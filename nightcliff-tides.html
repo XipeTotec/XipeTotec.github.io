@@ -6,7 +6,7 @@
 <title>Nightcliff Tides & Fishing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDvWt20Z9yDw8ZkHeuzFNyLLb6NrM-fVtM&libraries=places" async defer></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDvWt20Z9yDw8ZkHeuzFNyLLb6NrM-fVtM&libraries=places,marker&v=beta" async defer></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -276,6 +276,10 @@ body { background: var(--sand); color: var(--ink); font-family: 'DM Sans', syste
 .save-spot-form { background:var(--sand-dark); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-top:12px; }
 .save-spot-form h4 { font-family:'Cormorant Garamond',serif; font-size:16px; font-weight:400; margin-bottom:10px; color:var(--ink); }
 @media(max-width:480px){ #spotsMap { height:340px; } }
+/* COMBOBOX */
+.combo-wrap { position:relative; flex:1; display:flex; flex-direction:column; }
+.combo-wrap .log-input { width:100%; }
+.combo-wrap datalist { display:none; }
 </style>
 </head>
 <body>
@@ -972,7 +976,11 @@ async function fetchTideData() {
 }
 
 async function fetchSolunar(dStr) {
-  try { const r=await fetch(`https://api.solunar.org/solunar/${LAT},${LNG},${dStr.replace(/-/g,'')},${SOL_TZ}`); return r.ok?r.json():null; }
+  try {
+    const target = `https://api.solunar.org/solunar/${LAT},${LNG},${dStr.replace(/-/g,'')},${SOL_TZ}`;
+    const r=await fetch(`https://corsproxy.io/?url=${encodeURIComponent(target)}`);
+    return r.ok?r.json():null;
+  }
   catch(e){return null;}
 }
 
@@ -1549,12 +1557,18 @@ function renderApp({tideData,solunar,weather,marine}) {
       <div class="card">
         <div class="log-form">
           <div class="log-form-row">
-            <input class="log-input" id="logSpecies" placeholder="Species (e.g. Barramundi)" style="flex:2">
+            <div class="combo-wrap" style="flex:2">
+              <input class="log-input" id="logSpecies" placeholder="Species" list="speciesList" autocomplete="off" oninput="addToList('speciesList',this.value)">
+              <datalist id="speciesList"></datalist>
+            </div>
             <input class="log-input" id="logSize" placeholder="Size / weight" style="flex:1">
             <input class="log-input" id="logLure" placeholder="Lure / bait" style="flex:1">
           </div>
           <div class="log-form-row">
-            <input class="log-input" id="logLocation" placeholder="Location (e.g. Nightcliff Jetty)" style="flex:1.5">
+            <div class="combo-wrap" style="flex:1.5">
+              <input class="log-input" id="logLocation" placeholder="Location" list="locationList" autocomplete="off" oninput="addToList('locationList',this.value)">
+              <datalist id="locationList"></datalist>
+            </div>
             <input class="log-input" id="logNotes" placeholder="Notes" style="flex:2">
           </div>
           <div class="log-form-row">
@@ -1647,6 +1661,7 @@ function renderApp({tideData,solunar,weather,marine}) {
   // Render log
   renderLog();
   renderAlarms();
+  populateLists();
   // Autofill date/time for log form
   setTimeout(()=>{
     const ld=document.getElementById('logDate');
@@ -1805,6 +1820,7 @@ function addLogEntry(){
 
   renderLog();
   updateCatchOverlay();
+  populateLists();
 }
 
 function deleteLog(id){
@@ -2044,6 +2060,7 @@ function initMap() {
   gMap = new google.maps.Map(mapEl, {
     center: { lat: LAT, lng: LNG },
     zoom: 13,
+    mapId: 'nightcliff_tides_map',
     mapTypeId: 'hybrid',
     mapTypeControl: true,
     mapTypeControlOptions: {
@@ -2065,37 +2082,46 @@ function initMap() {
     pendingSpotLatLng = { lat: e.latLng.lat(), lng: e.latLng.lng() };
     document.getElementById('spotLatLngLabel').textContent =
       `📍 Selected: ${pendingSpotLatLng.lat.toFixed(5)}, ${pendingSpotLatLng.lng.toFixed(5)}`;
-    // Drop a temp marker
-    if(window._tempMarker) window._tempMarker.setMap(null);
-    window._tempMarker = new google.maps.Marker({
-      position: pendingSpotLatLng, map: gMap,
-      icon: { path: google.maps.SymbolPath.CIRCLE, scale:8, fillColor:'#82aa8c', fillOpacity:1, strokeColor:'#fff', strokeWeight:2 },
-      animation: google.maps.Animation.DROP
-    });
+    if(window._tempMarker) window._tempMarker.map = null;
+    window._tempMarker = makePinMarker(pendingSpotLatLng, '#82aa8c', '📍', gMap);
   });
 
   renderAllMapMarkers();
+}
+
+// Helper — creates a styled AdvancedMarkerElement with a coloured pin
+function makePinMarker(position, bgColor, glyphText, map) {
+  const { AdvancedMarkerElement, PinElement } = google.maps.marker;
+  const pin = new PinElement({
+    background: bgColor,
+    borderColor: '#fff',
+    glyphColor: '#fff',
+    glyph: glyphText || '',
+    scale: 1.0,
+  });
+  return new AdvancedMarkerElement({ position, map, content: pin.element });
+}
+
+// Helper — creates a small circle marker (for catches), correctly centred
+function makeCircleMarker(position, color, title, map, draggable) {
+  const { AdvancedMarkerElement } = google.maps.marker;
+  const dot = document.createElement('div');
+  // transform centres the div on the lat/lng point (fixes SE offset)
+  dot.style.cssText = `width:16px;height:16px;border-radius:50%;background:${color};border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,0.4);cursor:${draggable?'grab':'pointer'};transform:translate(-50%,-50%)`;
+  dot.title = title || '';
+  return new AdvancedMarkerElement({ position, map, content: dot, zIndex:10, gmpDraggable: !!draggable });
 }
 
 function renderAllMapMarkers() {
   if(!gMap) return;
 
   // Clear existing
-  Object.values(mapMarkers).flat().forEach(m => m.setMap(null));
+  Object.values(mapMarkers).flat().forEach(m => { m.map = null; });
   mapMarkers = { preset:[], custom:[], catches:[] };
 
-  // Preset spots (blue pins)
+  // Preset spots — blue pins
   PRESET_SPOTS.forEach(sp => {
-    const marker = new google.maps.Marker({
-      position: { lat:sp.lat, lng:sp.lng }, map: gMap,
-      title: sp.name,
-      icon: {
-        path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-        scale: 6, fillColor:'#82a2b9', fillOpacity:0.95,
-        strokeColor:'#fff', strokeWeight:1.5
-      },
-      label: { text:sp.icon, fontSize:'14px' }
-    });
+    const marker = makePinMarker({ lat:sp.lat, lng:sp.lng }, '#82a2b9', sp.icon, gMap);
     marker.addListener('click', () => {
       infoWindow.setContent(`
         <div class="map-info-window">
@@ -2108,18 +2134,10 @@ function renderAllMapMarkers() {
     mapMarkers.preset.push(marker);
   });
 
-  // Custom saved spots (green pins)
+  // Custom saved spots — green pins
   const customSpots = JSON.parse(localStorage.getItem('nightcliff_spots')||'[]');
   customSpots.forEach((sp,i) => {
-    const marker = new google.maps.Marker({
-      position: { lat:sp.lat, lng:sp.lng }, map: gMap,
-      title: sp.name,
-      icon: {
-        path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-        scale:6, fillColor:'#82aa8c', fillOpacity:0.95,
-        strokeColor:'#fff', strokeWeight:1.5
-      }
-    });
+    const marker = makePinMarker({ lat:sp.lat, lng:sp.lng }, '#82aa8c', '⭐', gMap);
     marker.addListener('click', () => {
       infoWindow.setContent(`
         <div class="map-info-window">
@@ -2135,25 +2153,20 @@ function renderAllMapMarkers() {
     mapMarkers.custom.push(marker);
   });
 
-  // Catch log markers (gold pins, grouped by location name)
-  const log = JSON.parse(localStorage.getItem('nightcliff_log')||'[]');
-  const geocoded = JSON.parse(localStorage.getItem('nightcliff_geocoded')||'{}');
-
-  // Match known preset spots by name, geocode others
   log.forEach(entry => {
     const locName = entry.location||'Nightcliff';
-    // Try to match preset
+    const geocoded = JSON.parse(localStorage.getItem('nightcliff_geocoded')||'{}');
+    // Per-entry dragged position takes priority
     const preset = PRESET_SPOTS.find(s => s.name.toLowerCase() === locName.toLowerCase());
-    let latLng = preset ? {lat:preset.lat, lng:preset.lng} : geocoded[locName];
-
+    let latLng = geocoded[`__id_${entry.id}`] || (preset ? {lat:preset.lat, lng:preset.lng} : geocoded[locName]);
     if(latLng) {
       plotCatchMarker(entry, latLng);
     } else {
-      // Geocode once and cache
       geocodeLocation(locName, ll => {
         if(!ll) return;
-        geocoded[locName] = ll;
-        localStorage.setItem('nightcliff_geocoded', JSON.stringify(geocoded));
+        const gc = JSON.parse(localStorage.getItem('nightcliff_geocoded')||'{}');
+        gc[locName] = ll;
+        localStorage.setItem('nightcliff_geocoded', JSON.stringify(gc));
         plotCatchMarker(entry, ll);
       });
     }
@@ -2165,26 +2178,32 @@ function renderAllMapMarkers() {
 function plotCatchMarker(entry, latLng) {
   if(!gMap) return;
   const col = speciesColor(entry.species||'?');
-  const marker = new google.maps.Marker({
-    position: latLng, map: gMap,
-    title: entry.species,
-    icon: {
-      path: google.maps.SymbolPath.CIRCLE,
-      scale:7, fillColor:col, fillOpacity:0.9,
-      strokeColor:'#fff', strokeWeight:1.5
-    },
-    zIndex: 10
-  });
+  const marker = makeCircleMarker(latLng, col, entry.species, gMap, true);
+
   marker.addListener('click', () => {
     infoWindow.setContent(`
       <div class="map-info-window">
         <h3>${entry.species}${entry.size?' · '+entry.size:''}</h3>
         <p>${entry.date} ${entry.time}<br>${entry.location}${entry.lure?' · '+entry.lure:''}</p>
         <div class="iw-meta">Tide: ${entry.tide}</div>
+        <div class="iw-meta" style="margin-top:3px;font-style:italic">Drag to correct position</div>
         ${entry.photo?`<br><img src="${entry.photo}" style="width:100%;border-radius:6px;margin-top:6px">`:''}
       </div>`);
     infoWindow.open(gMap, marker);
   });
+
+  // Persist dragged position to geocoded cache keyed by entry id
+  marker.addListener('dragend', () => {
+    const pos = marker.position;
+    const newLatLng = { lat: pos.lat, lng: pos.lng };
+    // Store under entry id so it overrides location-name geocoding
+    const geocoded = JSON.parse(localStorage.getItem('nightcliff_geocoded')||'{}');
+    geocoded[`__id_${entry.id}`] = newLatLng;
+    // Also update location name cache so future entries at same location benefit
+    geocoded[entry.location] = newLatLng;
+    localStorage.setItem('nightcliff_geocoded', JSON.stringify(geocoded));
+  });
+
   mapMarkers.catches.push(marker);
 }
 
@@ -2203,7 +2222,7 @@ function filterMapSpots(btn) {
   document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const filter = btn.dataset.filter;
-  const show = type => mapMarkers[type]?.forEach(m => m.setMap(filter==='all'||filter===type ? gMap : null));
+  const show = type => mapMarkers[type]?.forEach(m => { m.map = (filter==='all'||filter===type) ? gMap : null; });
   show('preset'); show('custom'); show('catches');
 }
 
@@ -2219,7 +2238,7 @@ function startAddSpot() {
 function cancelAddSpot() {
   addingSpot = false;
   pendingSpotLatLng = null;
-  if(window._tempMarker){ window._tempMarker.setMap(null); window._tempMarker=null; }
+  if(window._tempMarker){ window._tempMarker.map=null; window._tempMarker=null; }
   const form = document.getElementById('saveSpotForm');
   if(form) form.style.display = 'none';
   gMap?.setOptions({ draggableCursor:'' });
@@ -2232,12 +2251,8 @@ function useMyLocation() {
     document.getElementById('spotLatLngLabel').textContent =
       `📍 Your location: ${pendingSpotLatLng.lat.toFixed(5)}, ${pendingSpotLatLng.lng.toFixed(5)}`;
     gMap?.panTo(pendingSpotLatLng);
-    if(window._tempMarker) window._tempMarker.setMap(null);
-    window._tempMarker = new google.maps.Marker({
-      position:pendingSpotLatLng, map:gMap,
-      icon:{ path:google.maps.SymbolPath.CIRCLE, scale:8, fillColor:'#82aa8c', fillOpacity:1, strokeColor:'#fff', strokeWeight:2 },
-      animation:google.maps.Animation.DROP
-    });
+    if(window._tempMarker) window._tempMarker.map=null;
+    window._tempMarker = makePinMarker(pendingSpotLatLng, '#82aa8c', '📍', gMap);
   }, () => alert('Could not get your location.'));
 }
 
@@ -2252,7 +2267,7 @@ function saveCustomSpot() {
     date: new Date().toLocaleDateString('en-AU',{timeZone:TZ,day:'numeric',month:'short',year:'numeric'})
   });
   localStorage.setItem('nightcliff_spots', JSON.stringify(spots));
-  if(window._tempMarker){ window._tempMarker.setMap(null); window._tempMarker=null; }
+  if(window._tempMarker){ window._tempMarker.map=null; window._tempMarker=null; }
   document.getElementById('spotName').value='';
   document.getElementById('spotNotes').value='';
   cancelAddSpot();
@@ -2284,6 +2299,45 @@ function renderCustomSpotsList() {
           <button class="log-delete" onclick="event.stopPropagation();deleteCustomSpot(${i})" title="Delete">×</button>
         </div>
       </div>`).join('')}`;
+}
+
+// ── COMBOBOX DATALISTS ────────────────────────────────────────────────────────
+const DEFAULT_SPECIES = ['Barramundi','Mangrove Jack','Threadfin Salmon','Giant Trevally','Queenfish','Sailfish','Blue Salmon','Flathead','Whiting','Snapper','Coral Trout','Golden Snapper','Mackerel'];
+const DEFAULT_LOCATIONS = ['Nightcliff Jetty','Nightcliff Boat Ramp','Rapid Creek Mouth','Lee Point','East Point Reserve','Cullen Bay Marina','Fannie Bay','Casuarina Beach','Moulden Park Lake'];
+
+function populateLists() {
+  const log = JSON.parse(localStorage.getItem('nightcliff_log')||'[]');
+  // Build unique sorted lists from defaults + logged entries
+  const species = [...new Set([...DEFAULT_SPECIES, ...log.map(e=>e.species).filter(Boolean)])].sort();
+  const locations = [...new Set([...DEFAULT_LOCATIONS, ...log.map(e=>e.location).filter(Boolean)])].sort();
+
+  // Custom additions from localStorage
+  const customSpecies   = JSON.parse(localStorage.getItem('nightcliff_custom_species')||'[]');
+  const customLocations = JSON.parse(localStorage.getItem('nightcliff_custom_locs')||'[]');
+  const allSpecies   = [...new Set([...species,   ...customSpecies])].sort();
+  const allLocations = [...new Set([...locations, ...customLocations])].sort();
+
+  setDatalist('speciesList',  allSpecies);
+  setDatalist('locationList', allLocations);
+}
+
+function setDatalist(id, items) {
+  const dl = document.getElementById(id);
+  if(!dl) return;
+  dl.innerHTML = items.map(v=>`<option value="${v}">`).join('');
+}
+
+function addToList(listId, value) {
+  if(!value || value.length < 2) return;
+  const storageKey = listId === 'speciesList' ? 'nightcliff_custom_species' : 'nightcliff_custom_locs';
+  const existing = JSON.parse(localStorage.getItem(storageKey)||'[]');
+  const trimmed = value.trim();
+  // Only add when user has finished typing (not mid-word) — add on blur via the input's onchange
+  if(!existing.includes(trimmed)) {
+    existing.push(trimmed);
+    localStorage.setItem(storageKey, JSON.stringify(existing));
+    populateLists();
+  }
 }
 
 // ── BOM CHART SWITCHER ────────────────────────────────────────────────────────
