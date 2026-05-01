@@ -26,6 +26,7 @@ body { background: var(--sand); color: var(--ink); font-family: 'DM Sans', syste
 .nav-tab { padding: 10px 18px; font-size: 12px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; color: var(--stone-dark); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; font-family: 'DM Sans', sans-serif; }
 .nav-tab:hover { color: var(--ink); }
 .nav-tab.active { color: var(--ink); border-bottom-color: var(--terracotta); }
+.nav-icon { display: none; }
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
 
@@ -261,45 +262,126 @@ body { background: var(--sand); color: var(--ink); font-family: 'DM Sans', syste
 .fade-up:nth-child(2){animation-delay:.06s} .fade-up:nth-child(3){animation-delay:.12s} .fade-up:nth-child(4){animation-delay:.18s} .fade-up:nth-child(5){animation-delay:.24s}
 @keyframes fu { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 @media(max-width:600px){
-  /* Bottom navigation bar */
+  /* ── APP SHELL ── */
+  .app { padding:0 14px calc(72px + env(safe-area-inset-bottom,8px)); }
+
+  /* ── HEADER: compact single row ── */
+  .header { padding:14px 0 12px; margin-bottom:16px; gap:10px; }
+  .header-left h1 { font-size:22px; }
+  .header-left .sub { font-size:12px; margin-top:3px; }
+  .header-controls { margin-top:6px; gap:8px; }
+  .refresh-btn { padding:8px 16px; font-size:12px; }
+  .last-updated { font-size:11px; }
+  .clock { font-size:22px; }
+  .clock-date { font-size:11px; }
+
+  /* ── BOTTOM NAV with icons ── */
   .nav-tabs { position:fixed; bottom:0; left:0; right:0; border-bottom:none; border-top:1px solid var(--border); margin-bottom:0; background:var(--card); justify-content:space-around; overflow:visible; z-index:200; padding:0 0 env(safe-area-inset-bottom,4px); gap:0; }
-  .nav-tab { flex:1; padding:10px 4px 8px; font-size:9px; letter-spacing:0.06em; border-bottom:none; border-top:2px solid transparent; min-height:52px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .nav-tab { flex:1; padding:8px 2px 6px; border-bottom:none; border-top:2px solid transparent; min-height:58px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; }
   .nav-tab.active { border-top-color:var(--terracotta); border-bottom-color:transparent; color:var(--terracotta); }
-  /* App body padding for bottom nav */
-  .app { padding:0 12px calc(64px + env(safe-area-inset-bottom,8px)); }
-  /* Header */
-  .header { padding:16px 0 14px; }
-  .header-left h1 { font-size:clamp(24px,7vw,36px); }
-  .clock { font-size:clamp(20px,6vw,30px); }
-  .header-controls { gap:8px; margin-top:6px; }
-  /* Today stats: 2 columns */
-  .today-grid { grid-template-columns:repeat(2,1fr); }
-  .hero-cell { padding:14px 18px; gap:18px; }
-  /* Day card name */
-  .dc-name { min-width:80px; font-size:13px; }
-  /* Charts */
-  #tideChart { height:180px; }
-  /* Larrakia calendar: horizontal scroll */
+  .nav-icon { display:block; font-size:20px; line-height:1; }
+  .nav-label { font-size:9px; letter-spacing:0.05em; text-transform:uppercase; }
+
+  /* ── SECTIONS ── */
+  .section { margin-bottom:18px; }
+  .section-label { font-size:11px; letter-spacing:0.15em; margin-bottom:10px; }
+  .card { padding:18px 16px; }
+
+  /* ── GO SCORE: centred dashboard card ── */
+  .go-score-wrap { flex-direction:column; align-items:center; text-align:center; gap:14px; }
+  .go-score-verdict { width:100%; }
+  .go-score-num { font-size:44px; }
+  .go-score-verdict h3 { font-size:28px; }
+  .go-score-verdict p { font-size:14px; line-height:1.55; }
+  .go-factors { justify-content:center; }
+  .go-factor { font-size:13px; padding:5px 12px; }
+  .go-factor-dot { width:8px; height:8px; }
+
+  /* ── TODAY GRID ── */
+  .today-grid { grid-template-columns:repeat(2,1fr); gap:9px; }
+  .hero-cell { grid-column:1/-1; padding:18px 22px; gap:22px; }
+  .hero-height { font-size:clamp(56px,15vw,72px); }
+  .hero-arrow { font-size:26px; }
+  .hero-label { font-size:12px; }
+  .tide-progress-wrap { width:160px; }
+  .tide-progress-labels { font-size:10px; }
+  .tide-progress-track { height:4px; }
+
+  /* ── STAT CELLS: bigger text, more breathing room ── */
+  .stat-cell { padding:14px 16px; gap:4px; }
+  .stat-label { font-size:11px; letter-spacing:0.12em; }
+  .stat-value { font-size:18px; }
+  .stat-sub { font-size:12px; }
+  .countdown { font-size:13px; }
+  .stars { font-size:18px; letter-spacing:3px; }
+  .bite-row { font-size:13px; }
+  .bite-dot { width:8px; height:8px; }
+  .phase-pill { font-size:12px; padding:4px 12px; }
+  .moon-emoji { font-size:30px; }
+  .pressure-val { font-size:22px; }
+  .ramp-badge { font-size:12px; padding:5px 12px; }
+  .wind-compass-wrap { gap:12px; }
+
+  /* ── TIDE CHART ── */
+  #tideChart { height:200px; }
+  .chart-legend-note { font-size:11px; gap:10px; }
+  .chart-tip-time { font-size:17px; }
+
+  /* ── 7-DAY FORECAST CARDS ── */
+  .day-card-header { padding:14px 16px; }
+  .dc-name { font-size:16px; min-width:90px; }
+  .tide-chip { font-size:12px; padding:4px 10px; }
+  .dc-moon { font-size:18px; }
+  .stars-sm { font-size:14px; }
+
+  /* ── LARRAKIA CALENDAR ── */
   .larrakia-calendar { overflow-x:auto; -webkit-overflow-scrolling:touch; }
   .larrakia-header,.larrakia-row,.larrakia-season-bar { min-width:520px; }
-  /* Log form: stack fields */
+
+  /* ── LURE RECOMMENDER ── */
+  .lure-grid { grid-template-columns:1fr 1fr; gap:8px; }
+  .lure-card-title { font-size:13px; }
+  .lure-card-why { font-size:12px; }
+  .lure-confidence { font-size:10px; }
+
+  /* ── TIPS ── */
+  .tip-card { font-size:14px; padding:14px 16px; }
+
+  /* ── FISHING LOG ── */
   .log-form-row { flex-direction:column; }
-  .log-input { min-width:0; }
-  .log-btn { padding:11px 18px; }
-  /* Trip form: stack */
+  .log-input { font-size:16px; padding:12px 14px; min-width:0; }
+  .log-btn { font-size:15px; padding:13px 20px; width:100%; border-radius:10px; }
+  .log-entry-main { font-size:14px; }
+  .log-entry-meta { font-size:12px; }
+  .log-empty { font-size:14px; }
+
+  /* ── TRIP PLANNER ── */
   .trip-form { flex-direction:column; }
   .trip-form .log-input,.trip-form .alarm-select { width:100%; }
-  /* Alarm row: stack */
+  .trip-result h3 { font-size:22px; }
+  .trip-stat-value { font-size:20px; }
+  .trip-stat-label { font-size:11px; }
+
+  /* ── ALARMS ── */
   .alarm-row { flex-direction:column; align-items:stretch; }
-  .alarm-select { width:100%; }
-  /* Spots toolbar: horizontal scroll instead of wrap */
+  .alarm-select { width:100%; font-size:16px; padding:12px 14px; }
+  .alarm-entry { font-size:13px; padding:12px 14px; }
+
+  /* ── SPOTS ── */
   .spots-toolbar { flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:4px; }
-  /* Catch filters: horizontal scroll */
+  .spot-chip { font-size:13px; padding:8px 14px; }
+  #spotsMap { height:320px; }
+
+  /* ── CATCH FILTERS ── */
   .catch-filters { flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; }
-  /* Bigger refresh button tap target */
-  .refresh-btn { padding:8px 16px; }
-  /* Day card header tap target */
-  .day-card-header { padding:14px 14px; }
+  .catch-filter-btn { font-size:13px; padding:7px 14px; }
+  .catch-filter-search { font-size:13px; }
+  .catch-toggle { font-size:13px; }
+  .catch-summary { font-size:12px; }
+
+  /* ── WEATHER ── */
+  .bom-tab { font-size:13px; padding:8px 16px; }
+  .bom-link { font-size:12px; padding:6px 14px; }
 }
 /* MAP / SPOTS TAB */
 #spotsMap { width:100%; height:480px; border-radius:12px; border:1px solid var(--border); }
@@ -315,7 +397,6 @@ body { background: var(--sand); color: var(--ink); font-family: 'DM Sans', syste
 .map-info-window a { font-size:11px; color:#c4876a; text-decoration:none; }
 .save-spot-form { background:var(--sand-dark); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-top:12px; }
 .save-spot-form h4 { font-family:'Cormorant Garamond',serif; font-size:16px; font-weight:400; margin-bottom:10px; color:var(--ink); }
-@media(max-width:600px){ #spotsMap { height:320px; } }
 /* COMBOBOX */
 .combo-wrap { position:relative; flex:1; display:flex; flex-direction:column; }
 .combo-wrap .log-input { width:100%; }
@@ -340,12 +421,12 @@ body { background: var(--sand); color: var(--ink); font-family: 'DM Sans', syste
   </header>
 
   <nav class="nav-tabs">
-    <button class="nav-tab active" onclick="showTab('tides')">Tides</button>
-    <button class="nav-tab" onclick="showTab('fishing')">Fishing</button>
-    <button class="nav-tab" onclick="showTab('weather')">Weather</button>
-    <button class="nav-tab" onclick="showTab('planner')">Planner</button>
-    <button class="nav-tab" onclick="showTab('spots')">Spots</button>
-    <button class="nav-tab" onclick="showTab('log')">My Log</button>
+    <button class="nav-tab active" onclick="showTab('tides')"><span class="nav-icon">🌊</span><span class="nav-label">Tides</span></button>
+    <button class="nav-tab" onclick="showTab('fishing')"><span class="nav-icon">🎣</span><span class="nav-label">Fishing</span></button>
+    <button class="nav-tab" onclick="showTab('weather')"><span class="nav-icon">🌤</span><span class="nav-label">Weather</span></button>
+    <button class="nav-tab" onclick="showTab('planner')"><span class="nav-icon">📅</span><span class="nav-label">Planner</span></button>
+    <button class="nav-tab" onclick="showTab('spots')"><span class="nav-icon">📍</span><span class="nav-label">Spots</span></button>
+    <button class="nav-tab" onclick="showTab('log')"><span class="nav-icon">📔</span><span class="nav-label">My Log</span></button>
   </nav>
 
   <div id="content">
