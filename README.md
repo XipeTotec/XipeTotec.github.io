@@ -51,7 +51,7 @@ body { background: var(--sand); color: var(--ink); font-family: 'DM Sans', syste
 /* GO SCORE */
 .go-score-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
 .go-score-dial { position: relative; width: 110px; height: 110px; flex-shrink: 0; }
-.go-score-dial canvas { display: block; }
+.go-score-dial canvas { display: block; width: 110px; height: 110px; }
 .go-score-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .go-score-num { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 300; line-height: 1; color: var(--ink); }
 .go-score-label { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--stone-dark); }
@@ -260,7 +260,47 @@ body { background: var(--sand); color: var(--ink); font-family: 'DM Sans', syste
 .fade-up { animation: fu 0.45s ease both; }
 .fade-up:nth-child(2){animation-delay:.06s} .fade-up:nth-child(3){animation-delay:.12s} .fade-up:nth-child(4){animation-delay:.18s} .fade-up:nth-child(5){animation-delay:.24s}
 @keyframes fu { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-@media(max-width:480px){ .app{padding:0 12px 80px} .dc-name{min-width:90px;font-size:14px} }
+@media(max-width:600px){
+  /* Bottom navigation bar */
+  .nav-tabs { position:fixed; bottom:0; left:0; right:0; border-bottom:none; border-top:1px solid var(--border); margin-bottom:0; background:var(--card); justify-content:space-around; overflow:visible; z-index:200; padding:0 0 env(safe-area-inset-bottom,4px); gap:0; }
+  .nav-tab { flex:1; padding:10px 4px 8px; font-size:9px; letter-spacing:0.06em; border-bottom:none; border-top:2px solid transparent; min-height:52px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .nav-tab.active { border-top-color:var(--terracotta); border-bottom-color:transparent; color:var(--terracotta); }
+  /* App body padding for bottom nav */
+  .app { padding:0 12px calc(64px + env(safe-area-inset-bottom,8px)); }
+  /* Header */
+  .header { padding:16px 0 14px; }
+  .header-left h1 { font-size:clamp(24px,7vw,36px); }
+  .clock { font-size:clamp(20px,6vw,30px); }
+  .header-controls { gap:8px; margin-top:6px; }
+  /* Today stats: 2 columns */
+  .today-grid { grid-template-columns:repeat(2,1fr); }
+  .hero-cell { padding:14px 18px; gap:18px; }
+  /* Day card name */
+  .dc-name { min-width:80px; font-size:13px; }
+  /* Charts */
+  #tideChart { height:180px; }
+  /* Larrakia calendar: horizontal scroll */
+  .larrakia-calendar { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .larrakia-header,.larrakia-row,.larrakia-season-bar { min-width:520px; }
+  /* Log form: stack fields */
+  .log-form-row { flex-direction:column; }
+  .log-input { min-width:0; }
+  .log-btn { padding:11px 18px; }
+  /* Trip form: stack */
+  .trip-form { flex-direction:column; }
+  .trip-form .log-input,.trip-form .alarm-select { width:100%; }
+  /* Alarm row: stack */
+  .alarm-row { flex-direction:column; align-items:stretch; }
+  .alarm-select { width:100%; }
+  /* Spots toolbar: horizontal scroll instead of wrap */
+  .spots-toolbar { flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:4px; }
+  /* Catch filters: horizontal scroll */
+  .catch-filters { flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; }
+  /* Bigger refresh button tap target */
+  .refresh-btn { padding:8px 16px; }
+  /* Day card header tap target */
+  .day-card-header { padding:14px 14px; }
+}
 /* MAP / SPOTS TAB */
 #spotsMap { width:100%; height:480px; border-radius:12px; border:1px solid var(--border); }
 .spots-toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
@@ -275,7 +315,7 @@ body { background: var(--sand); color: var(--ink); font-family: 'DM Sans', syste
 .map-info-window a { font-size:11px; color:#c4876a; text-decoration:none; }
 .save-spot-form { background:var(--sand-dark); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-top:12px; }
 .save-spot-form h4 { font-family:'Cormorant Garamond',serif; font-size:16px; font-weight:400; margin-bottom:10px; color:var(--ink); }
-@media(max-width:480px){ #spotsMap { height:340px; } }
+@media(max-width:600px){ #spotsMap { height:320px; } }
 /* COMBOBOX */
 .combo-wrap { position:relative; flex:1; display:flex; flex-direction:column; }
 .combo-wrap .log-input { width:100%; }
@@ -1053,6 +1093,12 @@ function showTab(tab) {
   }
 }
 
+function fmtSunTime(val) {
+  if(!val) return '—';
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? val : fmtTime(d);
+}
+
 // ── RENDER ─────────────────────────────────────────────────────────────────────
 function renderApp({tideData,solunar,weather,marine}) {
   allExtremes=tideData.extremes||[];
@@ -1285,8 +1331,8 @@ function renderApp({tideData,solunar,weather,marine}) {
         </div>
         <div class="stat-cell">
           <div class="stat-label">Sunrise · Sunset</div>
-          <div class="stat-value" style="font-size:17px">${todayCond?.sunrise||'—'}</div>
-          <div class="stat-value" style="font-size:17px">${todayCond?.sunset||'—'}</div>
+          <div class="stat-value" style="font-size:17px;margin-top:4px">☀ ${fmtSunTime(todayCond?.sunrise)}</div>
+          <div class="stat-value" style="font-size:17px;margin-top:2px">🌅 ${fmtSunTime(todayCond?.sunset)}</div>
         </div>
         <div class="stat-cell">
           <div class="stat-label">Moon</div>
