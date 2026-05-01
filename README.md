@@ -51,7 +51,7 @@ body { background: var(--sand); color: var(--ink); font-family: 'DM Sans', syste
 /* GO SCORE */
 .go-score-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
 .go-score-dial { position: relative; width: 110px; height: 110px; flex-shrink: 0; }
-.go-score-dial canvas { display: block; }
+.go-score-dial canvas { display: block; width: 110px; height: 110px; }
 .go-score-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .go-score-num { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 300; line-height: 1; color: var(--ink); }
 .go-score-label { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--stone-dark); }
@@ -1093,6 +1093,12 @@ function showTab(tab) {
   }
 }
 
+function fmtSunTime(val) {
+  if(!val) return '—';
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? val : fmtTime(d);
+}
+
 // ── RENDER ─────────────────────────────────────────────────────────────────────
 function renderApp({tideData,solunar,weather,marine}) {
   allExtremes=tideData.extremes||[];
@@ -1325,8 +1331,8 @@ function renderApp({tideData,solunar,weather,marine}) {
         </div>
         <div class="stat-cell">
           <div class="stat-label">Sunrise · Sunset</div>
-          <div class="stat-value" style="font-size:17px">${todayCond?.sunrise||'—'}</div>
-          <div class="stat-value" style="font-size:17px">${todayCond?.sunset||'—'}</div>
+          <div class="stat-value" style="font-size:17px;margin-top:4px">☀ ${fmtSunTime(todayCond?.sunrise)}</div>
+          <div class="stat-value" style="font-size:17px;margin-top:2px">🌅 ${fmtSunTime(todayCond?.sunset)}</div>
         </div>
         <div class="stat-cell">
           <div class="stat-label">Moon</div>
