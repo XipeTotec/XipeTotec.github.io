@@ -105,7 +105,7 @@ body { background: var(--sand); color: var(--ink); font-family: 'DM Sans', syste
 /* WIND COMPASS */
 .wind-compass-wrap { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
 .wind-compass { position: relative; width: 44px; height: 44px; flex-shrink: 0; }
-.wind-compass canvas { display: block; }
+.wind-compass canvas { display: block; width: 44px; height: 44px; }
 
 /* CHART */
 .chart-wrap { position: relative; width: 100%; user-select: none; }
