@@ -116,7 +116,7 @@ body { background: var(--sand); color: var(--ink); font-family: 'DM Sans', syste
 .chart-tip-ht { font-size: 10px; color: var(--stone-dark); display: block; }
 .chart-legend-note { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-soft); font-size: 10px; color: var(--stone-dark); }
 .legend-item { display: flex; align-items: center; gap: 4px; }
-.legend-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.legend-swatch { width: 18px; height: 6px; border-radius: 3px; flex-shrink: 0; }
 
 /* CATCH OVERLAY */
 .catch-filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border-soft); }
@@ -545,22 +545,23 @@ function drawChart(canvas, extremes, startMs, endMs, hoverMs, showWindows, canva
     }
   }
 
-  // Fishing windows
+  // Fishing windows — pastel bar along the bottom
   if(!isMini&&showWindows){
     const wins=computeFishingWindows(extremes,startMs,endMs);
+    const barY=PAD.top+cH+5, barThick=6;
+    const barCols={'run-in':'rgba(130,185,145,0.9)','run-out':'rgba(130,165,200,0.9)','high-jetty':'rgba(196,135,106,0.85)','low-slack':'rgba(200,170,130,0.85)'};
+    ctx.lineCap='round';
     for(const win of wins){
       const wx1=Math.max(xOf(win.startMs),PAD.left), wx2=Math.min(xOf(win.endMs),PAD.left+cW);
-      if(wx2<=wx1)continue;
-      const cols={'run-in':['rgba(130,185,145,0.22)','rgba(130,185,145,0)','rgba(50,110,65,0.65)'],
-        'run-out':['rgba(130,165,200,0.22)','rgba(130,165,200,0)','rgba(40,90,140,0.65)'],
-        'high-jetty':['rgba(196,135,106,0.20)','rgba(196,135,106,0)','rgba(140,70,30,0.65)'],
-        'low-slack':['rgba(200,170,130,0.18)','rgba(200,170,130,0)','rgba(120,85,45,0.60)']};
-      const [cm,ce,cl]=cols[win.type]||cols['low-slack'];
-      const grd=ctx.createLinearGradient(wx1,0,wx2,0);
-      grd.addColorStop(0,ce); grd.addColorStop(0.25,cm); grd.addColorStop(0.75,cm); grd.addColorStop(1,ce);
-      ctx.fillStyle=grd; ctx.fillRect(wx1,PAD.top,wx2-wx1,cH);
-      if(wx2-wx1>36){ctx.font='500 9px DM Sans,sans-serif';ctx.fillStyle=cl;ctx.textAlign='center';ctx.fillText(win.label,(wx1+wx2)/2,PAD.top+11);}
+      if(wx2-wx1<barThick)continue;
+      ctx.beginPath();
+      ctx.moveTo(wx1+barThick/2,barY);
+      ctx.lineTo(wx2-barThick/2,barY);
+      ctx.strokeStyle=barCols[win.type]||barCols['low-slack'];
+      ctx.lineWidth=barThick;
+      ctx.stroke();
     }
+    ctx.lineCap='butt';
   }
 
   // H grid
