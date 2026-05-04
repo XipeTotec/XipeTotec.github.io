@@ -1114,7 +1114,7 @@ async function fetchAllSolunar() {
 
 async function fetchWeather() {
   try {
-    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LNG}&current=surface_pressure,wind_speed_10m,wind_direction_10m,uv_index&hourly=surface_pressure&daily=sunrise,sunset,uv_index_max,precipitation_probability_max&forecast_days=7&timezone=Australia%2FDarwin`);
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LNG}&current=surface_pressure,wind_speed_10m,wind_direction_10m,uv_index,temperature_2m,relative_humidity_2m&hourly=surface_pressure,temperature_2m,relative_humidity_2m&daily=sunrise,sunset,uv_index_max,precipitation_probability_max&forecast_days=7&timezone=Australia%2FDarwin`);
     if(!r.ok)return null;
     const d=await r.json();
     const p=d.current?.surface_pressure;
@@ -1126,6 +1126,12 @@ async function fetchWeather() {
       hPa:Math.round(p), trend:trend>0.5?'rising':trend<-0.5?'falling':'steady', trendVal:trend,
       windSpeed:Math.round(d.current?.wind_speed_10m||0), windDir:d.current?.wind_direction_10m||0,
       uvIndex:Math.round(d.current?.uv_index||0),
+      temp: Math.round(d.current?.temperature_2m ?? 0),
+      humidity: Math.round(d.current?.relative_humidity_2m ?? 0),
+      hourlyTime: d.hourly?.time || [],
+      hourlyPressure: d.hourly?.surface_pressure || [],
+      hourlyTemp: d.hourly?.temperature_2m || [],
+      hourlyHumidity: d.hourly?.relative_humidity_2m || [],
       daily: d.daily || null
     };
   } catch(e){return null;}
