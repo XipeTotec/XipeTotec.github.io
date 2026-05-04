@@ -7,6 +7,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDvWt20Z9yDw8ZkHeuzFNyLLb6NrM-fVtM&libraries=places,marker&v=beta" async defer></script>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#3d3530">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Nightcliff Tides">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -383,6 +388,16 @@ body { background: var(--sand); color: var(--ink); font-family: 'DM Sans', syste
   .bom-tab { font-size:13px; padding:8px 16px; }
   .bom-link { font-size:12px; padding:6px 14px; }
 }
+@media print {
+  .nav-tabs,.header-controls,.catch-filters,.save-spot-form,#spotsMap,.fade-up>*>*:not(.section) { display:none !important; }
+  .app { padding:0; max-width:none; }
+  .header { padding:10px 0; border-bottom:1px solid #ccc; }
+  .tab-pane { display:block !important; }
+  .day-card-body { display:block !important; }
+  body { background:white; }
+  .card,.stat-cell,.day-card { border:1px solid #ddd; break-inside:avoid; }
+  .section { break-inside:avoid; }
+}
 /* MAP / SPOTS TAB */
 #spotsMap { width:100%; height:480px; border-radius:12px; border:1px solid var(--border); }
 .spots-toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
@@ -417,6 +432,7 @@ body { background: var(--sand); color: var(--ink); font-family: 'DM Sans', syste
     <div class="header-right">
       <div class="clock" id="clock">—</div>
       <div class="clock-date" id="date">—</div>
+      <div class="stat-sub" id="goldenHour" style="margin-top:2px"></div>
     </div>
   </header>
 
@@ -1176,6 +1192,18 @@ function showTab(tab) {
       mainChartState=chartState;
     });
   }
+  if(tab==='tides'){
+    requestAnimationFrame(()=>{const lc=document.getElementById('lunarChart');if(lc)drawLunarChart(lc);});
+  }
+  if(tab==='weather'){
+    requestAnimationFrame(()=>{
+      const wc=document.getElementById('weatherChart');
+      if(wc&&window._weatherData?.hourlyTime?.length) drawWeatherChart(wc,window._weatherData.hourlyTime,window._weatherData.hourlyPressure,window._weatherData.hourlyTemp,window._weatherData.hourlyHumidity);
+    });
+  }
+  if(tab==='log'){
+    requestAnimationFrame(()=>{const c=document.getElementById('catchAnalysisChart');if(c)drawCatchAnalysisChart(c);});
+  }
   if(tab==='spots'){
     requestAnimationFrame(()=>requestAnimationFrame(()=>initMap()));
   }
@@ -1185,6 +1213,241 @@ function fmtSunTime(val) {
   if(!val) return '—';
   const d = new Date(val);
   return isNaN(d.getTime()) ? val : fmtTime(d);
+}
+
+// ── MOON AGE ──────────────────────────────────────────────────────────────────
+function calcMoonAge(date) {
+  const knownNew = new Date('2000-01-06T18:14:00Z').getTime();
+  const SYNODIC = 29.53059 * 24 * 3600 * 1000;
+  const age = ((date.getTime() - knownNew) % SYNODIC + SYNODIC) % SYNODIC;
+  const pct = age / SYNODIC;
+  const illumination = Math.round((1 - Math.cos(pct * 2 * Math.PI)) / 2 * 100);
+  const phase = pct < 0.0625 ? 'new moon' : pct < 0.1875 ? 'waxing crescent' :
+    pct < 0.3125 ? 'first quarter' : pct < 0.4375 ? 'waxing gibbous' :
+    pct < 0.5625 ? 'full moon' : pct < 0.6875 ? 'waning gibbous' :
+    pct < 0.8125 ? 'last quarter' : 'waning crescent';
+  return { ageDays: age / 86400000, pct, illumination, phase };
+}
+
+// ── WEATHER CHART ─────────────────────────────────────────────────────────────
+function drawWeatherChart(canvas, hourlyTime, hourlyPressure, hourlyTemp, hourlyHumidity) {
+  const dpr = window.devicePixelRatio || 1;
+  const Wcss = canvas.clientWidth || canvas.offsetWidth || 600;
+  const Hcss = 220;
+  canvas.width = Math.round(Wcss * dpr); canvas.height = Math.round(Hcss * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = Wcss, H = Hcss;
+  const PAD = {top:28, right:52, bottom:32, left:52};
+  const cW = W - PAD.left - PAD.right, cH = H - PAD.top - PAD.bottom;
+  const n = Math.min(hourlyTime.length, 168);
+  if(n < 2) return;
+  ctx.fillStyle = '#faf7f2';
+  ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(0,0,W,H,8); else ctx.rect(0,0,W,H); ctx.fill();
+  const xOf = i => PAD.left + (i/(n-1)) * cW;
+
+  // Humidity filled area (background, 0-100)
+  const yOfH = v => PAD.top + (1 - v/100) * cH;
+  ctx.beginPath();
+  for(let i=0;i<n;i++){const x=xOf(i),y=yOfH(hourlyHumidity[i]||0);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.lineTo(xOf(n-1),PAD.top+cH); ctx.lineTo(xOf(0),PAD.top+cH); ctx.closePath();
+  ctx.fillStyle='rgba(130,185,145,0.10)'; ctx.fill();
+  ctx.beginPath();
+  for(let i=0;i<n;i++){const x=xOf(i),y=yOfH(hourlyHumidity[i]||0);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.strokeStyle='rgba(130,185,145,0.6)'; ctx.lineWidth=1.5; ctx.lineJoin='round'; ctx.stroke();
+
+  // Pressure axis (left, blue)
+  const pArr = hourlyPressure.slice(0,n);
+  const pMin = Math.floor((Math.min(...pArr)-2)/5)*5, pMax = Math.ceil((Math.max(...pArr)+2)/5)*5;
+  const pRange = pMax - pMin || 1;
+  const yOfP = v => PAD.top + (1-(v-pMin)/pRange)*cH;
+  ctx.font='300 9px DM Sans,sans-serif'; ctx.textAlign='right'; ctx.fillStyle='rgba(130,165,200,0.9)';
+  for(let v=pMin;v<=pMax;v+=5){
+    const y=yOfP(v); if(y<PAD.top-4||y>PAD.top+cH+4) continue;
+    ctx.fillText(v,PAD.left-5,y+3);
+    ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+cW,y);ctx.strokeStyle='rgba(160,148,132,0.1)';ctx.lineWidth=1;ctx.stroke();
+  }
+  ctx.beginPath();
+  for(let i=0;i<n;i++){const x=xOf(i),y=yOfP(pArr[i]);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.strokeStyle='rgba(130,165,200,0.9)'; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.stroke();
+
+  // Temperature axis (right, terracotta)
+  const tArr = hourlyTemp.slice(0,n);
+  const tMin = Math.floor(Math.min(...tArr)-1), tMax = Math.ceil(Math.max(...tArr)+1);
+  const tRange = tMax-tMin||1;
+  const yOfT = v => PAD.top+(1-(v-tMin)/tRange)*cH;
+  ctx.textAlign='left'; ctx.fillStyle='rgba(196,135,106,0.9)';
+  for(let v=Math.ceil(tMin/5)*5;v<=tMax;v+=5){
+    const y=yOfT(v); if(y<PAD.top-4||y>PAD.top+cH+4) continue;
+    ctx.fillText(v+'°',PAD.left+cW+5,y+3);
+  }
+  ctx.beginPath();
+  for(let i=0;i<n;i++){const x=xOf(i),y=yOfT(tArr[i]);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.strokeStyle='rgba(196,135,106,0.9)'; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.stroke();
+
+  // X labels (day names every 24h)
+  ctx.textAlign='center'; ctx.fillStyle='rgba(110,95,82,0.55)'; ctx.font='300 9px DM Sans,sans-serif';
+  for(let i=0;i<n;i+=24){
+    const lbl=i===0?'Today':new Date(hourlyTime[i]).toLocaleDateString('en-AU',{timeZone:TZ,weekday:'short'});
+    ctx.fillText(lbl,xOf(i),H-8);
+    ctx.beginPath();ctx.moveTo(xOf(i),PAD.top);ctx.lineTo(xOf(i),PAD.top+cH);ctx.strokeStyle='rgba(160,148,132,0.15)';ctx.lineWidth=1;ctx.stroke();
+  }
+
+  // Now line
+  const nowMs=Date.now(), startMs=new Date(hourlyTime[0]).getTime(), endMs=new Date(hourlyTime[n-1]).getTime();
+  const nowFrac=(nowMs-startMs)/(endMs-startMs);
+  if(nowFrac>=0&&nowFrac<=1){
+    const nx=PAD.left+nowFrac*cW;
+    ctx.save();ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,PAD.top+cH);
+    ctx.strokeStyle='rgba(196,135,106,0.5)';ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);ctx.restore();
+  }
+
+  // Legend
+  const items=[['rgba(196,135,106,0.9)','Temperature'],['rgba(130,165,200,0.9)','Pressure'],['rgba(130,185,145,0.7)','Humidity']];
+  ctx.font='300 9px DM Sans,sans-serif'; ctx.textAlign='left';
+  let lx=PAD.left;
+  for(const [col,lbl] of items){
+    ctx.beginPath();ctx.moveTo(lx,PAD.top-10);ctx.lineTo(lx+16,PAD.top-10);ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle='rgba(100,88,76,0.65)';ctx.fillText(lbl,lx+20,PAD.top-7);
+    lx+=ctx.measureText(lbl).width+40;
+  }
+}
+
+// ── LUNAR CHART ───────────────────────────────────────────────────────────────
+function drawLunarChart(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const Wcss = canvas.clientWidth || canvas.offsetWidth || 600;
+  const Hcss = 90;
+  canvas.width = Math.round(Wcss*dpr); canvas.height = Math.round(Hcss*dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const W=Wcss, H=Hcss;
+  const PAD={top:8,right:8,bottom:22,left:8};
+  const cW=W-PAD.left-PAD.right, cH=H-PAD.top-PAD.bottom;
+  ctx.fillStyle='#faf7f2';
+  ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(0,0,W,H,8);else ctx.rect(0,0,W,H); ctx.fill();
+  const DAYS=28, now=new Date(), cellW=cW/DAYS;
+  const R=Math.min(cellW*0.38, cH*0.38);
+  for(let i=0;i<DAYS;i++){
+    const d=new Date(now.getTime()+i*86400000);
+    const moon=calcMoonAge(d);
+    const cx=PAD.left+(i+0.5)*cellW, cy=PAD.top+cH/2;
+    // Today highlight
+    if(i===0){ctx.beginPath();ctx.arc(cx,cy,R+3,0,Math.PI*2);ctx.fillStyle='rgba(196,135,106,0.1)';ctx.fill();}
+    // Dark circle (full orbit)
+    ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fillStyle='rgba(61,53,48,0.18)';ctx.fill();
+    // Illuminated portion using arc+bezier crescent
+    if(moon.illumination>1){
+      ctx.save();
+      ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.clip();
+      // Draw lit half then mask with terminator
+      const lit=moon.illumination/100;
+      // Waxing: 0-0.5 pct, Waning: 0.5-1 pct
+      const waxing=moon.pct<0.5;
+      // Right half always lit for waxing, left half for waning
+      const kx=Math.cos(moon.pct*Math.PI*2)*R*(waxing?-1:1);
+      ctx.fillStyle=`rgba(200,168,75,${0.25+lit*0.7})`;
+      ctx.beginPath();
+      ctx.arc(cx,cy,R,-Math.PI/2,Math.PI/2,waxing);
+      ctx.bezierCurveTo(cx+kx,cy+R,cx+kx,cy-R,cx,cy-R);
+      ctx.closePath();ctx.fill();
+      ctx.restore();
+    }
+    // Phase label at new/full
+    if(moon.illumination<=3){ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(61,53,48,0.5)';ctx.fillText('🌑',cx,cy+3);}
+    else if(moon.illumination>=97){ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(200,168,75,0.9)';ctx.fillText('🌕',cx,cy+3);}
+    // Day number every 7 days or first/last
+    if(i%7===0){
+      ctx.font='300 8px DM Sans,sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(110,95,82,0.55)';
+      const lbl=i===0?'Today':d.toLocaleDateString('en-AU',{timeZone:TZ,day:'numeric',month:'short'});
+      ctx.fillText(lbl,cx,H-5);
+    }
+  }
+}
+
+// ── BEST SESSION ──────────────────────────────────────────────────────────────
+function findBestSession(allExtremes, allSolunar, days7) {
+  let best=null, bestScore=-1;
+  const nowMs=Date.now();
+  const typeScore={'run-out':3,'run-in':3,'high-jetty':2,'low-slack':1};
+  for(const dStr of days7){
+    const dayStart=new Date(dStr+'T00:00:00+09:30').getTime();
+    const dayEnd=dayStart+86400000;
+    const sol=allSolunar[dStr];
+    const solR=sol?.rating?Math.round(parseFloat(sol.rating)/20):0;
+    const wins=computeFishingWindows(allExtremes,dayStart,dayEnd);
+    for(const win of wins){
+      if(win.endMs<nowMs) continue;
+      let score=(typeScore[win.type]||1)+solR;
+      // Bonus if solunar major overlaps
+      const midMs=(win.startMs+win.endMs)/2;
+      for(const t of [sol?.majorOne,sol?.majorTwo].filter(Boolean)){
+        const tMs=new Date(dStr+'T'+t.replace(/\s?(AM|PM)/i,'')+(t.toUpperCase().includes('PM')?' PM':' AM')).getTime();
+        if(Math.abs(tMs-midMs)<3600000) score+=1;
+      }
+      if(score>bestScore){bestScore=score;best={dStr,win,score:Math.min(10,Math.round(score/9*10)),sol,solR};}
+    }
+  }
+  return best;
+}
+
+// ── GOLDEN HOUR COUNTDOWN ─────────────────────────────────────────────────────
+function getGoldenHourCountdown() {
+  const srss=window._sunriseMsList||[], now=Date.now(), candidates=[];
+  for(const {srMs,ssMs} of srss){
+    if(srMs-30*60000>now) candidates.push({ms:srMs-30*60000,label:'Dawn'});
+    if(ssMs>now) candidates.push({ms:ssMs,label:'Dusk'});
+  }
+  candidates.sort((a,b)=>a.ms-b.ms);
+  const next=candidates[0];
+  if(!next||next.ms-now>14*3600000) return null;
+  const diff=next.ms-now;
+  const h=Math.floor(diff/3600000), m=Math.floor((diff%3600000)/60000);
+  return {label:next.label,text:h>0?`${h}h ${m}m`:`${m}m`,urgent:diff<3600000};
+}
+
+// ── CATCH ANALYSIS CHART ──────────────────────────────────────────────────────
+function drawCatchAnalysisChart(canvas) {
+  const log=JSON.parse(localStorage.getItem('nightcliff_log')||'[]');
+  const dpr=window.devicePixelRatio||1;
+  const Wcss=canvas.clientWidth||canvas.offsetWidth||600;
+  const Hcss=160;
+  canvas.width=Math.round(Wcss*dpr); canvas.height=Math.round(Hcss*dpr);
+  const ctx=canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const W=Wcss,H=Hcss;
+  const PAD={top:20,right:16,bottom:28,left:40};
+  const cW=W-PAD.left-PAD.right,cH=H-PAD.top-PAD.bottom;
+  ctx.fillStyle='#faf7f2';
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(0,0,W,H,8);else ctx.rect(0,0,W,H);ctx.fill();
+  if(!log.length){
+    ctx.font='300 12px DM Sans,sans-serif';ctx.fillStyle='rgba(110,95,82,0.4)';ctx.textAlign='center';
+    ctx.fillText('Log some catches to see analysis',W/2,H/2); return;
+  }
+  // Bucket catches by tide height into 10 buckets (0.0-0.5m, 0.5-1.0m, ... 4.5-5.0m)
+  const BUCKETS=10, bucketSize=0.5;
+  const counts=Array(BUCKETS).fill(0);
+  for(const e of log){if(e.tideH!=null){const b=Math.min(BUCKETS-1,Math.floor(e.tideH/bucketSize));counts[b]++;}}
+  const maxCount=Math.max(...counts,1);
+  const bW=cW/BUCKETS;
+  for(let i=0;i<BUCKETS;i++){
+    const x=PAD.left+i*bW, bH=(counts[i]/maxCount)*cH;
+    const tide=i*bucketSize;
+    ctx.fillStyle=tide<1?'rgba(130,165,200,0.7)':tide<3?'rgba(130,185,145,0.7)':'rgba(196,135,106,0.7)';
+    ctx.fillRect(x+2,PAD.top+cH-bH,bW-4,bH);
+    if(counts[i]>0){ctx.font='300 9px DM Sans,sans-serif';ctx.fillStyle='rgba(61,53,48,0.7)';ctx.textAlign='center';ctx.fillText(counts[i],x+bW/2,PAD.top+cH-bH-3);}
+    ctx.font='300 8px DM Sans,sans-serif';ctx.fillStyle='rgba(110,95,82,0.5)';ctx.textAlign='center';
+    ctx.fillText((tide).toFixed(1),x+bW/2,H-8);
+  }
+  ctx.font='300 9px DM Sans,sans-serif';ctx.fillStyle='rgba(110,95,82,0.5)';ctx.textAlign='right';
+  for(let v=0;v<=maxCount;v+=Math.max(1,Math.floor(maxCount/4))){
+    const y=PAD.top+cH-(v/maxCount)*cH;
+    ctx.fillText(v,PAD.left-4,y+3);
+    ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+cW,y);ctx.strokeStyle='rgba(160,148,132,0.12)';ctx.lineWidth=1;ctx.stroke();
+  }
+  ctx.font='300 9px DM Sans,sans-serif';ctx.fillStyle='rgba(110,95,82,0.4)';ctx.textAlign='center';
+  ctx.fillText('Tide height at catch (m)',W/2,PAD.top-6);
 }
 
 // ── RENDER ─────────────────────────────────────────────────────────────────────
@@ -1213,6 +1476,8 @@ function renderApp({tideData,solunar,weather,marine}) {
   const bestDay=findBestDay(days7,allSolunar,tideData.dailyConditions||[]);
   const bestLbl=bestDay?.dStr===today?'Today':new Date(bestDay?.dStr+'T12:00:00+09:30').toLocaleDateString('en-AU',{timeZone:TZ,weekday:'long'});
   const bestStars=bestDay?.sol?.rating?Math.round(parseFloat(bestDay.sol.rating)/20):(bestDay?.cond?.solunarRating||0);
+
+  const bestSession=findBestSession(allExtremes,allSolunar,days7);
 
   const tips=buildTips(todayCond,solToday,isRising,nextHigh,nextLow,weather,allExtremes,waterTemp);
   const goScore=computeGoScore(isRising,nextHigh,nextLow,solRating,spring,weather,waterTemp,allExtremes);
@@ -1376,6 +1641,23 @@ function renderApp({tideData,solunar,weather,marine}) {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- BEST UPCOMING SESSION -->
+    <div class="section fade-up">
+      <div class="section-label">Best upcoming session</div>
+      <div class="card">
+        ${bestSession ? `
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+            <div style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:300;color:var(--terracotta);min-width:60px;text-align:center">${bestSession.score}<span style="font-size:16px;color:var(--stone-dark)">/10</span></div>
+            <div style="flex:1">
+              <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:400;color:var(--ink);margin-bottom:2px">${bestSession.dStr===today?'Today':new Date(bestSession.dStr+'T12:00:00+09:30').toLocaleDateString('en-AU',{timeZone:TZ,weekday:'long',day:'numeric',month:'long'})} — ${bestSession.win.label}</div>
+              <div style="font-size:12px;color:var(--stone-dark)">${fmtTime(new Date(bestSession.win.startMs))} – ${fmtTime(new Date(bestSession.win.endMs))} · ${bestSession.solR}-star solunar</div>
+              <div style="margin-top:6px">${starsHTML(bestSession.solR,false)}</div>
+            </div>
+          </div>
+        ` : '<div style="font-size:13px;color:var(--stone-dark)">No upcoming sessions found in the next 7 days.</div>'}
       </div>
     </div>
 
@@ -1566,6 +1848,18 @@ function renderApp({tideData,solunar,weather,marine}) {
       </div>
     </div>
 
+    <!-- LUNAR CHART -->
+    <div class="section fade-up">
+      <div class="section-label">Lunar cycle — next 28 days</div>
+      <div class="card" style="padding:16px">
+        <canvas id="lunarChart" style="display:block;width:100%;height:90px;border-radius:6px"></canvas>
+        <div style="display:flex;gap:14px;margin-top:10px;font-size:10px;color:var(--stone-dark);flex-wrap:wrap">
+          <span>🌑 New moon</span><span>🌕 Full moon</span>
+          <span style="color:var(--terracotta)">● Today</span>
+        </div>
+      </div>
+    </div>
+
     <div class="footer">Tides: TideCheck · Solunar: solunar.org · Weather: Open-Meteo · Marine: Open-Meteo Marine<br>Auto-refreshes every 30 min. Predictions are estimates.</div>
   </div>
 
@@ -1615,7 +1909,19 @@ function renderApp({tideData,solunar,weather,marine}) {
         <div class="stat-cell"><div class="stat-label">Wind</div>${windHTML}</div>
         <div class="stat-cell"><div class="stat-label">Water temperature</div>${tempHTML}</div>
         <div class="stat-cell"><div class="stat-label">Swell / Chop</div>${waveHTML}</div>
+        <div class="stat-cell">
+          <div class="stat-label">Air temperature</div>
+          <div class="stat-value" style="font-size:24px">${weather?.temp!=null?weather.temp+'°C':'—'}</div>
+          <div class="stat-sub">${weather?.humidity!=null?weather.humidity+'% humidity':''}</div>
+        </div>
         <div class="stat-cell"><div class="stat-label">UV Index</div>${uvHTML}</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Temperature · pressure · humidity — 7 days</div>
+      <div class="card" style="padding:20px 20px 16px">
+        <canvas id="weatherChart" style="display:block;width:100%;height:220px;border-radius:6px"></canvas>
       </div>
     </div>
 
@@ -1686,6 +1992,13 @@ function renderApp({tideData,solunar,weather,marine}) {
 
   <!-- LOG TAB -->
   <div id="tab-log" class="tab-pane">
+    <div class="section">
+      <div class="section-label">Catches by tide height</div>
+      <div class="card" style="padding:16px">
+        <canvas id="catchAnalysisChart" style="display:block;width:100%;height:160px;border-radius:6px"></canvas>
+      </div>
+    </div>
+
     <div class="section">
       <div class="section-label">My fishing log</div>
       <div class="card">
@@ -1785,9 +2098,17 @@ function renderApp({tideData,solunar,weather,marine}) {
   // Open today day card
   requestAnimationFrame(()=>drawDayCard(today));
 
+  // Draw weather chart
+  requestAnimationFrame(()=>{
+    const wc=document.getElementById('weatherChart');
+    if(wc&&weather?.hourlyTime?.length) drawWeatherChart(wc,weather.hourlyTime,weather.hourlyPressure,weather.hourlyTemp,weather.hourlyHumidity);
+    const lc=document.getElementById('lunarChart'); if(lc) drawLunarChart(lc);
+    const c=document.getElementById('catchAnalysisChart'); if(c) drawCatchAnalysisChart(c);
+  });
+
   window._nextHigh=nextHigh; window._nextLow=nextLow; window._allExtremes=allExtremes;
   window._chartStart=chartStart; window._chartEnd=chartEnd; window._days7=days7;
-  window._tideData=tideData;
+  window._tideData=tideData; window._weatherData=weather;
 
   // Restore active tab
   showTab(activeTab);
@@ -2499,6 +2820,12 @@ function tick(){
   const cdH=document.getElementById('cd-high'),cdL=document.getElementById('cd-low');
   if(cdH&&window._nextHigh)cdH.textContent=fmtCountdown(new Date(window._nextHigh.time).getTime()-nowMs);
   if(cdL&&window._nextLow)cdL.textContent=fmtCountdown(new Date(window._nextLow.time).getTime()-nowMs);
+  const gh=getGoldenHourCountdown();
+  const ghEl=document.getElementById('goldenHour');
+  if(ghEl&&gh) {
+    ghEl.textContent=`${gh.label} in ${gh.text}`;
+    ghEl.style.color=gh.urgent?'var(--terracotta)':'var(--stone-dark)';
+  } else if(ghEl) ghEl.textContent='';
 }
 tick(); setInterval(tick,1000);
 
@@ -2529,6 +2856,7 @@ loadAll().then(d=>{
   document.getElementById('content').innerHTML=`<div class="loading-screen"><div class="error-card"><strong>Could not load tide data</strong><br><br>${err.message}<br><br>Check your connection then reload.</div></div>`;
   console.error(err);
 });
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
 </script>
 <div id="seasonTooltip" class="season-tooltip">
   <div class="season-tooltip-name"></div>
