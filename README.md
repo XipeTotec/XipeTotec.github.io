@@ -1199,6 +1199,8 @@ function showTab(tab) {
     requestAnimationFrame(()=>{
       const wc=document.getElementById('weatherChart');
       if(wc&&window._weatherData?.hourlyTime?.length) drawWeatherChart(wc,window._weatherData.hourlyTime,window._weatherData.hourlyPressure,window._weatherData.hourlyTemp,window._weatherData.hourlyHumidity);
+      const tc=document.getElementById('tideOverviewChartW');
+      if(tc&&window._allExtremes?.length) drawTideOverviewChart(tc,window._allExtremes,window._chartStart,window._sunriseMsList);
     });
   }
   if(tab==='log'){
@@ -2026,6 +2028,41 @@ function renderApp({tideData,solunar,weather,marine}) {
           <div class="stat-sub">${weather?.humidity!=null?weather.humidity+'% humidity':''}</div>
         </div>
         <div class="stat-cell"><div class="stat-label">UV Index</div>${uvHTML}</div>
+        <div class="stat-cell">
+          <div class="stat-label">Tide now</div>
+          <div><span class="hero-height" style="font-size:clamp(28px,6vw,38px)">${currentH.toFixed(2)}</span><span class="hero-unit" style="font-size:16px">m</span></div>
+          <div class="stat-sub">${isRising?'↑ Rising':'↓ Falling'}</div>
+          <div class="tide-progress-wrap" style="margin-top:6px">
+            <div class="tide-progress-labels"><span>${prev?.type==='high'?'High':'Low'}</span><span>${nextEx?.type==='high'?'High':'Low'}</span></div>
+            <div class="tide-progress-track"><div class="tide-progress-fill ${isRising?'rising':'falling'}" style="width:${progressPct}%"></div></div>
+          </div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Next high</div>
+          <div class="stat-value">${nextHigh?fmtTime(new Date(nextHigh.time)):'—'}</div>
+          <div class="stat-sub">${nextHigh?nextHigh.height.toFixed(2)+' m':''}</div>
+          <div class="countdown">${nextHigh?fmtCountdown(new Date(nextHigh.time).getTime()-nowMs):''}</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Next low</div>
+          <div class="stat-value">${nextLow?fmtTime(new Date(nextLow.time)):'—'}</div>
+          <div class="stat-sub">${nextLow?nextLow.height.toFixed(2)+' m':''}</div>
+          <div class="countdown">${nextLow?fmtCountdown(new Date(nextLow.time).getTime()-nowMs):''}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">7-day tides</div>
+      <div class="card" style="padding:20px 20px 16px">
+        <canvas id="tideOverviewChartW" style="display:block;width:100%;height:180px;border-radius:6px"></canvas>
+        <div class="chart-legend-note">
+          <div class="legend-item"><span class="legend-swatch" style="background:rgba(130,185,145,0.55)"></span>Run-in</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:rgba(130,165,200,0.55)"></span>Run-out</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:rgba(196,135,106,0.45)"></span>Jetty barra</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:rgba(200,170,130,0.55)"></span>Low slack</div>
+          <div class="legend-item"><span style="color:var(--terracotta)">●</span>&nbsp;Now</div>
+        </div>
       </div>
     </div>
 
@@ -2216,6 +2253,8 @@ function renderApp({tideData,solunar,weather,marine}) {
   requestAnimationFrame(()=>{
     const oc=document.getElementById('tideOverviewChart');
     if(oc) drawTideOverviewChart(oc,allExtremes,chartStart,sunriseMsList);
+    const ocw=document.getElementById('tideOverviewChartW');
+    if(ocw) drawTideOverviewChart(ocw,allExtremes,chartStart,sunriseMsList);
     const wc=document.getElementById('weatherChart');
     if(wc&&weather?.hourlyTime?.length) drawWeatherChart(wc,weather.hourlyTime,weather.hourlyPressure,weather.hourlyTemp,weather.hourlyHumidity);
     const lc=document.getElementById('lunarChart'); if(lc) drawLunarChart(lc);
