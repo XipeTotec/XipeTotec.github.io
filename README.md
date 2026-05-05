@@ -2053,6 +2053,13 @@ function renderApp({tideData,solunar,weather,marine}) {
     </div>
 
     <div class="section">
+      <div class="section-label">Temperature · pressure · humidity — 7 days</div>
+      <div class="card" style="padding:20px 20px 16px">
+        <canvas id="weatherChart" style="display:block;width:100%;height:220px;border-radius:6px"></canvas>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-label">7-day tides</div>
       <div class="card" style="padding:20px 20px 16px">
         <canvas id="tideOverviewChartW" style="display:block;width:100%;height:180px;border-radius:6px"></canvas>
@@ -2063,13 +2070,6 @@ function renderApp({tideData,solunar,weather,marine}) {
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(200,170,130,0.55)"></span>Low slack</div>
           <div class="legend-item"><span style="color:var(--terracotta)">●</span>&nbsp;Now</div>
         </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-label">Temperature · pressure · humidity — 7 days</div>
-      <div class="card" style="padding:20px 20px 16px">
-        <canvas id="weatherChart" style="display:block;width:100%;height:220px;border-radius:6px"></canvas>
       </div>
     </div>
 
