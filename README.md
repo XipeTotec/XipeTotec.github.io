@@ -1450,6 +1450,102 @@ function drawCatchAnalysisChart(canvas) {
   ctx.fillText('Tide height at catch (m)',W/2,PAD.top-6);
 }
 
+function drawTideOverviewChart(canvas, extremes, startMs, sunriseMsList) {
+  const dpr=window.devicePixelRatio||1;
+  const Wcss=canvas.clientWidth||canvas.offsetWidth||600;
+  const Hcss=180;
+  canvas.width=Math.round(Wcss*dpr); canvas.height=Math.round(Hcss*dpr);
+  const ctx=canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const W=Wcss,H=Hcss,DAYS=7;
+  const PAD={top:20,right:16,bottom:36,left:48};
+  const cW=W-PAD.left-PAD.right, cH=H-PAD.top-PAD.bottom;
+  const endMs=startMs+DAYS*86400000, span=endMs-startMs;
+  const N=DAYS*48, pts=[];
+  for(let i=0;i<=N;i++){const ms=startMs+(i/N)*span;pts.push({ms,h:interpolateTide(extremes,ms)});}
+  const hs=pts.map(p=>p.h);
+  const rawMin=Math.min(...hs),rawMax=Math.max(...hs);
+  const pad_h=(rawMax-rawMin)*0.08;
+  const minH=rawMin-pad_h,maxH=rawMax+pad_h,range=(maxH-minH)||1;
+  const xOf=ms=>PAD.left+((ms-startMs)/span)*cW;
+  const yOf=h=>PAD.top+(1-(h-minH)/range)*cH;
+
+  ctx.fillStyle='#faf7f2';
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(0,0,W,H,8);else ctx.rect(0,0,W,H);ctx.fill();
+
+  // Dawn/dusk shading
+  if(sunriseMsList){
+    for(const {srMs,ssMs} of sunriseMsList){
+      const pdS=Math.max(srMs-30*60000,startMs),pdE=Math.min(srMs+90*60000,endMs);
+      if(pdE>pdS){const gd=ctx.createLinearGradient(xOf(pdS),0,xOf(pdE),0);gd.addColorStop(0,'rgba(210,180,130,0)');gd.addColorStop(0.4,'rgba(210,180,130,0.08)');gd.addColorStop(1,'rgba(210,180,130,0)');ctx.fillStyle=gd;ctx.fillRect(xOf(pdS),PAD.top,xOf(pdE)-xOf(pdS),cH);}
+      const dkS=Math.max(ssMs-60*60000,startMs),dkE=Math.min(ssMs+30*60000,endMs);
+      if(dkE>dkS){const gd=ctx.createLinearGradient(xOf(dkS),0,xOf(dkE),0);gd.addColorStop(0,'rgba(210,150,100,0)');gd.addColorStop(0.5,'rgba(210,150,100,0.08)');gd.addColorStop(1,'rgba(210,150,100,0)');ctx.fillStyle=gd;ctx.fillRect(xOf(dkS),PAD.top,xOf(dkE)-xOf(dkS),cH);}
+    }
+  }
+
+  // Fishing window bar
+  const wins=computeFishingWindows(extremes,startMs,endMs);
+  const barY=PAD.top+cH+5,barThick=5;
+  const barCols={'run-in':'rgba(130,185,145,0.9)','run-out':'rgba(130,165,200,0.9)','high-jetty':'rgba(196,135,106,0.85)','low-slack':'rgba(200,170,130,0.85)'};
+  ctx.lineCap='round';
+  for(const win of wins){
+    const wx1=Math.max(xOf(win.startMs),PAD.left),wx2=Math.min(xOf(win.endMs),PAD.left+cW);
+    if(wx2-wx1<barThick)continue;
+    ctx.beginPath();ctx.moveTo(wx1+barThick/2,barY);ctx.lineTo(wx2-barThick/2,barY);
+    ctx.strokeStyle=barCols[win.type]||barCols['low-slack'];ctx.lineWidth=barThick;ctx.stroke();
+  }
+  ctx.lineCap='butt';
+
+  // H grid
+  const hStep=rawMax-rawMin>6?2:1;
+  ctx.font='300 10px DM Sans,sans-serif';ctx.textAlign='right';
+  for(let hv=Math.ceil(rawMin);hv<=Math.floor(rawMax)+0.5;hv+=hStep){
+    const y=yOf(hv);if(y<PAD.top-2||y>PAD.top+cH+2)continue;
+    ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+cW,y);ctx.strokeStyle='rgba(160,148,132,0.15)';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='rgba(110,95,82,0.5)';ctx.fillText(hv+'m',PAD.left-8,y+3.5);
+  }
+
+  // Day columns + labels
+  ctx.textAlign='center';ctx.font='300 10px DM Sans,sans-serif';ctx.fillStyle='rgba(110,95,82,0.5)';
+  for(let d=0;d<DAYS;d++){
+    const ms=startMs+d*86400000,x=xOf(ms);
+    if(d>0){ctx.beginPath();ctx.moveTo(x,PAD.top);ctx.lineTo(x,PAD.top+cH);ctx.strokeStyle='rgba(160,148,132,0.2)';ctx.lineWidth=1;ctx.stroke();}
+    const lbl=d===0?'Today':new Date(ms).toLocaleDateString('en-AU',{timeZone:TZ,weekday:'short'});
+    ctx.fillText(lbl,x+cW/(DAYS*2),H-10);
+  }
+
+  // Fill
+  const grad=ctx.createLinearGradient(0,PAD.top,0,PAD.top+cH);
+  grad.addColorStop(0,'rgba(184,201,176,0.42)');grad.addColorStop(0.55,'rgba(184,205,217,0.28)');grad.addColorStop(1,'rgba(213,230,240,0.06)');
+  ctx.beginPath();ctx.moveTo(xOf(pts[0].ms),yOf(pts[0].h));
+  for(let i=1;i<pts.length;i++)ctx.lineTo(xOf(pts[i].ms),yOf(pts[i].h));
+  ctx.lineTo(xOf(pts[pts.length-1].ms),PAD.top+cH);ctx.lineTo(xOf(pts[0].ms),PAD.top+cH);
+  ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+
+  // Line
+  ctx.beginPath();ctx.moveTo(xOf(pts[0].ms),yOf(pts[0].h));
+  for(let i=1;i<pts.length;i++)ctx.lineTo(xOf(pts[i].ms),yOf(pts[i].h));
+  ctx.strokeStyle='rgba(122,162,132,0.75)';ctx.lineWidth=1.8;ctx.lineJoin='round';ctx.stroke();
+
+  // Extremes dots
+  for(const ex of extremes.filter(e=>{const ms=new Date(e.time).getTime();return ms>=startMs&&ms<=endMs;})){
+    const ms=new Date(ex.time).getTime(),x=xOf(ms),y=yOf(ex.height),hi=ex.type==='high';
+    ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);
+    ctx.fillStyle=hi?'rgba(120,160,130,0.9)':'rgba(130,162,185,0.9)';ctx.fill();
+    ctx.strokeStyle=hi?'#78a082':'#82a2b9';ctx.lineWidth=1.5;ctx.stroke();
+  }
+
+  // Now line
+  const nowMs=Date.now();
+  if(nowMs>=startMs&&nowMs<=endMs){
+    const nx=xOf(nowMs);
+    ctx.save();ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,PAD.top+cH);
+    ctx.strokeStyle='rgba(196,135,106,0.5)';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.setLineDash([]);ctx.restore();
+  }
+}
+
 // ── RENDER ─────────────────────────────────────────────────────────────────────
 function renderApp({tideData,solunar,weather,marine}) {
   allExtremes=tideData.extremes||[];
@@ -1490,7 +1586,7 @@ function renderApp({tideData,solunar,weather,marine}) {
   const sunriseMsList=[];
   if(weather?.daily){
     const {sunrise,sunset}=weather.daily;
-    for(let i=0;i<Math.min(2,(sunrise||[]).length);i++){
+    for(let i=0;i<Math.min(7,(sunrise||[]).length);i++){
       const srMs=sunrise[i]?new Date(sunrise[i]).getTime():null;
       const ssMs=sunset[i]?new Date(sunset[i]).getTime():null;
       if(srMs&&ssMs)sunriseMsList.push({srMs,ssMs});
@@ -1811,6 +1907,21 @@ function renderApp({tideData,solunar,weather,marine}) {
       </div>
     </div>
 
+    <!-- 7-DAY TIDE OVERVIEW CHART -->
+    <div class="section fade-up">
+      <div class="section-label">7-day tide overview</div>
+      <div class="card" style="padding:20px 20px 16px">
+        <canvas id="tideOverviewChart" style="display:block;width:100%;height:180px;border-radius:6px"></canvas>
+        <div class="chart-legend-note">
+          <div class="legend-item"><span class="legend-swatch" style="background:rgba(130,185,145,0.55)"></span>Run-in</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:rgba(130,165,200,0.55)"></span>Run-out</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:rgba(196,135,106,0.45)"></span>Jetty barra</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:rgba(200,170,130,0.55)"></span>Low slack</div>
+          <div class="legend-item"><span style="color:var(--terracotta)">●</span>&nbsp;Now</div>
+        </div>
+      </div>
+    </div>
+
     <!-- 7-DAY -->
     <div class="section fade-up">
       <div class="section-label">7-day forecast · open multiple days to compare</div>
@@ -2101,8 +2212,10 @@ function renderApp({tideData,solunar,weather,marine}) {
   // Open today day card
   requestAnimationFrame(()=>drawDayCard(today));
 
-  // Draw weather chart
+  // Draw tide overview + weather chart + lunar + catch analysis
   requestAnimationFrame(()=>{
+    const oc=document.getElementById('tideOverviewChart');
+    if(oc) drawTideOverviewChart(oc,allExtremes,chartStart,sunriseMsList);
     const wc=document.getElementById('weatherChart');
     if(wc&&weather?.hourlyTime?.length) drawWeatherChart(wc,weather.hourlyTime,weather.hourlyPressure,weather.hourlyTemp,weather.hourlyHumidity);
     const lc=document.getElementById('lunarChart'); if(lc) drawLunarChart(lc);
