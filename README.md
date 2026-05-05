@@ -1608,9 +1608,9 @@ function renderApp({tideData,solunar,weather,marine}) {
 
   // BOM tabs
   const BOM_CHARTS=[
-    {id:'synoptic',label:'Synoptic',url:'http://www.bom.gov.au/australia/charts/synoptic_col.shtml',img:'http://www.bom.gov.au/australia/charts/current/IDY00003.gif'},
-    {id:'radar',label:'Radar',url:'http://www.bom.gov.au/products/IDR663.loop.shtml',img:'http://www.bom.gov.au/radar/IDR663.gif'},
-    {id:'sea',label:'Sea Temp',url:'http://www.bom.gov.au/oceanography/forecasts/index.shtml',img:'http://www.bom.gov.au/oceanography/forecasts/images/sst_anom_top_4panel.gif'},
+    {id:'synoptic',label:'Synoptic',url:'https://www.bom.gov.au/australia/charts/synoptic_col.shtml',img:'https://www.bom.gov.au/australia/charts/current/IDY00003.gif'},
+    {id:'radar',label:'Darwin Radar',url:'https://www.bom.gov.au/products/IDR633.loop.shtml',iframe:'https://www.bom.gov.au/products/IDR633.loop.shtml'},
+    {id:'sea',label:'Sea Temp',url:'https://www.bom.gov.au/oceanography/forecasts/index.shtml',img:'https://www.bom.gov.au/oceanography/forecasts/images/sst_anom_top_4panel.gif'},
   ];
 
   document.getElementById('content').innerHTML = `
@@ -1937,12 +1937,15 @@ function renderApp({tideData,solunar,weather,marine}) {
       </div>
       ${BOM_CHARTS.map((c,i)=>`
         <div id="bom-${c.id}" style="display:${i===0?'block':'none'}">
-          <div class="bom-wrap">
-            <img src="${c.img}" alt="${c.label} chart" onerror="this.parentElement.innerHTML='<div style=\\'padding:20px;text-align:center;font-size:12px;color:var(--stone-dark)\\'>Chart cannot be loaded directly. Open BOM link below.</div>'" loading="lazy">
+          <div class="bom-wrap" ${c.iframe?'style="height:460px;background:#1a1a2e"':''}>
+            ${c.iframe
+              ? `<iframe src="${c.iframe}" style="width:100%;height:100%;border:none;display:block" title="${c.label}" loading="lazy"></iframe>`
+              : `<img src="${c.img}" alt="${c.label} chart" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div style=\\'padding:24px;text-align:center\\'>Could not load image — <a href=\\'${c.url}\\' target=\\'_blank\\' style=\\'color:var(--terracotta)\\'>open on BOM ↗</a></div>')" loading="lazy">`
+            }
           </div>
           <div class="bom-links">
             <a class="bom-link" href="${c.url}" target="_blank" rel="noopener">Open on BOM ↗</a>
-            <a class="bom-link" href="http://www.bom.gov.au/nt/forecasts/darwin.shtml" target="_blank" rel="noopener">Darwin Forecast ↗</a>
+            <a class="bom-link" href="https://www.bom.gov.au/nt/forecasts/darwin.shtml" target="_blank" rel="noopener">Darwin Forecast ↗</a>
           </div>
         </div>`).join('')}
     </div>
