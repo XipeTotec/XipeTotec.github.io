@@ -1201,6 +1201,7 @@ function showTab(tab) {
       if(wc&&window._weatherData?.hourlyTime?.length) drawWeatherChart(wc,window._weatherData.hourlyTime,window._weatherData.hourlyPressure,window._weatherData.hourlyTemp,window._weatherData.hourlyHumidity);
       const tc=document.getElementById('tideOverviewChartW');
       if(tc&&window._allExtremes?.length) drawTideOverviewChart(tc,window._allExtremes,window._chartStart,window._sunriseMsList);
+      if(wc) attachWeatherHover(wc,tc);
     });
   }
   if(tab==='log'){
@@ -1232,7 +1233,7 @@ function calcMoonAge(date) {
 }
 
 // ── WEATHER CHART ─────────────────────────────────────────────────────────────
-function drawWeatherChart(canvas, hourlyTime, hourlyPressure, hourlyTemp, hourlyHumidity) {
+function drawWeatherChart(canvas, hourlyTime, hourlyPressure, hourlyTemp, hourlyHumidity, hoverMs=null) {
   const dpr = window.devicePixelRatio || 1;
   const Wcss = canvas.clientWidth || canvas.offsetWidth || 600;
   const Hcss = 220;
@@ -1313,6 +1314,32 @@ function drawWeatherChart(canvas, hourlyTime, hourlyPressure, hourlyTemp, hourly
     ctx.beginPath();ctx.moveTo(lx,PAD.top-10);ctx.lineTo(lx+16,PAD.top-10);ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();
     ctx.fillStyle='rgba(100,88,76,0.65)';ctx.fillText(lbl,lx+20,PAD.top-7);
     lx+=ctx.measureText(lbl).width+40;
+  }
+
+  // Hover crosshair
+  if(hoverMs!=null){
+    const wStartMs=new Date(hourlyTime[0]).getTime(), wEndMs=new Date(hourlyTime[n-1]).getTime();
+    const hFrac=(hoverMs-wStartMs)/(wEndMs-wStartMs);
+    if(hFrac>=0&&hFrac<=1){
+      const nx=PAD.left+hFrac*cW;
+      ctx.save();
+      ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,PAD.top+cH);
+      ctx.strokeStyle='rgba(61,53,48,0.5)';ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.stroke();
+      // Value dots
+      const hi=Math.round(hFrac*(n-1));
+      const tVal=tArr[hi], pVal=pArr[hi], hVal=hourlyHumidity[hi];
+      const dotData=[[yOfT(tVal),'rgba(196,135,106,0.9)'],[yOfP(pVal),'rgba(130,165,200,0.9)'],[yOfH(hVal),'rgba(130,185,145,0.9)']];
+      for(const [dy,col] of dotData){ctx.beginPath();ctx.arc(nx,dy,3.5,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();}
+      // Label
+      const d=new Date(hoverMs);
+      const lbl2=d.toLocaleDateString('en-AU',{timeZone:TZ,weekday:'short',day:'numeric',month:'short'})+' '+fmtTime(d);
+      ctx.font='400 10px DM Sans,sans-serif';ctx.fillStyle='rgba(61,53,48,0.8)';
+      ctx.textAlign=nx>W*0.6?'right':'left';
+      ctx.fillText(lbl2,nx+(nx>W*0.6?-8:8),PAD.top+14);
+      ctx.fillStyle='rgba(61,53,48,0.6)';ctx.font='300 9px DM Sans,sans-serif';
+      ctx.fillText(`${tVal!=null?Math.round(tVal)+'°C ':''} ${pVal!=null?Math.round(pVal)+'hPa ':''} ${hVal!=null?Math.round(hVal)+'%':''}`,nx+(nx>W*0.6?-8:8),PAD.top+26);
+      ctx.restore();
+    }
   }
 }
 
@@ -1452,7 +1479,7 @@ function drawCatchAnalysisChart(canvas) {
   ctx.fillText('Tide height at catch (m)',W/2,PAD.top-6);
 }
 
-function drawTideOverviewChart(canvas, extremes, startMs, sunriseMsList) {
+function drawTideOverviewChart(canvas, extremes, startMs, sunriseMsList, hoverMs=null) {
   const dpr=window.devicePixelRatio||1;
   const Wcss=canvas.clientWidth||canvas.offsetWidth||600;
   const Hcss=180;
@@ -1545,6 +1572,55 @@ function drawTideOverviewChart(canvas, extremes, startMs, sunriseMsList) {
     ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,PAD.top+cH);
     ctx.strokeStyle='rgba(196,135,106,0.5)';ctx.lineWidth=1.5;ctx.stroke();
     ctx.setLineDash([]);ctx.restore();
+  }
+
+  // Hover crosshair
+  if(hoverMs!=null&&hoverMs>=startMs&&hoverMs<=endMs){
+    const nx=xOf(hoverMs);
+    ctx.save();
+    ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,PAD.top+cH);
+    ctx.strokeStyle='rgba(61,53,48,0.5)';ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.stroke();
+    const h=interpolateTide(extremes,hoverMs),hy=yOf(h);
+    ctx.beginPath();ctx.arc(nx,hy,4,0,Math.PI*2);
+    ctx.fillStyle='rgba(122,162,132,0.9)';ctx.fill();
+    ctx.strokeStyle='#78a082';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.font='400 10px DM Sans,sans-serif';ctx.fillStyle='rgba(61,53,48,0.8)';
+    ctx.textAlign=nx>W*0.6?'right':'left';
+    ctx.fillText(h.toFixed(2)+'m',nx+(nx>W*0.6?-8:8),hy-8);
+    ctx.restore();
+  }
+}
+
+// ── WEATHER+TIDE HOVER ────────────────────────────────────────────────────────
+function attachWeatherHover(wc, tc) {
+  if(!wc||wc._hoverAttached) return;
+  wc._hoverAttached=true;
+  const wd=window._weatherData;
+  if(!wd?.hourlyTime?.length) return;
+  const wStartMs=new Date(wd.hourlyTime[0]).getTime();
+  const wEndMs=new Date(wd.hourlyTime[wd.hourlyTime.length-1]).getTime();
+  const tStartMs=window._chartStart, tEndMs=tStartMs+7*86400000;
+
+  function hmsFromX(canvas,xPx,s,e,padL,padR){
+    const W=canvas.clientWidth||canvas.offsetWidth;
+    return s+(xPx-padL)/(W-padL-padR)*(e-s);
+  }
+  function redraw(hoverMs){
+    if(wc&&wd?.hourlyTime?.length) drawWeatherChart(wc,wd.hourlyTime,wd.hourlyPressure,wd.hourlyTemp,wd.hourlyHumidity,hoverMs);
+    if(tc&&window._allExtremes?.length) drawTideOverviewChart(tc,window._allExtremes,window._chartStart,window._sunriseMsList,hoverMs);
+  }
+  function handleMove(canvas,s,e,padL,padR){
+    return ev=>{
+      const rect=canvas.getBoundingClientRect();
+      const hMs=hmsFromX(canvas,ev.clientX-rect.left,s,e,padL,padR);
+      if(hMs>=s&&hMs<=e) redraw(hMs);
+    };
+  }
+  wc.addEventListener('mousemove',handleMove(wc,wStartMs,wEndMs,52,52));
+  wc.addEventListener('mouseleave',()=>redraw(null));
+  if(tc){
+    tc.addEventListener('mousemove',handleMove(tc,tStartMs,tEndMs,48,16));
+    tc.addEventListener('mouseleave',()=>redraw(null));
   }
 }
 
@@ -2257,6 +2333,7 @@ function renderApp({tideData,solunar,weather,marine}) {
     if(ocw) drawTideOverviewChart(ocw,allExtremes,chartStart,sunriseMsList);
     const wc=document.getElementById('weatherChart');
     if(wc&&weather?.hourlyTime?.length) drawWeatherChart(wc,weather.hourlyTime,weather.hourlyPressure,weather.hourlyTemp,weather.hourlyHumidity);
+    if(wc&&ocw) attachWeatherHover(wc,ocw);
     const lc=document.getElementById('lunarChart'); if(lc) drawLunarChart(lc);
     const c=document.getElementById('catchAnalysisChart'); if(c) drawCatchAnalysisChart(c);
   });
