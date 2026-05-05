@@ -123,6 +123,10 @@ body { background: var(--sand); color: var(--ink); font-family: 'DM Sans', syste
 .chart-legend-note { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-soft); font-size: 10px; color: var(--stone-dark); }
 .legend-item { display: flex; align-items: center; gap: 4px; }
 .legend-swatch { width: 18px; height: 6px; border-radius: 3px; flex-shrink: 0; }
+.chart-filters { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.chart-filter-btn { display:flex; align-items:center; gap:5px; background:rgba(255,255,255,0.5); border:1.5px solid rgba(160,148,132,0.25); border-radius:20px; padding:4px 11px; font-size:11px; cursor:pointer; color:rgba(110,95,82,0.45); transition:all 0.15s; font-family:inherit; }
+.chart-filter-btn.active { background:rgba(255,255,255,0.92); border-color:rgba(130,148,165,0.5); color:rgba(61,53,48,0.85); }
+.cfswatch { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
 
 /* CATCH OVERLAY */
 .catch-filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border-soft); }
@@ -1197,11 +1201,13 @@ function showTab(tab) {
   }
   if(tab==='weather'){
     requestAnimationFrame(()=>{
-      const wc=document.getElementById('weatherChart');
-      if(wc&&window._weatherData?.hourlyTime?.length) drawWeatherChart(wc,window._weatherData.hourlyTime,window._weatherData.hourlyPressure,window._weatherData.hourlyTemp,window._weatherData.hourlyHumidity);
-      const tc=document.getElementById('tideOverviewChartW');
-      if(tc&&window._allExtremes?.length) drawTideOverviewChart(tc,window._allExtremes,window._chartStart,window._sunriseMsList);
-      if(wc) attachWeatherHover(wc,tc);
+      const cc=document.getElementById('combinedChart');
+      const wd=window._weatherData;
+      if(cc&&wd?.hourlyTime?.length){
+        const f=window._chartFilters||{temp:true,pressure:true,humidity:true,tides:true};
+        drawCombinedChart(cc,wd.hourlyTime,wd.hourlyPressure,wd.hourlyTemp,wd.hourlyHumidity,window._allExtremes||[],window._sunriseMsList,f);
+        attachCombinedHover(cc);
+      }
     });
   }
   if(tab==='log'){
@@ -1232,64 +1238,115 @@ function calcMoonAge(date) {
   return { ageDays: age / 86400000, pct, illumination, phase };
 }
 
-// ── WEATHER CHART ─────────────────────────────────────────────────────────────
-function drawWeatherChart(canvas, hourlyTime, hourlyPressure, hourlyTemp, hourlyHumidity, hoverMs=null) {
-  const dpr = window.devicePixelRatio || 1;
-  const Wcss = canvas.clientWidth || canvas.offsetWidth || 600;
-  const Hcss = 220;
-  canvas.width = Math.round(Wcss * dpr); canvas.height = Math.round(Hcss * dpr);
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const W = Wcss, H = Hcss;
-  const PAD = {top:28, right:52, bottom:32, left:52};
-  const cW = W - PAD.left - PAD.right, cH = H - PAD.top - PAD.bottom;
-  const n = Math.min(hourlyTime.length, 168);
-  if(n < 2) return;
-  ctx.fillStyle = '#faf7f2';
-  ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(0,0,W,H,8); else ctx.rect(0,0,W,H); ctx.fill();
-  const xOf = i => PAD.left + (i/(n-1)) * cW;
+// ── COMBINED WEATHER+TIDE CHART ───────────────────────────────────────────────
+function drawCombinedChart(canvas, hourlyTime, hourlyPressure, hourlyTemp, hourlyHumidity, extremes, sunriseMsList, filters, hoverMs=null) {
+  const f=filters||{temp:true,pressure:true,humidity:true,tides:true};
+  const dpr=window.devicePixelRatio||1;
+  const Wcss=canvas.clientWidth||canvas.offsetWidth||600;
+  const Hcss=260;
+  canvas.width=Math.round(Wcss*dpr); canvas.height=Math.round(Hcss*dpr);
+  const ctx=canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const W=Wcss,H=Hcss;
+  const PAD={top:28,right:52,bottom:36,left:52};
+  const cW=W-PAD.left-PAD.right,cH=H-PAD.top-PAD.bottom;
+  const n=Math.min(hourlyTime.length,168);
+  if(n<2)return;
+  const xOf=i=>PAD.left+(i/(n-1))*cW;
+  const wStartMs=new Date(hourlyTime[0]).getTime(),wEndMs=new Date(hourlyTime[n-1]).getTime();
+  const xOfMs=ms=>PAD.left+(ms-wStartMs)/(wEndMs-wStartMs)*cW;
 
-  // Humidity filled area (background, 0-100)
-  const yOfH = v => PAD.top + (1 - v/100) * cH;
-  ctx.beginPath();
-  for(let i=0;i<n;i++){const x=xOf(i),y=yOfH(hourlyHumidity[i]||0);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
-  ctx.lineTo(xOf(n-1),PAD.top+cH); ctx.lineTo(xOf(0),PAD.top+cH); ctx.closePath();
-  ctx.fillStyle='rgba(130,185,145,0.10)'; ctx.fill();
-  ctx.beginPath();
-  for(let i=0;i<n;i++){const x=xOf(i),y=yOfH(hourlyHumidity[i]||0);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
-  ctx.strokeStyle='rgba(130,185,145,0.6)'; ctx.lineWidth=1.5; ctx.lineJoin='round'; ctx.stroke();
+  ctx.fillStyle='#faf7f2';
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(0,0,W,H,8);else ctx.rect(0,0,W,H);ctx.fill();
 
-  // Pressure axis (left, blue)
-  const pArr = hourlyPressure.slice(0,n);
-  const pMin = Math.floor((Math.min(...pArr)-2)/5)*5, pMax = Math.ceil((Math.max(...pArr)+2)/5)*5;
-  const pRange = pMax - pMin || 1;
-  const yOfP = v => PAD.top + (1-(v-pMin)/pRange)*cH;
-  ctx.font='300 9px DM Sans,sans-serif'; ctx.textAlign='right'; ctx.fillStyle='rgba(130,165,200,0.9)';
-  for(let v=pMin;v<=pMax;v+=5){
-    const y=yOfP(v); if(y<PAD.top-4||y>PAD.top+cH+4) continue;
-    ctx.fillText(v,PAD.left-5,y+3);
-    ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+cW,y);ctx.strokeStyle='rgba(160,148,132,0.1)';ctx.lineWidth=1;ctx.stroke();
+  // Dawn/dusk shading
+  if(sunriseMsList){
+    for(const {srMs,ssMs} of sunriseMsList){
+      const pdS=Math.max(srMs-30*60000,wStartMs),pdE=Math.min(srMs+90*60000,wEndMs);
+      if(pdE>pdS){const gd=ctx.createLinearGradient(xOfMs(pdS),0,xOfMs(pdE),0);gd.addColorStop(0,'rgba(210,180,130,0)');gd.addColorStop(0.4,'rgba(210,180,130,0.08)');gd.addColorStop(1,'rgba(210,180,130,0)');ctx.fillStyle=gd;ctx.fillRect(xOfMs(pdS),PAD.top,xOfMs(pdE)-xOfMs(pdS),cH);}
+      const dkS=Math.max(ssMs-60*60000,wStartMs),dkE=Math.min(ssMs+30*60000,wEndMs);
+      if(dkE>dkS){const gd=ctx.createLinearGradient(xOfMs(dkS),0,xOfMs(dkE),0);gd.addColorStop(0,'rgba(210,150,100,0)');gd.addColorStop(0.5,'rgba(210,150,100,0.08)');gd.addColorStop(1,'rgba(210,150,100,0)');ctx.fillStyle=gd;ctx.fillRect(xOfMs(dkS),PAD.top,xOfMs(dkE)-xOfMs(dkS),cH);}
+    }
   }
-  ctx.beginPath();
-  for(let i=0;i<n;i++){const x=xOf(i),y=yOfP(pArr[i]);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
-  ctx.strokeStyle='rgba(130,165,200,0.9)'; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.stroke();
 
-  // Temperature axis (right, terracotta)
-  const tArr = hourlyTemp.slice(0,n);
-  const tMin = Math.floor(Math.min(...tArr)-1), tMax = Math.ceil(Math.max(...tArr)+1);
-  const tRange = tMax-tMin||1;
-  const yOfT = v => PAD.top+(1-(v-tMin)/tRange)*cH;
-  ctx.textAlign='left'; ctx.fillStyle='rgba(196,135,106,0.9)';
-  for(let v=Math.ceil(tMin/5)*5;v<=tMax;v+=5){
-    const y=yOfT(v); if(y<PAD.top-4||y>PAD.top+cH+4) continue;
-    ctx.fillText(v+'°',PAD.left+cW+5,y+3);
+  // Prepare data arrays
+  const pArr=hourlyPressure.slice(0,n),tArr=hourlyTemp.slice(0,n),hArr=hourlyHumidity.slice(0,n);
+  const tideArr=extremes?.length?hourlyTime.slice(0,n).map(t=>interpolateTide(extremes,new Date(t).getTime())):[];
+
+  // Y-scale helpers — each series independently normalised
+  const pMin=Math.floor((Math.min(...pArr)-2)/5)*5,pMax=Math.ceil((Math.max(...pArr)+2)/5)*5,pRange=pMax-pMin||1;
+  const yOfP=v=>PAD.top+(1-(v-pMin)/pRange)*cH;
+  const tMin=Math.floor(Math.min(...tArr)-1),tMax=Math.ceil(Math.max(...tArr)+1),tRange=tMax-tMin||1;
+  const yOfT=v=>PAD.top+(1-(v-tMin)/tRange)*cH;
+  const yOfH=v=>PAD.top+(1-v/100)*cH;
+  const tideRaw=tideArr.length?tideArr:[0];
+  const tdMin=Math.min(...tideRaw)-0.15,tdMax=Math.max(...tideRaw)+0.15,tdRange=tdMax-tdMin||1;
+  const yOfTide=v=>PAD.top+(1-(v-tdMin)/tdRange)*cH;
+
+  // Pressure left-axis + grid
+  ctx.font='300 9px DM Sans,sans-serif';
+  if(f.pressure){
+    ctx.textAlign='right';ctx.fillStyle='rgba(130,165,200,0.85)';
+    for(let v=pMin;v<=pMax;v+=5){const y=yOfP(v);if(y<PAD.top-4||y>PAD.top+cH+4)continue;ctx.fillText(v,PAD.left-5,y+3);ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+cW,y);ctx.strokeStyle='rgba(160,148,132,0.1)';ctx.lineWidth=1;ctx.stroke();}
+  } else {
+    ctx.strokeStyle='rgba(160,148,132,0.1)';ctx.lineWidth=1;
+    for(let i=0;i<=4;i++){const y=PAD.top+i/4*cH;ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+cW,y);ctx.stroke();}
   }
-  ctx.beginPath();
-  for(let i=0;i<n;i++){const x=xOf(i),y=yOfT(tArr[i]);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
-  ctx.strokeStyle='rgba(196,135,106,0.9)'; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.stroke();
 
-  // X labels (day names every 24h)
-  ctx.textAlign='center'; ctx.fillStyle='rgba(110,95,82,0.55)'; ctx.font='300 9px DM Sans,sans-serif';
+  // Right-axis labels — temp inner-right, tide outer-right
+  if(f.temp){
+    ctx.textAlign='left';ctx.fillStyle='rgba(196,135,106,0.85)';
+    for(let v=Math.ceil(tMin/5)*5;v<=tMax;v+=5){const y=yOfT(v);if(y<PAD.top-4||y>PAD.top+cH+4)continue;ctx.fillText(v+'°',PAD.left+cW+4,y+3);}
+  }
+  if(f.tides&&tideArr.length){
+    const tStep=tdMax-tdMin>4?2:1;
+    ctx.textAlign='right';ctx.fillStyle='rgba(122,162,132,0.8)';
+    for(let v=Math.ceil(tdMin);v<=Math.floor(tdMax)+0.1;v+=tStep){const y=yOfTide(v);if(y<PAD.top-4||y>PAD.top+cH+4)continue;ctx.fillText(v+'m',W-3,y+3);}
+  }
+
+  // ── Series: humidity fill (back)
+  if(f.humidity){
+    ctx.beginPath();for(let i=0;i<n;i++){const x=xOf(i),y=yOfH(hArr[i]||0);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.lineTo(xOf(n-1),PAD.top+cH);ctx.lineTo(xOf(0),PAD.top+cH);ctx.closePath();
+    ctx.fillStyle='rgba(130,185,145,0.10)';ctx.fill();
+    ctx.beginPath();for(let i=0;i<n;i++){const x=xOf(i),y=yOfH(hArr[i]||0);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.strokeStyle='rgba(130,185,145,0.55)';ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.stroke();
+  }
+
+  // ── Series: tide curve + fishing bar
+  if(f.tides&&tideArr.length){
+    const tideGrad=ctx.createLinearGradient(0,PAD.top,0,PAD.top+cH);
+    tideGrad.addColorStop(0,'rgba(122,162,132,0.22)');tideGrad.addColorStop(1,'rgba(122,162,132,0.04)');
+    ctx.beginPath();ctx.moveTo(xOf(0),yOfTide(tideArr[0]));
+    for(let i=1;i<n;i++)ctx.lineTo(xOf(i),yOfTide(tideArr[i]));
+    ctx.lineTo(xOf(n-1),PAD.top+cH);ctx.lineTo(xOf(0),PAD.top+cH);ctx.closePath();
+    ctx.fillStyle=tideGrad;ctx.fill();
+    ctx.beginPath();ctx.moveTo(xOf(0),yOfTide(tideArr[0]));
+    for(let i=1;i<n;i++)ctx.lineTo(xOf(i),yOfTide(tideArr[i]));
+    ctx.strokeStyle='rgba(122,162,132,0.8)';ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();
+    // Fishing window bar
+    const wins=computeFishingWindows(extremes,wStartMs,wEndMs);
+    const barY=PAD.top+cH+5,barThick=5;
+    const barCols={'run-in':'rgba(130,185,145,0.9)','run-out':'rgba(130,165,200,0.9)','high-jetty':'rgba(196,135,106,0.85)','low-slack':'rgba(200,170,130,0.85)'};
+    ctx.lineCap='round';
+    for(const win of wins){const wx1=Math.max(xOfMs(win.startMs),PAD.left),wx2=Math.min(xOfMs(win.endMs),PAD.left+cW);if(wx2-wx1<barThick)continue;ctx.beginPath();ctx.moveTo(wx1+barThick/2,barY);ctx.lineTo(wx2-barThick/2,barY);ctx.strokeStyle=barCols[win.type]||barCols['low-slack'];ctx.lineWidth=barThick;ctx.stroke();}
+    ctx.lineCap='butt';
+  }
+
+  // ── Series: pressure line
+  if(f.pressure){
+    ctx.beginPath();for(let i=0;i<n;i++){const x=xOf(i),y=yOfP(pArr[i]);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.strokeStyle='rgba(130,165,200,0.9)';ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();
+  }
+
+  // ── Series: temperature line
+  if(f.temp){
+    ctx.beginPath();for(let i=0;i<n;i++){const x=xOf(i),y=yOfT(tArr[i]);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.strokeStyle='rgba(196,135,106,0.9)';ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();
+  }
+
+  // X-axis labels + day dividers
+  ctx.textAlign='center';ctx.fillStyle='rgba(110,95,82,0.55)';ctx.font='300 9px DM Sans,sans-serif';
   for(let i=0;i<n;i+=24){
     const lbl=i===0?'Today':new Date(hourlyTime[i]).toLocaleDateString('en-AU',{timeZone:TZ,weekday:'short'});
     ctx.fillText(lbl,xOf(i),H-8);
@@ -1297,50 +1354,55 @@ function drawWeatherChart(canvas, hourlyTime, hourlyPressure, hourlyTemp, hourly
   }
 
   // Now line
-  const nowMs=Date.now(), startMs=new Date(hourlyTime[0]).getTime(), endMs=new Date(hourlyTime[n-1]).getTime();
-  const nowFrac=(nowMs-startMs)/(endMs-startMs);
+  const nowFrac=(Date.now()-wStartMs)/(wEndMs-wStartMs);
   if(nowFrac>=0&&nowFrac<=1){
     const nx=PAD.left+nowFrac*cW;
-    ctx.save();ctx.setLineDash([4,4]);
-    ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,PAD.top+cH);
+    ctx.save();ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,PAD.top+cH);
     ctx.strokeStyle='rgba(196,135,106,0.5)';ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);ctx.restore();
-  }
-
-  // Legend
-  const items=[['rgba(196,135,106,0.9)','Temperature'],['rgba(130,165,200,0.9)','Pressure'],['rgba(130,185,145,0.7)','Humidity']];
-  ctx.font='300 9px DM Sans,sans-serif'; ctx.textAlign='left';
-  let lx=PAD.left;
-  for(const [col,lbl] of items){
-    ctx.beginPath();ctx.moveTo(lx,PAD.top-10);ctx.lineTo(lx+16,PAD.top-10);ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();
-    ctx.fillStyle='rgba(100,88,76,0.65)';ctx.fillText(lbl,lx+20,PAD.top-7);
-    lx+=ctx.measureText(lbl).width+40;
   }
 
   // Hover crosshair
   if(hoverMs!=null){
-    const wStartMs=new Date(hourlyTime[0]).getTime(), wEndMs=new Date(hourlyTime[n-1]).getTime();
     const hFrac=(hoverMs-wStartMs)/(wEndMs-wStartMs);
     if(hFrac>=0&&hFrac<=1){
       const nx=PAD.left+hFrac*cW;
-      ctx.save();
-      ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,PAD.top+cH);
+      ctx.save();ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,PAD.top+cH);
       ctx.strokeStyle='rgba(61,53,48,0.5)';ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.stroke();
-      // Value dots
       const hi=Math.round(hFrac*(n-1));
-      const tVal=tArr[hi], pVal=pArr[hi], hVal=hourlyHumidity[hi];
-      const dotData=[[yOfT(tVal),'rgba(196,135,106,0.9)'],[yOfP(pVal),'rgba(130,165,200,0.9)'],[yOfH(hVal),'rgba(130,185,145,0.9)']];
-      for(const [dy,col] of dotData){ctx.beginPath();ctx.arc(nx,dy,3.5,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();}
-      // Label
+      const tVal=f.temp?tArr[hi]:null,pVal=f.pressure?pArr[hi]:null,hVal=f.humidity?hArr[hi]:null;
+      const tdVal=f.tides&&tideArr.length?tideArr[hi]:null;
+      const dots=[];
+      if(tVal!=null)dots.push([yOfT(tVal),'rgba(196,135,106,0.9)']);
+      if(pVal!=null)dots.push([yOfP(pVal),'rgba(130,165,200,0.9)']);
+      if(hVal!=null)dots.push([yOfH(hVal),'rgba(130,185,145,0.9)']);
+      if(tdVal!=null)dots.push([yOfTide(tdVal),'rgba(122,162,132,1)']);
+      for(const [dy,col] of dots){ctx.beginPath();ctx.arc(nx,dy,3.5,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();}
       const d=new Date(hoverMs);
-      const lbl2=d.toLocaleDateString('en-AU',{timeZone:TZ,weekday:'short',day:'numeric',month:'short'})+' '+fmtTime(d);
-      ctx.font='400 10px DM Sans,sans-serif';ctx.fillStyle='rgba(61,53,48,0.8)';
-      ctx.textAlign=nx>W*0.6?'right':'left';
-      ctx.fillText(lbl2,nx+(nx>W*0.6?-8:8),PAD.top+14);
+      const lbl=d.toLocaleDateString('en-AU',{timeZone:TZ,weekday:'short',day:'numeric',month:'short'})+' '+fmtTime(d);
+      const side=nx>W*0.6?'right':'left',ox=nx>W*0.6?-8:8;
+      ctx.font='400 10px DM Sans,sans-serif';ctx.fillStyle='rgba(61,53,48,0.8)';ctx.textAlign=side;
+      ctx.fillText(lbl,nx+ox,PAD.top+14);
+      const parts=[];
+      if(tVal!=null)parts.push(Math.round(tVal)+'°C');
+      if(pVal!=null)parts.push(Math.round(pVal)+'hPa');
+      if(hVal!=null)parts.push(Math.round(hVal)+'%');
+      if(tdVal!=null)parts.push(tdVal.toFixed(2)+'m');
       ctx.fillStyle='rgba(61,53,48,0.6)';ctx.font='300 9px DM Sans,sans-serif';
-      ctx.fillText(`${tVal!=null?Math.round(tVal)+'°C ':''} ${pVal!=null?Math.round(pVal)+'hPa ':''} ${hVal!=null?Math.round(hVal)+'%':''}`,nx+(nx>W*0.6?-8:8),PAD.top+26);
+      ctx.fillText(parts.join('  '),nx+ox,PAD.top+26);
       ctx.restore();
     }
   }
+}
+
+function toggleChartFilter(key){
+  if(!window._chartFilters)window._chartFilters={temp:true,pressure:true,humidity:true,tides:true};
+  window._chartFilters[key]=!window._chartFilters[key];
+  document.querySelectorAll('.chart-filter-btn').forEach(b=>{if(b.dataset.filter===key)b.classList.toggle('active',window._chartFilters[key]);});
+  const canvas=document.getElementById('combinedChart');
+  if(!canvas)return;
+  const wd=window._weatherData;
+  if(!wd?.hourlyTime?.length)return;
+  drawCombinedChart(canvas,wd.hourlyTime,wd.hourlyPressure,wd.hourlyTemp,wd.hourlyHumidity,window._allExtremes||[],window._sunriseMsList,window._chartFilters);
 }
 
 // ── LUNAR CHART ───────────────────────────────────────────────────────────────
@@ -1591,37 +1653,24 @@ function drawTideOverviewChart(canvas, extremes, startMs, sunriseMsList, hoverMs
   }
 }
 
-// ── WEATHER+TIDE HOVER ────────────────────────────────────────────────────────
-function attachWeatherHover(wc, tc) {
-  if(!wc||wc._hoverAttached) return;
-  wc._hoverAttached=true;
-  const wd=window._weatherData;
-  if(!wd?.hourlyTime?.length) return;
-  const wStartMs=new Date(wd.hourlyTime[0]).getTime();
-  const wEndMs=new Date(wd.hourlyTime[wd.hourlyTime.length-1]).getTime();
-  const tStartMs=window._chartStart, tEndMs=tStartMs+7*86400000;
-
-  function hmsFromX(canvas,xPx,s,e,padL,padR){
-    const W=canvas.clientWidth||canvas.offsetWidth;
-    return s+(xPx-padL)/(W-padL-padR)*(e-s);
+// ── COMBINED CHART HOVER ──────────────────────────────────────────────────────
+function attachCombinedHover(canvas){
+  if(!canvas||canvas._hoverAttached)return;
+  canvas._hoverAttached=true;
+  function redraw(hMs){
+    const wd=window._weatherData;
+    if(!wd?.hourlyTime?.length)return;
+    const f=window._chartFilters||{temp:true,pressure:true,humidity:true,tides:true};
+    drawCombinedChart(canvas,wd.hourlyTime,wd.hourlyPressure,wd.hourlyTemp,wd.hourlyHumidity,window._allExtremes||[],window._sunriseMsList,f,hMs);
   }
-  function redraw(hoverMs){
-    if(wc&&wd?.hourlyTime?.length) drawWeatherChart(wc,wd.hourlyTime,wd.hourlyPressure,wd.hourlyTemp,wd.hourlyHumidity,hoverMs);
-    if(tc&&window._allExtremes?.length) drawTideOverviewChart(tc,window._allExtremes,window._chartStart,window._sunriseMsList,hoverMs);
-  }
-  function handleMove(canvas,s,e,padL,padR){
-    return ev=>{
-      const rect=canvas.getBoundingClientRect();
-      const hMs=hmsFromX(canvas,ev.clientX-rect.left,s,e,padL,padR);
-      if(hMs>=s&&hMs<=e) redraw(hMs);
-    };
-  }
-  wc.addEventListener('mousemove',handleMove(wc,wStartMs,wEndMs,52,52));
-  wc.addEventListener('mouseleave',()=>redraw(null));
-  if(tc){
-    tc.addEventListener('mousemove',handleMove(tc,tStartMs,tEndMs,48,16));
-    tc.addEventListener('mouseleave',()=>redraw(null));
-  }
+  canvas.addEventListener('mousemove',e=>{
+    const wd=window._weatherData;if(!wd?.hourlyTime?.length)return;
+    const rect=canvas.getBoundingClientRect(),W=canvas.clientWidth||canvas.offsetWidth;
+    const s=new Date(wd.hourlyTime[0]).getTime(),en=new Date(wd.hourlyTime[wd.hourlyTime.length-1]).getTime();
+    const hMs=s+(e.clientX-rect.left-52)/(W-104)*(en-s);
+    if(hMs>=s&&hMs<=en)redraw(hMs);
+  });
+  canvas.addEventListener('mouseleave',()=>redraw(null));
 }
 
 // ── RENDER ─────────────────────────────────────────────────────────────────────
@@ -2129,17 +2178,16 @@ function renderApp({tideData,solunar,weather,marine}) {
     </div>
 
     <div class="section">
-      <div class="section-label">Temperature · pressure · humidity — 7 days</div>
-      <div class="card" style="padding:20px 20px 16px">
-        <canvas id="weatherChart" style="display:block;width:100%;height:220px;border-radius:6px"></canvas>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-label">7-day tides</div>
-      <div class="card" style="padding:20px 20px 16px">
-        <canvas id="tideOverviewChartW" style="display:block;width:100%;height:180px;border-radius:6px"></canvas>
-        <div class="chart-legend-note">
+      <div class="section-label">7-day forecast</div>
+      <div class="card" style="padding:16px 20px 16px">
+        <div class="chart-filters">
+          <button class="chart-filter-btn active" data-filter="temp" onclick="toggleChartFilter('temp')"><span class="cfswatch" style="background:rgba(196,135,106,0.85)"></span>Temp</button>
+          <button class="chart-filter-btn active" data-filter="pressure" onclick="toggleChartFilter('pressure')"><span class="cfswatch" style="background:rgba(130,165,200,0.85)"></span>Pressure</button>
+          <button class="chart-filter-btn active" data-filter="humidity" onclick="toggleChartFilter('humidity')"><span class="cfswatch" style="background:rgba(130,185,145,0.8)"></span>Humidity</button>
+          <button class="chart-filter-btn active" data-filter="tides" onclick="toggleChartFilter('tides')"><span class="cfswatch" style="background:rgba(122,162,132,0.85)"></span>Tides</button>
+        </div>
+        <canvas id="combinedChart" style="display:block;width:100%;height:260px;border-radius:6px"></canvas>
+        <div class="chart-legend-note" style="margin-top:10px">
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(130,185,145,0.55)"></span>Run-in</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(130,165,200,0.55)"></span>Run-out</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(196,135,106,0.45)"></span>Jetty barra</div>
@@ -2325,15 +2373,16 @@ function renderApp({tideData,solunar,weather,marine}) {
   // Open today day card
   requestAnimationFrame(()=>drawDayCard(today));
 
-  // Draw tide overview + weather chart + lunar + catch analysis
+  // Draw tide overview + combined chart + lunar + catch analysis
   requestAnimationFrame(()=>{
     const oc=document.getElementById('tideOverviewChart');
     if(oc) drawTideOverviewChart(oc,allExtremes,chartStart,sunriseMsList);
-    const ocw=document.getElementById('tideOverviewChartW');
-    if(ocw) drawTideOverviewChart(ocw,allExtremes,chartStart,sunriseMsList);
-    const wc=document.getElementById('weatherChart');
-    if(wc&&weather?.hourlyTime?.length) drawWeatherChart(wc,weather.hourlyTime,weather.hourlyPressure,weather.hourlyTemp,weather.hourlyHumidity);
-    if(wc&&ocw) attachWeatherHover(wc,ocw);
+    const cc=document.getElementById('combinedChart');
+    if(cc&&weather?.hourlyTime?.length){
+      const f=window._chartFilters||{temp:true,pressure:true,humidity:true,tides:true};
+      drawCombinedChart(cc,weather.hourlyTime,weather.hourlyPressure,weather.hourlyTemp,weather.hourlyHumidity,allExtremes,sunriseMsList,f);
+      attachCombinedHover(cc);
+    }
     const lc=document.getElementById('lunarChart'); if(lc) drawLunarChart(lc);
     const c=document.getElementById('catchAnalysisChart'); if(c) drawCatchAnalysisChart(c);
   });
