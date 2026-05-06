@@ -1181,13 +1181,18 @@ async function loadAll(force=false) {
   if(!force){
     try {
       const c=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
-      if(c&&Date.now()-c.ts<REFRESH_MS)return c;
+      if(c&&Date.now()-c.ts<REFRESH_MS){
+        // Main cache is fresh — but always load tide from its own long-lived cache
+        const tideData=await fetchTideData();
+        return{...c,tideData};
+      }
     } catch(e){}
   }
   const [tideData,solunar,weather,marine]=await Promise.all([fetchTideData(),fetchAllSolunar(),fetchWeather(),fetchMarine()]);
-  const payload={tideData,solunar,weather,marine,ts:Date.now()};
+  // Don't store tide in the main cache — it has its own separate 7-day cache
+  const payload={solunar,weather,marine,ts:Date.now()};
   try{localStorage.setItem(CACHE_KEY,JSON.stringify(payload));}catch(e){}
-  return payload;
+  return{tideData,solunar,weather,marine};
 }
 
 // ── GLOBAL STATE ──────────────────────────────────────────────────────────────
