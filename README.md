@@ -470,6 +470,8 @@ const REFRESH_MS = 30 * 60 * 1000;
 const TIDE_CACHE_KEY = 'nightcliff_tides_v1';
 const TIDE_DAYS  = 90;
 const TIDE_TTL   = 7 * 86400000; // re-fetch tide data once a week
+const SOLUNAR_CACHE_KEY = 'nightcliff_sol_v1';
+const SOLUNAR_TTL = 24 * 3600000; // re-fetch solunar once a day
 const RAMP_MIN_M = 1.5; // Nightcliff boat ramp accessible above this height
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -548,7 +550,14 @@ function computeGoScore(isRising, nextHigh, nextLow, solunarRating, spring, pres
   if(pressure?.trend==='rising'){ score+=1; factors.push({label:'Pressure rising',color:'#d6e4d0',pts:1}); }
   else if(pressure?.trend==='falling'&&pressure.trendVal<-1.5){ factors.push({label:'Pressure falling',color:'#fdf0ec',pts:0}); }
 
-  const maxScore = 9;
+  // Wind direction (0-1 pt) — SE trades are ideal for Darwin harbour
+  if(pressure?.windDir!=null){
+    const wd=pressure.windDir;
+    if(wd>=135&&wd<=225){ score+=1; factors.push({label:'SE trade wind',color:'#b8d4c8',pts:1}); }
+    else if((wd>=315||wd<=45)&&pressure.windSpeed>15){ factors.push({label:'NW/N wind — choppy',color:'#f0ddd8',pts:0}); }
+  }
+
+  const maxScore = 10;
   const pct = Math.round((score/maxScore)*10);
   const capped = Math.min(10, pct);
 
@@ -1138,8 +1147,10 @@ async function fetchSolunar(dStr) {
 }
 
 async function fetchAllSolunar() {
+  try{const c=JSON.parse(localStorage.getItem(SOLUNAR_CACHE_KEY)||'null');if(c&&Date.now()-c.ts<SOLUNAR_TTL)return c.data;}catch(e){}
   const res={}, now=Date.now();
   await Promise.all(Array.from({length:7},(_,i)=>localDateStr(new Date(now+i*86400000))).map(d=>fetchSolunar(d).then(data=>{if(data)res[d]=data;})));
+  try{localStorage.setItem(SOLUNAR_CACHE_KEY,JSON.stringify({data:res,ts:Date.now()}));}catch(e){}
   return res;
 }
 
@@ -1687,142 +1698,87 @@ function attachCombinedHover(canvas){
   canvas.addEventListener('mouseleave',()=>redraw(null));
 }
 
-function attachCombinedInteraction(canvas){
+function attachPanZoom(canvas,{padL,padR,getView,setView,onHover,onHoverEnd}){
   if(!canvas||canvas._interactionAttached)return;
   canvas._interactionAttached=true;
   canvas.style.cursor='crosshair';
+  function xToMs(clientX){
+    const v=getView(),rect=canvas.getBoundingClientRect(),W=canvas.clientWidth||canvas.offsetWidth;
+    return v.startMs+(clientX-rect.left-padL)/(W-padL-padR)*(v.endMs-v.startMs);
+  }
+  if(onHover){
+    canvas.addEventListener('mousemove',e=>{const v=getView(),hMs=xToMs(e.clientX);if(hMs>=v.startMs&&hMs<=v.endMs)onHover(hMs);});
+    canvas.addEventListener('mouseleave',()=>{if(onHoverEnd)onHoverEnd();});
+  }
+  canvas.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const v=getView(),pivot=xToMs(e.clientX),fac=e.deltaY>0?1.35:0.74;
+    const span=(v.endMs-v.startMs)*fac,frac=(pivot-v.startMs)/(v.endMs-v.startMs);
+    setView(pivot-frac*span,pivot+(1-frac)*span);
+  },{passive:false});
+  let drag=null;
+  canvas.addEventListener('mousedown',e=>{const v=getView();drag={x:e.clientX,vs:v.startMs,ve:v.endMs};canvas.style.cursor='grabbing';e.preventDefault();});
+  window.addEventListener('mousemove',e=>{
+    if(!drag)return;
+    const W=canvas.clientWidth||canvas.offsetWidth,span=drag.ve-drag.vs,dt=-(e.clientX-drag.x)/(W-padL-padR)*span;
+    setView(drag.vs+dt,drag.ve+dt);
+  });
+  window.addEventListener('mouseup',()=>{if(drag){drag=null;canvas.style.cursor='crosshair';}});
+  let lastT={};
+  canvas.addEventListener('touchstart',e=>{
+    [...e.changedTouches].forEach(t=>{lastT[t.identifier]={x:t.clientX};});
+    if(e.touches.length===1){const v=getView();drag={x:e.touches[0].clientX,vs:v.startMs,ve:v.endMs};}else drag=null;
+  },{passive:true});
+  canvas.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    const v=getView(),W=canvas.clientWidth||canvas.offsetWidth;
+    if(e.touches.length===2){
+      const [a,b2]=[e.touches[0],e.touches[1]],pa=lastT[a.identifier],pb=lastT[b2.identifier];if(!pa||!pb)return;
+      const od=Math.abs(pa.x-pb.x)||1,nd=Math.abs(a.clientX-b2.clientX)||1;
+      const pivot=xToMs((a.clientX+b2.clientX)/2),span=(v.endMs-v.startMs)*(od/nd),frac=(pivot-v.startMs)/(v.endMs-v.startMs);
+      setView(pivot-frac*span,pivot+(1-frac)*span);[a,b2].forEach(t=>{lastT[t.identifier]={x:t.clientX};});
+    } else if(e.touches.length===1&&drag){
+      const span=drag.ve-drag.vs,dt=-(e.touches[0].clientX-drag.x)/(W-padL-padR)*span;setView(drag.vs+dt,drag.ve+dt);
+    }
+  },{passive:false});
+  canvas.addEventListener('touchend',e=>{[...e.changedTouches].forEach(t=>{delete lastT[t.identifier];});drag=null;});
+}
 
+function attachCombinedInteraction(canvas){
+  function getDataStart(){const wd=window._weatherData;return wd?.hourlyTime?.length?new Date(wd.hourlyTime[0]).getTime():Date.now();}
   function getDataEnd(){
     const wd=window._weatherData;if(!wd)return null;
     const wE=new Date(wd.hourlyTime[Math.min(167,wd.hourlyTime.length-1)]).getTime();
     const exE=window._allExtremes?.length?new Date(window._allExtremes[window._allExtremes.length-1].time).getTime():wE;
     return Math.max(wE,exE);
   }
-  function getDataStart(){const wd=window._weatherData;return wd?.hourlyTime?.length?new Date(wd.hourlyTime[0]).getTime():Date.now();}
   function getView(){return window._chartView||{startMs:getDataStart(),endMs:new Date((window._weatherData?.hourlyTime||[])[Math.min(167,(window._weatherData?.hourlyTime?.length||1)-1)]).getTime()};}
-  function redraw(hMs=null){
-    const wd=window._weatherData;if(!wd?.hourlyTime?.length)return;
-    const f=window._chartFilters||{temp:true,pressure:true,humidity:true,tides:true};
-    const v=window._chartView;
-    drawCombinedChart(canvas,wd.hourlyTime,wd.hourlyPressure,wd.hourlyTemp,wd.hourlyHumidity,window._allExtremes||[],window._sunriseMsList,f,hMs,v?.startMs,v?.endMs);
-  }
   function setView(s,e){
     const ds=getDataStart(),de=getDataEnd();if(!de)return;
-    const minSpan=4*3.6e6,span=Math.max(minSpan,Math.min(de-ds,e-s));
-    let ns=Math.max(ds,Math.min(de-span,s));
+    const minSpan=4*3.6e6,span=Math.max(minSpan,Math.min(de-ds,e-s)),ns=Math.max(ds,Math.min(de-span,s));
     window._chartView={startMs:ns,endMs:ns+span};
-    redraw();
+    const wd=window._weatherData,f=window._chartFilters||{temp:true,pressure:true,humidity:true,tides:true},v=window._chartView;
+    if(wd?.hourlyTime?.length)drawCombinedChart(canvas,wd.hourlyTime,wd.hourlyPressure,wd.hourlyTemp,wd.hourlyHumidity,window._allExtremes||[],window._sunriseMsList,f,null,v.startMs,v.endMs);
     const btn=document.getElementById('chartResetBtn');if(btn)btn.style.display='inline-flex';
   }
-  function xToMs(clientX){
-    const v=getView(),rect=canvas.getBoundingClientRect(),W=canvas.clientWidth||canvas.offsetWidth;
-    return v.startMs+(clientX-rect.left-52)/(W-104)*(v.endMs-v.startMs);
-  }
-
-  // Scroll wheel zoom
-  canvas.addEventListener('wheel',e=>{
-    e.preventDefault();
-    const v=getView(),pivot=xToMs(e.clientX);
-    const fac=e.deltaY>0?1.35:0.74;
-    const span=(v.endMs-v.startMs)*fac;
-    const frac=(pivot-v.startMs)/(v.endMs-v.startMs);
-    setView(pivot-frac*span,pivot+(1-frac)*span);
-  },{passive:false});
-
-  // Mouse drag pan
-  let drag=null;
-  canvas.addEventListener('mousedown',e=>{const v=getView();drag={x:e.clientX,vs:v.startMs,ve:v.endMs};canvas.style.cursor='grabbing';e.preventDefault();});
-  window.addEventListener('mousemove',e=>{
-    if(!drag)return;
-    const W=canvas.clientWidth||canvas.offsetWidth,span=drag.ve-drag.vs;
-    const dt=-(e.clientX-drag.x)/(W-104)*span;
-    setView(drag.vs+dt,drag.ve+dt);
-  });
-  window.addEventListener('mouseup',()=>{if(drag){drag=null;canvas.style.cursor='crosshair';}});
-
-  // Touch pan + pinch zoom
-  let lastT={};
-  canvas.addEventListener('touchstart',e=>{
-    [...e.changedTouches].forEach(t=>{lastT[t.identifier]={x:t.clientX};});
-    if(e.touches.length===1){const v=getView();drag={x:e.touches[0].clientX,vs:v.startMs,ve:v.endMs};}
-    else drag=null;
-  },{passive:true});
-  canvas.addEventListener('touchmove',e=>{
-    e.preventDefault();
-    const v=getView(),W=canvas.clientWidth||canvas.offsetWidth;
-    if(e.touches.length===2){
-      const [a,b2]=[e.touches[0],e.touches[1]];
-      const pa=lastT[a.identifier],pb=lastT[b2.identifier];if(!pa||!pb)return;
-      const od=Math.abs(pa.x-pb.x)||1,nd=Math.abs(a.clientX-b2.clientX)||1;
-      const midX=(a.clientX+b2.clientX)/2,pivot=xToMs(midX);
-      const span=(v.endMs-v.startMs)*(od/nd);
-      const frac=(pivot-v.startMs)/(v.endMs-v.startMs);
-      setView(pivot-frac*span,pivot+(1-frac)*span);
-      [a,b2].forEach(t=>{lastT[t.identifier]={x:t.clientX};});
-    } else if(e.touches.length===1&&drag){
-      const span=drag.ve-drag.vs,dt=-(e.touches[0].clientX-drag.x)/(W-104)*span;
-      setView(drag.vs+dt,drag.ve+dt);
-    }
-  },{passive:false});
-  canvas.addEventListener('touchend',e=>{[...e.changedTouches].forEach(t=>{delete lastT[t.identifier];});drag=null;});
+  attachPanZoom(canvas,{padL:52,padR:52,getView,setView});
 }
 
 function attachTideInteraction(canvas){
-  if(!canvas||canvas._interactionAttached)return;
-  canvas._interactionAttached=true;
-  canvas.style.cursor='crosshair';
   const PL=48,PR=16;
   function getDataBounds(){const ex=window._allExtremes;return ex?.length?{s:new Date(ex[0].time).getTime(),e:new Date(ex[ex.length-1].time).getTime()}:null;}
-  function getView(){const b=getDataBounds();const def7=window._chartStart+(7*86400000);return window._tideView||{startMs:window._chartStart||Date.now(),endMs:def7};}
+  function getView(){return window._tideView||{startMs:window._chartStart||Date.now(),endMs:(window._chartStart||Date.now())+7*86400000};}
   function redraw(hMs=null){
     const oc=document.getElementById('tideOverviewChart');if(!oc)return;
-    const v=window._tideView;
-    drawTideOverviewChart(oc,window._allExtremes||[],window._chartStart,window._sunriseMsList,hMs,v?.startMs,v?.endMs);
+    drawTideOverviewChart(oc,window._allExtremes||[],window._chartStart,window._sunriseMsList,hMs,window._tideView?.startMs,window._tideView?.endMs);
   }
   function setView(s,e){
     const b=getDataBounds();if(!b)return;
-    const minSpan=12*3.6e6,span=Math.max(minSpan,Math.min(b.e-b.s,e-s));
-    const ns=Math.max(b.s,Math.min(b.e-span,s));
-    window._tideView={startMs:ns,endMs:ns+span};
-    redraw();
+    const minSpan=12*3.6e6,span=Math.max(minSpan,Math.min(b.e-b.s,e-s)),ns=Math.max(b.s,Math.min(b.e-span,s));
+    window._tideView={startMs:ns,endMs:ns+span};redraw();
     const btn=document.getElementById('tideResetBtn');if(btn)btn.style.display='inline-flex';
   }
-  function xToMs(clientX){
-    const v=getView(),rect=canvas.getBoundingClientRect(),W=canvas.clientWidth||canvas.offsetWidth;
-    return v.startMs+(clientX-rect.left-PL)/(W-PL-PR)*(v.endMs-v.startMs);
-  }
-  canvas.addEventListener('wheel',e=>{
-    e.preventDefault();const v=getView(),pivot=xToMs(e.clientX);
-    const fac=e.deltaY>0?1.35:0.74,span=(v.endMs-v.startMs)*fac,frac=(pivot-v.startMs)/(v.endMs-v.startMs);
-    setView(pivot-frac*span,pivot+(1-frac)*span);
-  },{passive:false});
-  // Hover
-  canvas.addEventListener('mousemove',e=>{
-    const v=getView(),rect=canvas.getBoundingClientRect(),W=canvas.clientWidth||canvas.offsetWidth;
-    const hMs=v.startMs+(e.clientX-rect.left-PL)/(W-PL-PR)*(v.endMs-v.startMs);
-    if(hMs>=v.startMs&&hMs<=v.endMs)redraw(hMs);
-  });
-  canvas.addEventListener('mouseleave',()=>redraw(null));
-  // Drag
-  let drag=null;
-  canvas.addEventListener('mousedown',e=>{const v=getView();drag={x:e.clientX,vs:v.startMs,ve:v.endMs};canvas.style.cursor='grabbing';e.preventDefault();});
-  window.addEventListener('mousemove',e=>{if(!drag)return;const W=canvas.clientWidth||canvas.offsetWidth,span=drag.ve-drag.vs,dt=-(e.clientX-drag.x)/(W-PL-PR)*span;setView(drag.vs+dt,drag.ve+dt);});
-  window.addEventListener('mouseup',()=>{if(drag){drag=null;canvas.style.cursor='crosshair';}});
-  // Touch
-  let lastT={};
-  canvas.addEventListener('touchstart',e=>{[...e.changedTouches].forEach(t=>{lastT[t.identifier]={x:t.clientX};});if(e.touches.length===1){const v=getView();drag={x:e.touches[0].clientX,vs:v.startMs,ve:v.endMs};}else drag=null;},{passive:true});
-  canvas.addEventListener('touchmove',e=>{
-    e.preventDefault();const v=getView(),W=canvas.clientWidth||canvas.offsetWidth;
-    if(e.touches.length===2){
-      const [a,b2]=[e.touches[0],e.touches[1]];const pa=lastT[a.identifier],pb=lastT[b2.identifier];if(!pa||!pb)return;
-      const od=Math.abs(pa.x-pb.x)||1,nd=Math.abs(a.clientX-b2.clientX)||1;
-      const pivot=xToMs((a.clientX+b2.clientX)/2),span=(v.endMs-v.startMs)*(od/nd),frac=(pivot-v.startMs)/(v.endMs-v.startMs);
-      setView(pivot-frac*span,pivot+(1-frac)*span);[a,b2].forEach(t=>{lastT[t.identifier]={x:t.clientX};});
-    } else if(e.touches.length===1&&drag){
-      const span=drag.ve-drag.vs,dt=-(e.touches[0].clientX-drag.x)/(W-PL-PR)*span;setView(drag.vs+dt,drag.ve+dt);
-    }
-  },{passive:false});
-  canvas.addEventListener('touchend',e=>{[...e.changedTouches].forEach(t=>{delete lastT[t.identifier];});drag=null;});
+  attachPanZoom(canvas,{padL:PL,padR:PR,getView,setView,onHover:hMs=>redraw(hMs),onHoverEnd:()=>redraw(null)});
 }
 
 function resetTideView(){
@@ -1830,6 +1786,16 @@ function resetTideView(){
   const btn=document.getElementById('tideResetBtn');if(btn)btn.style.display='none';
   const oc=document.getElementById('tideOverviewChart');if(!oc)return;
   drawTideOverviewChart(oc,window._allExtremes||[],window._chartStart,window._sunriseMsList);
+}
+
+function shareSession(btn){
+  const txt=window._bestSessionShare;
+  if(!txt)return;
+  if(navigator.clipboard?.writeText){
+    navigator.clipboard.writeText(txt).then(()=>{
+      const orig=btn.textContent;btn.textContent='Copied!';setTimeout(()=>{btn.textContent=orig;},1800);
+    }).catch(()=>prompt('Copy this:',txt));
+  } else prompt('Copy this:',txt);
 }
 
 // ── RENDER ─────────────────────────────────────────────────────────────────────
@@ -1899,9 +1865,16 @@ function renderApp({tideData,solunar,weather,marine}) {
     pressHTML=`<div class="pressure-row"><span class="pressure-val">${weather.hPa}</span><span style="font-size:11px;color:var(--stone-dark)">hPa</span><span class="pressure-trend ${weather.trend}">${arr}</span></div><div class="stat-sub">${fn}</div>`;
   } else pressHTML='<div class="stat-value" style="font-size:14px">—</div>';
 
-  // Ramp
+  // Ramp — with countdown to opening if currently closed
   const rampOk=currentH>=RAMP_MIN_M;
-  const rampHTML=`<div class="ramp-indicator"><span class="ramp-badge ${rampOk?'ok':'low'}">${rampOk?'✓ Accessible':'✗ Too shallow'}</span></div><div class="stat-sub" style="margin-top:3px">Min ${RAMP_MIN_M}m · Now ${currentH.toFixed(2)}m</div>`;
+  let rampOpenMs=null;
+  if(!rampOk){
+    for(let t=nowMs+300000;t<nowMs+18*3600000;t+=300000){
+      if(interpolateTide(allExtremes,t)>=RAMP_MIN_M){rampOpenMs=t;break;}
+    }
+  }
+  const rampSub=rampOk?`Min ${RAMP_MIN_M}m · Now ${currentH.toFixed(2)}m`:`Now ${currentH.toFixed(2)}m${rampOpenMs?` · Opens ${fmtCountdown(rampOpenMs-nowMs)}`:''}`;
+  const rampHTML=`<div class="ramp-indicator"><span class="ramp-badge ${rampOk?'ok':'low'}">${rampOk?'✓ Accessible':'✗ Too shallow'}</span></div><div class="stat-sub" style="margin-top:3px">${rampSub}</div>`;
 
   // Wind compass
   const windHTML=weather?`<div class="wind-compass-wrap"><div class="wind-compass"><canvas id="compassCanvas"></canvas></div><div><div class="stat-value" style="font-size:16px">${weather.windSpeed} km/h ${windDirStr(weather.windDir)}</div><div class="stat-sub">Surface wind</div></div></div>`:'<div class="stat-value" style="font-size:14px">—</div>';
@@ -1964,6 +1937,23 @@ function renderApp({tideData,solunar,weather,marine}) {
       ${seasonBarHTML}
       ${speciesRowsHTML}
     </div>`;
+
+  // Night session flag for best session
+  let nightSession=false;
+  if(bestSession&&weather?.daily?.sunrise){
+    const bsIdx=(weather.daily.sunrise||[]).findIndex((_,i)=>localDateStr(new Date(weather.daily.sunrise[i]))===bestSession.dStr);
+    if(bsIdx>=0){
+      const sr=new Date(weather.daily.sunrise[bsIdx]).getTime();
+      const ss=new Date(weather.daily.sunset[bsIdx]).getTime();
+      nightSession=bestSession.win.endMs<sr||bestSession.win.startMs>ss;
+    }
+  }
+
+  // Store share data for clipboard button
+  if(bestSession){
+    const bsDayLabel=bestSession.dStr===today?'Today':new Date(bestSession.dStr+'T12:00:00+09:30').toLocaleDateString('en-AU',{timeZone:TZ,weekday:'long',day:'numeric',month:'long'});
+    window._bestSessionShare=`🎣 Nightcliff Tides — Best Session\n${bsDayLabel}: ${bestSession.win.label}\n${fmtTime(new Date(bestSession.win.startMs))} – ${fmtTime(new Date(bestSession.win.endMs))}\nScore: ${bestSession.score}/10 · ${bestSession.solR}-star solunar${nightSession?' · 🌙 Night session':''}\nhttps://xipetotec.github.io`;
+  }
 
   // Lure cards HTML
   const lureHTML=lures.map(l=>`
@@ -2034,10 +2024,11 @@ function renderApp({tideData,solunar,weather,marine}) {
           <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
             <div style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:300;color:var(--terracotta);min-width:60px;text-align:center">${bestSession.score}<span style="font-size:16px;color:var(--stone-dark)">/10</span></div>
             <div style="flex:1">
-              <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:400;color:var(--ink);margin-bottom:2px">${bestSession.dStr===today?'Today':new Date(bestSession.dStr+'T12:00:00+09:30').toLocaleDateString('en-AU',{timeZone:TZ,weekday:'long',day:'numeric',month:'long'})} — ${bestSession.win.label}</div>
-              <div style="font-size:12px;color:var(--stone-dark)">${fmtTime(new Date(bestSession.win.startMs))} – ${fmtTime(new Date(bestSession.win.endMs))} · ${bestSession.solR}-star solunar</div>
+              <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:400;color:var(--ink);margin-bottom:2px">${bestSession.dStr===today?'Today':new Date(bestSession.dStr+'T12:00:00+09:30').toLocaleDateString('en-AU',{timeZone:TZ,weekday:'long',day:'numeric',month:'long'})} — ${bestSession.win.label}${nightSession?' <span style="font-size:13px">🌙</span>':''}</div>
+              <div style="font-size:12px;color:var(--stone-dark)">${fmtTime(new Date(bestSession.win.startMs))} – ${fmtTime(new Date(bestSession.win.endMs))} · ${bestSession.solR}-star solunar${nightSession?' · night session':''}</div>
               <div style="margin-top:6px">${starsHTML(bestSession.solR,false)}</div>
             </div>
+            <button onclick="shareSession(this)" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(160,148,132,0.3);border-radius:20px;padding:6px 14px;font-size:11px;cursor:pointer;color:var(--stone-dark);font-family:inherit;flex-shrink:0" title="Copy to clipboard">Share ↗</button>
           </div>
         ` : '<div style="font-size:13px;color:var(--stone-dark)">No upcoming sessions found in the next 7 days.</div>'}
       </div>
@@ -2052,6 +2043,7 @@ function renderApp({tideData,solunar,weather,marine}) {
             <div class="hero-arrow">${isRising?'↑':'↓'}</div>
             <div><span class="hero-height" id="hero-h">${currentH.toFixed(2)}</span><span class="hero-unit">m</span></div>
             <div class="hero-label">${isRising?'Rising':'Falling'} tide</div>
+            ${nextEx?`<div style="font-size:11px;color:var(--stone-dark);margin-top:4px;font-style:italic">Turns ${fmtCountdown(new Date(nextEx.time).getTime()-nowMs)}</div>`:''}
           </div>
           <div class="tide-progress-wrap">
             <div class="tide-progress-labels"><span>${prev?.type==='high'?'High':'Low'}</span><span>${nextEx?.type==='high'?'High':'Low'}</span></div>
