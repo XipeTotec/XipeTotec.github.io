@@ -268,7 +268,7 @@ body { background: var(--sand); color: var(--ink); font-family: 'Inter', system-
 .loading-dots span:nth-child(2) { animation-delay: 0.2s; } .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes dot-pop { 0%,80%,100%{transform:scale(0.5);opacity:0.35} 40%{transform:scale(1);opacity:1} }
 .loading-text { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 20px; color: var(--stone-dark); }
-.error-card { background:#fdf0ec; border:1px solid #e8c4b4; border-radius:12px; padding:24px; color:var(--terracotta); font-size:13px; line-height:1.7; max-width:480px; text-align:center; }
+.error-card { background:rgba(251,113,133,0.08); border:1px solid rgba(251,113,133,0.2); border-radius:12px; padding:24px; color:var(--rose); font-size:13px; line-height:1.7; max-width:480px; text-align:center; }
 
 .footer { text-align:center; font-size:11px; color:var(--stone); margin-top:50px; line-height:2.1; letter-spacing:0.04em; }
 .fade-up { animation: fu 0.45s ease both; }
@@ -415,12 +415,12 @@ body { background: var(--sand); color: var(--ink); font-family: 'Inter', system-
 .spot-chip.active { background:var(--ink); color:var(--sand); border-color:var(--ink); }
 .spot-chip .chip-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 .map-info-window { font-family:'DM Sans',sans-serif; max-width:220px; }
-.map-info-window h3 { font-family:'Cormorant Garamond',serif; font-size:17px; font-weight:400; color:#3d3530; margin-bottom:4px; }
+.map-info-window h3 { font-family:'DM Serif Display',serif; font-size:17px; font-weight:400; color:var(--ink); margin-bottom:4px; }
 .map-info-window p { font-size:11px; color:#7a6e62; line-height:1.5; margin-bottom:6px; }
 .map-info-window .iw-meta { font-size:10px; color:#9e9082; }
 .map-info-window a { font-size:11px; color:#c4876a; text-decoration:none; }
 .save-spot-form { background:var(--sand-dark); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-top:12px; }
-.save-spot-form h4 { font-family:'Cormorant Garamond',serif; font-size:16px; font-weight:400; margin-bottom:10px; color:var(--ink); }
+.save-spot-form h4 { font-family:'DM Serif Display',serif; font-size:16px; font-weight:400; margin-bottom:10px; color:var(--ink); }
 /* COMBOBOX */
 .combo-wrap { position:relative; flex:1; display:flex; flex-direction:column; }
 .combo-wrap .log-input { width:100%; }
@@ -1986,7 +1986,7 @@ function renderApp({tideData,solunar,weather,marine}) {
       const wdir=wind_direction_10m_dominant?.[i];
       const wave=marine?.dailyWave?.[i];
       const uvColor=uv>=8?'#c0392b':uv>=6?'#e67e22':uv>=3?'#f1c40f':'#27ae60';
-      return `<div style="background:var(--cream-bg);border:1px solid var(--border-soft);border-radius:10px;padding:10px 10px 8px;display:flex;flex-direction:column;gap:4px${i===0?';border-color:var(--sage);background:#f0f6ee':''}">
+      return `<div style="background:var(--sand-dark);border:1px solid var(--border);border-radius:10px;padding:10px 10px 8px;display:flex;flex-direction:column;gap:4px${i===0?';border-color:rgba(34,211,238,0.25);background:rgba(34,211,238,0.05)':''}">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
           <div>
             <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:${i===0?'var(--green-text)':'var(--ink)'}">${lbl}</div>
@@ -2016,9 +2016,9 @@ function renderApp({tideData,solunar,weather,marine}) {
   document.getElementById('content').innerHTML = `
   <div id="tab-tides" class="tab-pane active">
     <!-- BEST DAY BANNER -->
-    <div class="best-day-banner fade-up" style="background:linear-gradient(135deg,#e8f0e4,#edf5f0);border:1px solid var(--sage);border-radius:12px;padding:12px 18px;margin-bottom:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:20px">🎣</span>
-      <div style="font-size:13px;color:var(--green-text)"><strong>Best fishing day this week: ${bestLbl}</strong> — ${bestStars}-star solunar${bestDay?.cond?.springNeap==='spring'?', spring tide':''}${bestDay?.dStr===today?'. That\'s today!':'.'}</div>
+    <div class="best-day-banner fade-up" style="background:linear-gradient(135deg,rgba(52,211,153,0.08),rgba(34,211,238,0.05));border:1px solid rgba(52,211,153,0.2);border-radius:16px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="font-size:24px">🎣</span>
+      <div style="font-size:13px;color:var(--emerald)"><strong>Best fishing day this week: ${bestLbl}</strong> — ${bestStars}-star solunar${bestDay?.cond?.springNeap==='spring'?', spring tide':''}${bestDay?.dStr===today?'. That\'s today!':'.'}</div>
     </div>
 
     <!-- GO SCORE -->
@@ -2050,13 +2050,13 @@ function renderApp({tideData,solunar,weather,marine}) {
       <div class="card">
         ${bestSession ? `
           <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-            <div style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:300;color:var(--terracotta);min-width:60px;text-align:center">${bestSession.score}<span style="font-size:16px;color:var(--stone-dark)">/10</span></div>
+            <div style="font-family:'DM Serif Display',serif;font-size:48px;font-weight:400;color:var(--violet);min-width:62px;text-align:center;line-height:1">${bestSession.score}<span style="font-size:16px;color:var(--stone-dark)">/10</span></div>
             <div style="flex:1">
-              <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:400;color:var(--ink);margin-bottom:2px">${bestSession.dStr===today?'Today':new Date(bestSession.dStr+'T12:00:00+09:30').toLocaleDateString('en-AU',{timeZone:TZ,weekday:'long',day:'numeric',month:'long'})} — ${bestSession.win.label}${nightSession?' <span style="font-size:13px">🌙</span>':''}</div>
-              <div style="font-size:12px;color:var(--stone-dark)">${fmtTime(new Date(bestSession.win.startMs))} – ${fmtTime(new Date(bestSession.win.endMs))} · ${bestSession.solR}-star solunar${nightSession?' · night session':''}</div>
-              <div style="margin-top:6px">${starsHTML(bestSession.solR,false)}</div>
+              <div style="font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;color:var(--ink);margin-bottom:3px">${bestSession.dStr===today?'Today':new Date(bestSession.dStr+'T12:00:00+09:30').toLocaleDateString('en-AU',{timeZone:TZ,weekday:'long',day:'numeric',month:'long'})} — ${bestSession.win.label}${nightSession?' <span style="font-size:13px">🌙</span>':''}</div>
+              <div style="font-size:11px;color:var(--stone-dark);line-height:1.6">${fmtTime(new Date(bestSession.win.startMs))} – ${fmtTime(new Date(bestSession.win.endMs))} · ${bestSession.solR}-star solunar${nightSession?' · night session':''}</div>
+              <div style="margin-top:8px">${starsHTML(bestSession.solR,false)}</div>
             </div>
-            <button onclick="shareSession(this)" style="background:rgba(255,255,255,0.6);border:1.5px solid rgba(160,148,132,0.3);border-radius:20px;padding:6px 14px;font-size:11px;cursor:pointer;color:var(--stone-dark);font-family:inherit;flex-shrink:0" title="Copy to clipboard">Share ↗</button>
+            <button onclick="shareSession(this)" style="background:var(--violet);border:none;border-radius:12px;padding:8px 16px;font-size:11px;font-weight:600;cursor:pointer;color:white;font-family:inherit;flex-shrink:0" title="Copy to clipboard">Share ↗</button>
           </div>
         ` : '<div style="font-size:13px;color:var(--stone-dark)">No upcoming sessions found in the next 7 days.</div>'}
       </div>
@@ -2152,7 +2152,7 @@ function renderApp({tideData,solunar,weather,marine}) {
             <button class="catch-filter-btn" id="catchExpandBtn" onclick="toggleCatchFilters()" style="display:none">
               Filters ▾
             </button>
-            <span id="catchActiveCount" style="font-size:10px;color:var(--terracotta);display:none"></span>
+            <span id="catchActiveCount" style="font-size:10px;color:var(--cyan);display:none"></span>
           </div>
           <div id="catchFilterPanel" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-soft)">
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:12px">
@@ -2189,7 +2189,7 @@ function renderApp({tideData,solunar,weather,marine}) {
               <div class="stat-label">Show as:</div>
               <button class="catch-filter-btn active" data-mode="time" onclick="setCatchMode(this)">Time of day</button>
               <button class="catch-filter-btn" data-mode="absolute" onclick="setCatchMode(this)">Exact date</button>
-              <button class="catch-filter-btn" style="margin-left:auto;color:var(--terracotta)" onclick="clearCatchFilters()">Clear filters</button>
+              <button class="catch-filter-btn" style="margin-left:auto;color:var(--rose)" onclick="clearCatchFilters()">Clear filters</button>
             </div>
             <div style="margin-top:8px;font-size:11px;color:var(--stone-dark)">
               <strong>Time of day mode:</strong> plots all your catches by time-of-day on today's tide curve — great for spotting patterns (e.g. always catch at run-out). <strong>Exact date:</strong> only shows catches within the 48h chart window.
@@ -2206,7 +2206,7 @@ function renderApp({tideData,solunar,weather,marine}) {
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(196,135,106,0.45)"></span>Jetty barra</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(200,170,130,0.55)"></span>Low slack</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(210,180,130,0.35)"></span>Dawn/dusk</div>
-          <div class="legend-item"><span style="color:var(--terracotta)">●</span>&nbsp;Now</div>
+          <div class="legend-item"><span style="color:var(--orange)">●</span>&nbsp;Now</div>
           <div class="legend-item"><span style="font-size:12px">🐟</span>&nbsp;Your catch</div>
         </div>
         <div class="catch-summary" id="catchSummary" style="display:none"></div>
@@ -2223,7 +2223,7 @@ function renderApp({tideData,solunar,weather,marine}) {
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(130,165,200,0.55)"></span>Run-out</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(196,135,106,0.45)"></span>Jetty barra</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(200,170,130,0.55)"></span>Low slack</div>
-          <div class="legend-item"><span style="color:var(--terracotta)">●</span>&nbsp;Now</div>
+          <div class="legend-item"><span style="color:var(--orange)">●</span>&nbsp;Now</div>
         </div>
       </div>
     </div>
@@ -2272,7 +2272,7 @@ function renderApp({tideData,solunar,weather,marine}) {
         <canvas id="lunarChart" style="display:block;width:100%;height:90px;border-radius:6px"></canvas>
         <div style="display:flex;gap:14px;margin-top:10px;font-size:10px;color:var(--stone-dark);flex-wrap:wrap">
           <span>🌑 New moon</span><span>🌕 Full moon</span>
-          <span style="color:var(--terracotta)">● Today</span>
+          <span style="color:var(--orange)">● Today</span>
         </div>
       </div>
     </div>
@@ -2291,7 +2291,7 @@ function renderApp({tideData,solunar,weather,marine}) {
     <div class="section">
       <div class="section-label">Gulumoerrgin seasons &amp; species calendar · Larrakia Country</div>
       <div class="card">
-        <p style="font-size:11px;color:var(--stone-dark);margin-bottom:14px;line-height:1.6">The Larrakia people are the traditional custodians of Darwin. Their seven-season Gulumoerrgin calendar reflects thousands of years of ecological knowledge about this Country. Hover any season bar for detail. <a href="https://www.csiro.au/en/research/indigenous-science/indigenous-knowledge/calendars/gulumoerrgin" target="_blank" rel="noopener" style="color:var(--terracotta);text-decoration:none">Source: CSIRO ↗</a></p>
+        <p style="font-size:11px;color:var(--stone-dark);margin-bottom:14px;line-height:1.6">The Larrakia people are the traditional custodians of Darwin. Their seven-season Gulumoerrgin calendar reflects thousands of years of ecological knowledge about this Country. Hover any season bar for detail. <a href="https://www.csiro.au/en/research/indigenous-science/indigenous-knowledge/calendars/gulumoerrgin" target="_blank" rel="noopener" style="color:var(--orange);text-decoration:none">Source: CSIRO ↗</a></p>
         ${calHTML}
         <div class="lk-legend">
           <div class="lk-legend-item"><div class="lk-legend-swatch" style="background:#7ba3c0"></div>Balnba</div>
@@ -2372,7 +2372,7 @@ function renderApp({tideData,solunar,weather,marine}) {
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(130,165,200,0.55)"></span>Run-out</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(196,135,106,0.45)"></span>Jetty barra</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(200,170,130,0.55)"></span>Low slack</div>
-          <div class="legend-item"><span style="color:var(--terracotta)">●</span>&nbsp;Now</div>
+          <div class="legend-item"><span style="color:var(--orange)">●</span>&nbsp;Now</div>
         </div>
       </div>
     </div>
@@ -2392,7 +2392,7 @@ function renderApp({tideData,solunar,weather,marine}) {
           <div class="bom-wrap" ${c.iframe?'style="height:460px;background:#1a1a2e"':''}>
             ${c.iframe
               ? `<iframe src="${c.iframe}" style="width:100%;height:100%;border:none;display:block" title="${c.label}" loading="lazy"></iframe>`
-              : `<img src="${c.img}" alt="${c.label} chart" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div style=\\'padding:24px;text-align:center\\'>Could not load image — <a href=\\'${c.url}\\' target=\\'_blank\\' style=\\'color:var(--terracotta)\\'>open on BOM ↗</a></div>')" loading="lazy">`
+              : `<img src="${c.img}" alt="${c.label} chart" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div style=\\'padding:24px;text-align:center\\'>Could not load image — <a href=\\'${c.url}\\' target=\\'_blank\\' style=\\'color:var(--cyan)\\'>open on BOM ↗</a></div>')" loading="lazy">`
             }
           </div>
           <div class="bom-links">
@@ -2509,7 +2509,7 @@ function renderApp({tideData,solunar,weather,marine}) {
     <div class="section">
       <div class="section-label">My fishing spots · Nightcliff &amp; Darwin</div>
       <div class="spots-toolbar">
-        <button class="spot-chip active" data-filter="all" onclick="filterMapSpots(this)"><span class="chip-dot" style="background:var(--terracotta)"></span>All spots</button>
+        <button class="spot-chip active" data-filter="all" onclick="filterMapSpots(this)"><span class="chip-dot" style="background:var(--cyan)"></span>All spots</button>
         <button class="spot-chip" data-filter="preset" onclick="filterMapSpots(this)"><span class="chip-dot" style="background:#82a2b9"></span>Darwin classics</button>
         <button class="spot-chip" data-filter="custom" onclick="filterMapSpots(this)"><span class="chip-dot" style="background:#82aa8c"></span>My spots</button>
         <button class="spot-chip" data-filter="catches" onclick="filterMapSpots(this)"><span class="chip-dot" style="background:#c8a84b"></span>Catch locations</button>
@@ -3063,7 +3063,7 @@ function renderAllMapMarkers() {
           <div class="iw-meta">Saved ${sp.date||''}</div><br>
           <a href="https://www.google.com/maps/dir/?api=1&destination=${sp.lat},${sp.lng}" target="_blank">Get directions ↗</a>
           &nbsp;·&nbsp;
-          <a href="#" onclick="deleteCustomSpot(${i});return false" style="color:var(--terracotta)">Delete</a>
+          <a href="#" onclick="deleteCustomSpot(${i});return false" style="color:var(--rose)">Delete</a>
         </div>`);
       infoWindow.open(gMap, marker);
     });
@@ -3286,7 +3286,7 @@ function tick(){
   const ghEl=document.getElementById('goldenHour');
   if(ghEl&&gh) {
     ghEl.textContent=`${gh.label} in ${gh.text}`;
-    ghEl.style.color=gh.urgent?'var(--terracotta)':'var(--stone-dark)';
+    ghEl.style.color=gh.urgent?'var(--rose)':'var(--stone-dark)';
   } else if(ghEl) ghEl.textContent='';
 }
 tick(); setInterval(tick,1000);
