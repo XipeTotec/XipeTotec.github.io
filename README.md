@@ -28,17 +28,21 @@ body { background: var(--sand); color: var(--ink); font-family: 'Inter', system-
 
 /* NAV TABS */
 .nav-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 28px; overflow-x: auto; }
-.nav-tab { padding: 10px 18px; font-size: 12px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase; color: var(--stone-dark); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; font-family: 'Inter', sans-serif; }
+.nav-tab { padding: 10px 18px; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--stone-dark); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; font-family: 'Inter', sans-serif; }
 .nav-tab:hover { color: var(--ink); }
-.nav-tab.active { color: var(--ink); border-bottom-color: var(--terracotta); }
+.nav-tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
 .nav-icon { display: none; }
+.live-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.2); border-radius:20px; padding:3px 10px; font-size:10px; font-weight:500; color:var(--emerald); }
+.live-dot { width:5px; height:5px; border-radius:50%; background:var(--emerald); animation:blink 2s infinite; flex:0 0 5px; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
 
 /* HEADER */
-.header { padding: 36px 0 24px; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
-.header-left h1 { font-family: 'DM Serif Display', serif; font-weight: 300; font-size: clamp(30px,5vw,50px); color: var(--ink); letter-spacing: 0.01em; line-height: 1; }
-.header-left .sub { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 14px; color: var(--stone-dark); margin-top: 5px; }
+.header { padding: 20px 0 16px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+.header-left h1 { font-family: 'DM Serif Display', serif; font-weight: 400; font-size: clamp(26px,5vw,42px); color: var(--ink); letter-spacing: -0.01em; line-height: 1; }
+.header-left h1 em { font-style: italic; color: var(--cyan); }
+.header-left .sub { font-size: 11px; color: var(--stone-dark); margin-top: 5px; letter-spacing: 0.04em; }
 .header-right { text-align: right; }
 .clock { font-family: 'DM Serif Display', serif; font-weight: 300; font-size: clamp(24px,4vw,38px); color: var(--ink-soft); letter-spacing: 0.04em; line-height: 1; }
 .clock-date { font-size: 11px; color: var(--stone-dark); margin-top: 4px; letter-spacing: 0.09em; text-transform: uppercase; }
@@ -285,11 +289,12 @@ body { background: var(--sand); color: var(--ink); font-family: 'Inter', system-
   .clock-date { font-size:11px; }
 
   /* ── BOTTOM NAV with icons ── */
-  .nav-tabs { position:fixed; bottom:0; left:0; right:0; border-bottom:none; border-top:1px solid var(--border); margin-bottom:0; background:var(--card); justify-content:space-around; overflow:visible; z-index:200; padding:0 0 env(safe-area-inset-bottom,4px); gap:0; }
-  .nav-tab { flex:1; padding:8px 2px 6px; border-bottom:none; border-top:2px solid transparent; min-height:58px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; }
-  .nav-tab.active { border-top-color:var(--terracotta); border-bottom-color:transparent; color:var(--terracotta); }
+  .nav-tabs { position:fixed; bottom:0; left:0; right:0; border-bottom:none; border-top:1px solid var(--border); margin-bottom:0; background:rgba(7,9,15,0.95); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); justify-content:space-around; overflow:visible; z-index:200; padding:6px 0 env(safe-area-inset-bottom,10px); gap:0; }
+  .nav-tab { flex:1; padding:4px 2px; border-bottom:none; border-top:none; min-height:52px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+  .nav-tab.active { color:var(--cyan); border-bottom-color:transparent; }
+  .nav-tab.active::after { content:''; display:block; width:4px; height:4px; border-radius:50%; background:var(--cyan); margin-top:2px; }
   .nav-icon { display:block; font-size:20px; line-height:1; }
-  .nav-label { font-size:9px; letter-spacing:0.05em; text-transform:uppercase; }
+  .nav-label { font-size:9px; letter-spacing:0.05em; text-transform:uppercase; font-weight:500; }
 
   /* ── SECTIONS ── */
   .section { margin-bottom:18px; }
@@ -426,17 +431,17 @@ body { background: var(--sand); color: var(--ink); font-family: 'Inter', system-
 <div class="app">
   <header class="header">
     <div class="header-left">
-      <h1>Nightcliff Tides</h1>
-      <div class="sub">Darwin Harbour &nbsp;·&nbsp; Northern Territory</div>
+      <h1>Nightcliff <em>Tides</em></h1>
+      <div class="sub">Darwin NT &nbsp;·&nbsp; <span id="date">—</span></div>
       <div class="header-controls">
         <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">↻ Refresh</button>
         <span class="last-updated" id="lastUpdated"></span>
       </div>
     </div>
     <div class="header-right">
-      <div class="clock" id="clock">—</div>
-      <div class="clock-date" id="date">—</div>
-      <div class="stat-sub" id="goldenHour" style="margin-top:2px"></div>
+      <div class="live-badge"><div class="live-dot"></div>Live</div>
+      <div class="clock" id="clock" style="margin-top:8px">—</div>
+      <div class="stat-sub" id="goldenHour" style="margin-top:2px;font-size:10px;color:var(--stone-dark)"></div>
     </div>
   </header>
 
