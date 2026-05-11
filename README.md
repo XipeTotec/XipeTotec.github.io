@@ -640,7 +640,7 @@ function drawChart(canvas, extremes, startMs, endMs, hoverMs, showWindows, canva
 
   // BG
   ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='#faf7f2';
+  ctx.fillStyle='#0f1219';
   ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(0,0,W,H,8);else ctx.rect(0,0,W,H); ctx.fill();
 
   // Dawn/dusk shading
@@ -650,14 +650,14 @@ function drawChart(canvas, extremes, startMs, endMs, hoverMs, showWindows, canva
       const pdStart=Math.max(srMs-30*60000,startMs), pdEnd=Math.min(srMs+90*60000,endMs);
       if(pdEnd>pdStart){
         const gd=ctx.createLinearGradient(xOf(pdStart),0,xOf(pdEnd),0);
-        gd.addColorStop(0,'rgba(210,180,130,0)'); gd.addColorStop(0.4,'rgba(210,180,130,0.10)'); gd.addColorStop(1,'rgba(210,180,130,0)');
+        gd.addColorStop(0,'rgba(251,191,36,0)'); gd.addColorStop(0.4,'rgba(251,191,36,0.08)'); gd.addColorStop(1,'rgba(251,191,36,0)');
         ctx.fillStyle=gd; ctx.fillRect(xOf(pdStart),PAD.top,xOf(pdEnd)-xOf(pdStart),cH);
       }
       // Dusk (1.5h around sunset)
       const dkStart=Math.max(ssMs-60*60000,startMs), dkEnd=Math.min(ssMs+30*60000,endMs);
       if(dkEnd>dkStart){
         const gd=ctx.createLinearGradient(xOf(dkStart),0,xOf(dkEnd),0);
-        gd.addColorStop(0,'rgba(210,150,100,0)'); gd.addColorStop(0.5,'rgba(210,150,100,0.10)'); gd.addColorStop(1,'rgba(210,150,100,0)');
+        gd.addColorStop(0,'rgba(99,102,241,0)'); gd.addColorStop(0.5,'rgba(99,102,241,0.08)'); gd.addColorStop(1,'rgba(99,102,241,0)');
         ctx.fillStyle=gd; ctx.fillRect(xOf(dkStart),PAD.top,xOf(dkEnd)-xOf(dkStart),cH);
       }
     }
@@ -685,11 +685,11 @@ function drawChart(canvas, extremes, startMs, endMs, hoverMs, showWindows, canva
   // H grid
   if(!isMini){
     const hStep=rawMax-rawMin>6?2:1;
-    ctx.font='300 10px DM Sans,sans-serif'; ctx.textAlign='right';
+    ctx.font='300 10px Inter,sans-serif'; ctx.textAlign='right';
     for(let hv=Math.ceil(rawMin);hv<=Math.floor(rawMax)+0.5;hv+=hStep){
       const y=yOf(hv); if(y<PAD.top-2||y>PAD.top+cH+2)continue;
-      ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+cW,y);ctx.strokeStyle='rgba(160,148,132,0.15)';ctx.lineWidth=1;ctx.stroke();
-      ctx.fillStyle='rgba(110,95,82,0.5)'; ctx.fillText(hv+'m',PAD.left-8,y+3.5);
+      ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+cW,y);ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.fillText(hv+'m',PAD.left-8,y+3.5);
     }
   }
   // V grid
@@ -697,18 +697,18 @@ function drawChart(canvas, extremes, startMs, endMs, hoverMs, showWindows, canva
   const totalH=span/3600000;
   for(let hr=0;hr<=totalH;hr+=6){
     const ms=startMs+hr*3600000, x=xOf(ms);
-    ctx.beginPath();ctx.moveTo(x,PAD.top);ctx.lineTo(x,PAD.top+cH);ctx.strokeStyle='rgba(160,148,132,0.15)';ctx.lineWidth=1;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x,PAD.top);ctx.lineTo(x,PAD.top+cH);ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;ctx.stroke();
     if(hr<totalH){
       const lh=parseInt(new Date(ms).toLocaleTimeString('en-AU',{timeZone:TZ,hour:'numeric',hour12:false}));
       let lbl=lh===0||lh===24?'12am':lh===12?'12pm':lh>12?(lh-12)+'pm':lh+'am';
       if(totalH>24&&lh===0)lbl=new Date(ms).toLocaleDateString('en-AU',{timeZone:TZ,weekday:'short'});
-      ctx.font=`300 ${isMini?8:10}px DM Sans,sans-serif`; ctx.fillStyle='rgba(110,95,82,0.5)'; ctx.fillText(lbl,x,H-(isMini?5:10));
+      ctx.font=`300 ${isMini?8:10}px Inter,sans-serif`; ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.fillText(lbl,x,H-(isMini?5:10));
     }
   }
 
   // Fill
   const grad=ctx.createLinearGradient(0,PAD.top,0,PAD.top+cH);
-  grad.addColorStop(0,'rgba(184,201,176,0.42)'); grad.addColorStop(0.55,'rgba(184,205,217,0.28)'); grad.addColorStop(1,'rgba(213,230,240,0.06)');
+  grad.addColorStop(0,'rgba(34,211,238,0.25)'); grad.addColorStop(0.55,'rgba(34,211,238,0.08)'); grad.addColorStop(1,'rgba(34,211,238,0.01)');
   ctx.beginPath(); ctx.moveTo(xOf(pts[0].ms),yOf(pts[0].h));
   for(let i=1;i<pts.length;i++)ctx.lineTo(xOf(pts[i].ms),yOf(pts[i].h));
   ctx.lineTo(xOf(pts[pts.length-1].ms),PAD.top+cH); ctx.lineTo(xOf(pts[0].ms),PAD.top+cH);
@@ -717,20 +717,20 @@ function drawChart(canvas, extremes, startMs, endMs, hoverMs, showWindows, canva
   // Line
   ctx.beginPath(); ctx.moveTo(xOf(pts[0].ms),yOf(pts[0].h));
   for(let i=1;i<pts.length;i++)ctx.lineTo(xOf(pts[i].ms),yOf(pts[i].h));
-  ctx.strokeStyle='rgba(122,162,132,0.75)'; ctx.lineWidth=isMini?1.2:1.8; ctx.lineJoin='round'; ctx.stroke();
+  ctx.strokeStyle='rgba(34,211,238,0.85)'; ctx.lineWidth=isMini?1.2:1.8; ctx.lineJoin='round'; ctx.stroke();
 
   // Extremes
   const visEx=extremes.filter(e=>{const ms=new Date(e.time).getTime();return ms>=startMs&&ms<=endMs;});
   for(const ex of visEx){
     const ms=new Date(ex.time).getTime(),x=xOf(ms),y=yOf(ex.height),hi=ex.type==='high';
     ctx.beginPath();ctx.arc(x,y,isMini?3:4,0,Math.PI*2);
-    ctx.fillStyle=hi?'rgba(120,160,130,0.9)':'rgba(130,162,185,0.9)'; ctx.fill();
-    ctx.strokeStyle=hi?'#78a082':'#82a2b9'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle=hi?'rgba(52,211,153,0.9)':'rgba(167,139,250,0.9)'; ctx.fill();
+    ctx.strokeStyle=hi?'#34d399':'#a78bfa'; ctx.lineWidth=1.5; ctx.stroke();
     if(!isMini){
-      ctx.font='400 10px DM Sans,sans-serif'; ctx.fillStyle=hi?'#3e6645':'#2e5572';
+      ctx.font='400 10px Inter,sans-serif'; ctx.fillStyle=hi?'#34d399':'#a78bfa';
       ctx.textAlign=x>PAD.left+cW*0.75?'right':x<PAD.left+cW*0.25?'left':'center';
       ctx.fillText((hi?'▲ ':'▼ ')+ex.height.toFixed(1)+'m',x,hi?y-10:y+18);
-      ctx.font='300 9px DM Sans,sans-serif'; ctx.fillStyle='rgba(100,88,76,0.6)';
+      ctx.font='300 9px Inter,sans-serif'; ctx.fillStyle='rgba(255,255,255,0.3)';
       ctx.fillText(fmtTime(new Date(ex.time)),x,hi?y-20:y+28);
     }
   }
@@ -740,8 +740,8 @@ function drawChart(canvas, extremes, startMs, endMs, hoverMs, showWindows, canva
   if(nowMs>=startMs&&nowMs<=endMs){
     const nx=xOf(nowMs),ny=yOf(interpolateTide(extremes,nowMs));
     ctx.save();ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,PAD.top+cH);
-    ctx.strokeStyle='rgba(196,135,106,0.5)';ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);ctx.restore();
-    ctx.beginPath();ctx.arc(nx,ny,isMini?3:5,0,Math.PI*2);ctx.fillStyle='#c4876a';ctx.fill();ctx.strokeStyle='#faf7f2';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.strokeStyle='rgba(251,146,60,0.5)';ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);ctx.restore();
+    ctx.beginPath();ctx.arc(nx,ny,isMini?3:5,0,Math.PI*2);ctx.fillStyle='#fb923c';ctx.fill();ctx.strokeStyle='#0f1219';ctx.lineWidth=1.5;ctx.stroke();
   }
 
   // Dawn/dusk markers on x-axis
@@ -796,7 +796,7 @@ function drawChart(canvas, extremes, startMs, endMs, hoverMs, showWindows, canva
       ctx.strokeStyle='#faf7f2'; ctx.lineWidth=1.5; ctx.stroke();
 
       // Initial
-      ctx.font='bold 8px DM Sans,sans-serif';
+      ctx.font='bold 8px Inter,sans-serif';
       ctx.fillStyle='#fff'; ctx.textAlign='center';
       ctx.fillText((c.species||'?')[0].toUpperCase(), cx2, cy2-19);
     }
@@ -807,7 +807,7 @@ function drawChart(canvas, extremes, startMs, endMs, hoverMs, showWindows, canva
     const hx=xOf(hoverMs),hy=yOf(interpolateTide(extremes,hoverMs));
     ctx.save();ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(hx,PAD.top);ctx.lineTo(hx,PAD.top+cH);
     ctx.strokeStyle='rgba(100,85,70,0.3)';ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([]);ctx.restore();
-    ctx.beginPath();ctx.arc(hx,hy,5,0,Math.PI*2);ctx.fillStyle='#3d3530';ctx.fill();ctx.strokeStyle='#faf7f2';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.beginPath();ctx.arc(hx,hy,5,0,Math.PI*2);ctx.fillStyle='#fb923c';ctx.fill();ctx.strokeStyle='#0f1219';ctx.lineWidth=1.5;ctx.stroke();
   }
 }
 
@@ -947,7 +947,7 @@ function drawDial(canvas, score) {
   const cx=S/2,cy=S/2,r=44,sw=10;
   const startA=Math.PI*0.75, endA=Math.PI*2.25;
   // Track
-  ctx.beginPath(); ctx.arc(cx,cy,r,startA,endA); ctx.strokeStyle='rgba(160,148,132,0.2)'; ctx.lineWidth=sw; ctx.lineCap='round'; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,r,startA,endA); ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=sw; ctx.lineCap='round'; ctx.stroke();
   // Fill
   const col=score>=8?'#82aa8c':score>=5?'#c8a84b':score>=3?'#b8cdd9':'#c4b9a8';
   const fillEnd=startA+(endA-startA)*(score/10);
@@ -960,13 +960,13 @@ function drawCompass(canvas, deg, speed) {
   canvas.width=S*dpr; canvas.height=S*dpr;
   const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr);
   const cx=S/2,cy=S/2,r=18;
-  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.strokeStyle='rgba(160,148,132,0.3)'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=1.5; ctx.stroke();
   // Arrow
   const rad=(deg-90)*(Math.PI/180);
   const ax=cx+r*0.65*Math.cos(rad), ay=cy+r*0.65*Math.sin(rad);
   ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(ax,ay);
-  ctx.strokeStyle='#5c504a'; ctx.lineWidth=2; ctx.lineCap='round'; ctx.stroke();
-  ctx.beginPath(); ctx.arc(ax,ay,3,0,Math.PI*2); ctx.fillStyle='#c4876a'; ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.7)'; ctx.lineWidth=2; ctx.lineCap='round'; ctx.stroke();
+  ctx.beginPath(); ctx.arc(ax,ay,3,0,Math.PI*2); ctx.fillStyle='#fb923c'; ctx.fill();
 }
 
 // ── LARRAKIA SEASONS (Gulumoerrgin) ───────────────────────────────────────────
@@ -1297,16 +1297,16 @@ function drawCombinedChart(canvas, hourlyTime, hourlyPressure, hourlyTemp, hourl
   const vStart=viewStartMs??wStartMs, vEnd=viewEndMs??wEndMs, vSpan=vEnd-vStart;
   const xOfMs=ms=>PAD.left+(ms-vStart)/vSpan*cW;
 
-  ctx.fillStyle='#faf7f2';
+  ctx.fillStyle='#0f1219';
   ctx.beginPath();if(ctx.roundRect)ctx.roundRect(0,0,W,H,8);else ctx.rect(0,0,W,H);ctx.fill();
 
   // Dawn/dusk shading (clipped to view)
   if(sunriseMsList){
     for(const {srMs,ssMs} of sunriseMsList){
       const pdS=srMs-30*60000,pdE=srMs+90*60000;
-      if(pdE>vStart&&pdS<vEnd){const x1=xOfMs(Math.max(pdS,vStart)),x2=xOfMs(Math.min(pdE,vEnd));const gd=ctx.createLinearGradient(x1,0,x2,0);gd.addColorStop(0,'rgba(210,180,130,0)');gd.addColorStop(0.4,'rgba(210,180,130,0.08)');gd.addColorStop(1,'rgba(210,180,130,0)');ctx.fillStyle=gd;ctx.fillRect(x1,PAD.top,x2-x1,cH);}
+      if(pdE>vStart&&pdS<vEnd){const x1=xOfMs(Math.max(pdS,vStart)),x2=xOfMs(Math.min(pdE,vEnd));const gd=ctx.createLinearGradient(x1,0,x2,0);gd.addColorStop(0,'rgba(251,191,36,0)');gd.addColorStop(0.4,'rgba(251,191,36,0.06)');gd.addColorStop(1,'rgba(251,191,36,0)');ctx.fillStyle=gd;ctx.fillRect(x1,PAD.top,x2-x1,cH);}
       const dkS=ssMs-60*60000,dkE=ssMs+30*60000;
-      if(dkE>vStart&&dkS<vEnd){const x1=xOfMs(Math.max(dkS,vStart)),x2=xOfMs(Math.min(dkE,vEnd));const gd=ctx.createLinearGradient(x1,0,x2,0);gd.addColorStop(0,'rgba(210,150,100,0)');gd.addColorStop(0.5,'rgba(210,150,100,0.08)');gd.addColorStop(1,'rgba(210,150,100,0)');ctx.fillStyle=gd;ctx.fillRect(x1,PAD.top,x2-x1,cH);}
+      if(dkE>vStart&&dkS<vEnd){const x1=xOfMs(Math.max(dkS,vStart)),x2=xOfMs(Math.min(dkE,vEnd));const gd=ctx.createLinearGradient(x1,0,x2,0);gd.addColorStop(0,'rgba(99,102,241,0)');gd.addColorStop(0.5,'rgba(99,102,241,0.06)');gd.addColorStop(1,'rgba(99,102,241,0)');ctx.fillStyle=gd;ctx.fillRect(x1,PAD.top,x2-x1,cH);}
     }
   }
 
@@ -1328,16 +1328,16 @@ function drawCombinedChart(canvas, hourlyTime, hourlyPressure, hourlyTemp, hourl
   const yOfTide=v=>PAD.top+(1-(v-tdMin)/tdRange)*cH;
 
   // Axes
-  ctx.font='300 9px DM Sans,sans-serif';
+  ctx.font='300 9px Inter,sans-serif';
   if(f.pressure){
-    ctx.textAlign='right';ctx.fillStyle='rgba(130,165,200,0.85)';
-    for(let v=pMin;v<=pMax;v+=5){const y=yOfP(v);if(y<PAD.top-4||y>PAD.top+cH+4)continue;ctx.fillText(v,PAD.left-5,y+3);ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+cW,y);ctx.strokeStyle='rgba(160,148,132,0.1)';ctx.lineWidth=1;ctx.stroke();}
+    ctx.textAlign='right';ctx.fillStyle='rgba(167,139,250,0.7)';
+    for(let v=pMin;v<=pMax;v+=5){const y=yOfP(v);if(y<PAD.top-4||y>PAD.top+cH+4)continue;ctx.fillText(v,PAD.left-5,y+3);ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+cW,y);ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;ctx.stroke();}
   } else {
-    ctx.strokeStyle='rgba(160,148,132,0.1)';ctx.lineWidth=1;
+    ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
     for(let i=0;i<=4;i++){const y=PAD.top+i/4*cH;ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+cW,y);ctx.stroke();}
   }
-  if(f.temp){ctx.textAlign='left';ctx.fillStyle='rgba(196,135,106,0.85)';for(let v=Math.ceil(tMin/5)*5;v<=tMax;v+=5){const y=yOfT(v);if(y<PAD.top-4||y>PAD.top+cH+4)continue;ctx.fillText(v+'°',PAD.left+cW+4,y+3);}}
-  if(f.tides&&tidePts.length){const ts2=tdMax-tdMin>5?2:1;ctx.textAlign='right';ctx.fillStyle='rgba(122,162,132,0.8)';for(let v=Math.ceil(tdMin);v<=Math.floor(tdMax)+0.1;v+=ts2){const y=yOfTide(v);if(y<PAD.top-4||y>PAD.top+cH+4)continue;ctx.fillText(v+'m',W-3,y+3);}}
+  if(f.temp){ctx.textAlign='left';ctx.fillStyle='rgba(251,146,60,0.7)';for(let v=Math.ceil(tMin/5)*5;v<=tMax;v+=5){const y=yOfT(v);if(y<PAD.top-4||y>PAD.top+cH+4)continue;ctx.fillText(v+'°',PAD.left+cW+4,y+3);}}
+  if(f.tides&&tidePts.length){const ts2=tdMax-tdMin>5?2:1;ctx.textAlign='right';ctx.fillStyle='rgba(34,211,238,0.8)';for(let v=Math.ceil(tdMin);v<=Math.floor(tdMax)+0.1;v+=ts2){const y=yOfTide(v);if(y<PAD.top-4||y>PAD.top+cH+4)continue;ctx.fillText(v+'m',W-3,y+3);}}
 
   // Clip series to chart plot area
   ctx.save();ctx.beginPath();ctx.rect(PAD.left-1,PAD.top,cW+2,cH+12);ctx.clip();
@@ -1347,17 +1347,17 @@ function drawCombinedChart(canvas, hourlyTime, hourlyPressure, hourlyTemp, hourl
     const pts=hourlyTime.slice(0,n).map((t,i)=>({ms:new Date(t).getTime(),v:hArr[i]||0})).filter(p=>p.ms>=vStart-3.6e6&&p.ms<=vEnd+3.6e6);
     if(pts.length>1){
       ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(xOfMs(p.ms),yOfH(p.v)):ctx.lineTo(xOfMs(p.ms),yOfH(p.v)));
-      ctx.lineTo(xOfMs(pts[pts.length-1].ms),PAD.top+cH);ctx.lineTo(xOfMs(pts[0].ms),PAD.top+cH);ctx.closePath();ctx.fillStyle='rgba(130,185,145,0.10)';ctx.fill();
-      ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(xOfMs(p.ms),yOfH(p.v)):ctx.lineTo(xOfMs(p.ms),yOfH(p.v)));ctx.strokeStyle='rgba(130,185,145,0.55)';ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.stroke();
+      ctx.lineTo(xOfMs(pts[pts.length-1].ms),PAD.top+cH);ctx.lineTo(xOfMs(pts[0].ms),PAD.top+cH);ctx.closePath();ctx.fillStyle='rgba(34,211,238,0.08)';ctx.fill();
+      ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(xOfMs(p.ms),yOfH(p.v)):ctx.lineTo(xOfMs(p.ms),yOfH(p.v)));ctx.strokeStyle='rgba(34,211,238,0.5)';ctx.lineWidth=1.5;ctx.lineJoin='round';ctx.stroke();
     }
   }
 
   // Tide fill + line + fishing bar
   if(f.tides&&tidePts.length>1){
-    const tg=ctx.createLinearGradient(0,PAD.top,0,PAD.top+cH);tg.addColorStop(0,'rgba(122,162,132,0.22)');tg.addColorStop(1,'rgba(122,162,132,0.04)');
+    const tg=ctx.createLinearGradient(0,PAD.top,0,PAD.top+cH);tg.addColorStop(0,'rgba(34,211,238,0.15)');tg.addColorStop(1,'rgba(34,211,238,0.02)');
     ctx.beginPath();tidePts.forEach((p,i)=>i===0?ctx.moveTo(xOfMs(p.ms),yOfTide(p.h)):ctx.lineTo(xOfMs(p.ms),yOfTide(p.h)));
     ctx.lineTo(xOfMs(tidePts[tidePts.length-1].ms),PAD.top+cH);ctx.lineTo(xOfMs(tidePts[0].ms),PAD.top+cH);ctx.closePath();ctx.fillStyle=tg;ctx.fill();
-    ctx.beginPath();tidePts.forEach((p,i)=>i===0?ctx.moveTo(xOfMs(p.ms),yOfTide(p.h)):ctx.lineTo(xOfMs(p.ms),yOfTide(p.h)));ctx.strokeStyle='rgba(122,162,132,0.8)';ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();
+    ctx.beginPath();tidePts.forEach((p,i)=>i===0?ctx.moveTo(xOfMs(p.ms),yOfTide(p.h)):ctx.lineTo(xOfMs(p.ms),yOfTide(p.h)));ctx.strokeStyle='rgba(34,211,238,0.8)';ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();
     const wins=computeFishingWindows(extremes,vStart,vEnd);
     const barY=PAD.top+cH+5,barThick=5,barCols={'run-in':'rgba(130,185,145,0.9)','run-out':'rgba(130,165,200,0.9)','high-jetty':'rgba(196,135,106,0.85)','low-slack':'rgba(200,170,130,0.85)'};
     ctx.lineCap='round';
@@ -1366,13 +1366,13 @@ function drawCombinedChart(canvas, hourlyTime, hourlyPressure, hourlyTemp, hourl
   }
 
   // Pressure + temperature lines (only points in/near view)
-  if(f.pressure){const pts=hourlyTime.slice(0,n).map((t,i)=>({ms:new Date(t).getTime(),v:pArr[i]})).filter(p=>p.ms>=vStart-3.6e6&&p.ms<=vEnd+3.6e6);if(pts.length>1){ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(xOfMs(p.ms),yOfP(p.v)):ctx.lineTo(xOfMs(p.ms),yOfP(p.v)));ctx.strokeStyle='rgba(130,165,200,0.9)';ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();}}
-  if(f.temp){const pts=hourlyTime.slice(0,n).map((t,i)=>({ms:new Date(t).getTime(),v:tArr[i]})).filter(p=>p.ms>=vStart-3.6e6&&p.ms<=vEnd+3.6e6);if(pts.length>1){ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(xOfMs(p.ms),yOfT(p.v)):ctx.lineTo(xOfMs(p.ms),yOfT(p.v)));ctx.strokeStyle='rgba(196,135,106,0.9)';ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();}}
+  if(f.pressure){const pts=hourlyTime.slice(0,n).map((t,i)=>({ms:new Date(t).getTime(),v:pArr[i]})).filter(p=>p.ms>=vStart-3.6e6&&p.ms<=vEnd+3.6e6);if(pts.length>1){ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(xOfMs(p.ms),yOfP(p.v)):ctx.lineTo(xOfMs(p.ms),yOfP(p.v)));ctx.strokeStyle='rgba(167,139,250,0.9)';ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();}}
+  if(f.temp){const pts=hourlyTime.slice(0,n).map((t,i)=>({ms:new Date(t).getTime(),v:tArr[i]})).filter(p=>p.ms>=vStart-3.6e6&&p.ms<=vEnd+3.6e6);if(pts.length>1){ctx.beginPath();pts.forEach((p,i)=>i===0?ctx.moveTo(xOfMs(p.ms),yOfT(p.v)):ctx.lineTo(xOfMs(p.ms),yOfT(p.v)));ctx.strokeStyle='rgba(251,146,60,0.9)';ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();}}
 
   ctx.restore(); // end clip
 
   // X-axis: adaptive label density
-  ctx.textAlign='center';ctx.fillStyle='rgba(110,95,82,0.55)';ctx.font='300 9px DM Sans,sans-serif';
+  ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='300 9px Inter,sans-serif';
   const vSpanH=vSpan/3.6e6;
   let lStep,lFmt;
   if(vSpanH<=12){lStep=2*3.6e6;lFmt=ms=>new Date(ms).toLocaleTimeString('en-AU',{timeZone:TZ,hour:'2-digit',minute:'2-digit',hour12:false});}
@@ -1382,17 +1382,17 @@ function drawCombinedChart(canvas, hourlyTime, hourlyPressure, hourlyTemp, hourl
   for(let ms=Math.ceil(vStart/lStep)*lStep;ms<=vEnd;ms+=lStep){
     const x=xOfMs(ms);if(x<PAD.left+12||x>PAD.left+cW-5)continue;
     ctx.fillText(lFmt(ms),x,H-8);
-    ctx.beginPath();ctx.moveTo(x,PAD.top);ctx.lineTo(x,PAD.top+cH);ctx.strokeStyle='rgba(160,148,132,0.15)';ctx.lineWidth=1;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x,PAD.top);ctx.lineTo(x,PAD.top+cH);ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;ctx.stroke();
   }
 
   // Now line
   const nowMs2=Date.now();
-  if(nowMs2>=vStart&&nowMs2<=vEnd){const nx=xOfMs(nowMs2);ctx.save();ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,PAD.top+cH);ctx.strokeStyle='rgba(196,135,106,0.5)';ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);ctx.restore();}
+  if(nowMs2>=vStart&&nowMs2<=vEnd){const nx=xOfMs(nowMs2);ctx.save();ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,PAD.top+cH);ctx.strokeStyle='rgba(251,146,60,0.5)';ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);ctx.restore();}
 
   // Hover crosshair
   if(hoverMs!=null&&hoverMs>=vStart&&hoverMs<=vEnd){
     const nx=xOfMs(hoverMs);
-    ctx.save();ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,PAD.top+cH);ctx.strokeStyle='rgba(61,53,48,0.5)';ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.stroke();
+    ctx.save();ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,PAD.top+cH);ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.stroke();
     const wFrac=(hoverMs-wStartMs)/(wEndMs-wStartMs),wi=Math.max(0,Math.min(n-1,Math.round(wFrac*(n-1))));
     const inW=hoverMs>=wStartMs&&hoverMs<=wEndMs;
     const tVal=f.temp&&inW?tArr[wi]:null,pVal=f.pressure&&inW?pArr[wi]:null,hVal=f.humidity&&inW?hArr[wi]:null;
@@ -1403,9 +1403,9 @@ function drawCombinedChart(canvas, hourlyTime, hourlyPressure, hourlyTemp, hourl
     const d=new Date(hoverMs);
     const lbl=d.toLocaleDateString('en-AU',{timeZone:TZ,weekday:'short',day:'numeric',month:'short'})+' '+fmtTime(d);
     const side=nx>W*0.6?'right':'left',ox=nx>W*0.6?-8:8;
-    ctx.font='400 10px DM Sans,sans-serif';ctx.fillStyle='rgba(61,53,48,0.8)';ctx.textAlign=side;ctx.fillText(lbl,nx+ox,PAD.top+14);
+    ctx.font='400 10px Inter,sans-serif';ctx.fillStyle='rgba(255,255,255,0.8)';ctx.textAlign=side;ctx.fillText(lbl,nx+ox,PAD.top+14);
     const parts=[];if(tVal!=null)parts.push(Math.round(tVal)+'°C');if(pVal!=null)parts.push(Math.round(pVal)+'hPa');if(hVal!=null)parts.push(Math.round(hVal)+'%');if(tdVal!=null)parts.push(tdVal.toFixed(2)+'m');
-    ctx.fillStyle='rgba(61,53,48,0.6)';ctx.font='300 9px DM Sans,sans-serif';ctx.fillText(parts.join('  '),nx+ox,PAD.top+26);
+    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='300 9px Inter,sans-serif';ctx.fillText(parts.join('  '),nx+ox,PAD.top+26);
     ctx.restore();
   }
 }
@@ -1438,7 +1438,7 @@ function drawLunarChart(canvas) {
   const W=Wcss, H=Hcss;
   const PAD={top:8,right:8,bottom:22,left:8};
   const cW=W-PAD.left-PAD.right, cH=H-PAD.top-PAD.bottom;
-  ctx.fillStyle='#faf7f2';
+  ctx.fillStyle='#0f1219';
   ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(0,0,W,H,8);else ctx.rect(0,0,W,H); ctx.fill();
   const DAYS=28, now=new Date(), cellW=cW/DAYS;
   const R=Math.min(cellW*0.38, cH*0.38);
@@ -1449,7 +1449,7 @@ function drawLunarChart(canvas) {
     // Today highlight
     if(i===0){ctx.beginPath();ctx.arc(cx,cy,R+3,0,Math.PI*2);ctx.fillStyle='rgba(196,135,106,0.1)';ctx.fill();}
     // Dark circle (full orbit)
-    ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fillStyle='rgba(61,53,48,0.18)';ctx.fill();
+    ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.06)';ctx.fill();
     // Illuminated portion using arc+bezier crescent
     if(moon.illumination>1){
       ctx.save();
@@ -1468,11 +1468,11 @@ function drawLunarChart(canvas) {
       ctx.restore();
     }
     // Phase label at new/full
-    if(moon.illumination<=3){ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(61,53,48,0.5)';ctx.fillText('🌑',cx,cy+3);}
+    if(moon.illumination<=3){ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,0.35)';ctx.fillText('🌑',cx,cy+3);}
     else if(moon.illumination>=97){ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(200,168,75,0.9)';ctx.fillText('🌕',cx,cy+3);}
     // Day number every 7 days or first/last
     if(i%7===0){
-      ctx.font='300 8px DM Sans,sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(110,95,82,0.55)';
+      ctx.font='300 8px Inter,sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,0.3)';
       const lbl=i===0?'Today':d.toLocaleDateString('en-AU',{timeZone:TZ,day:'numeric',month:'short'});
       ctx.fillText(lbl,cx,H-5);
     }
@@ -1532,10 +1532,10 @@ function drawCatchAnalysisChart(canvas) {
   const W=Wcss,H=Hcss;
   const PAD={top:20,right:16,bottom:28,left:40};
   const cW=W-PAD.left-PAD.right,cH=H-PAD.top-PAD.bottom;
-  ctx.fillStyle='#faf7f2';
+  ctx.fillStyle='#0f1219';
   ctx.beginPath();if(ctx.roundRect)ctx.roundRect(0,0,W,H,8);else ctx.rect(0,0,W,H);ctx.fill();
   if(!log.length){
-    ctx.font='300 12px DM Sans,sans-serif';ctx.fillStyle='rgba(110,95,82,0.4)';ctx.textAlign='center';
+    ctx.font='300 12px Inter,sans-serif';ctx.fillStyle='rgba(110,95,82,0.4)';ctx.textAlign='center';
     ctx.fillText('Log some catches to see analysis',W/2,H/2); return;
   }
   // Bucket catches by tide height into 10 buckets (0.0-0.5m, 0.5-1.0m, ... 4.5-5.0m)
@@ -1549,17 +1549,17 @@ function drawCatchAnalysisChart(canvas) {
     const tide=i*bucketSize;
     ctx.fillStyle=tide<1?'rgba(130,165,200,0.7)':tide<3?'rgba(130,185,145,0.7)':'rgba(196,135,106,0.7)';
     ctx.fillRect(x+2,PAD.top+cH-bH,bW-4,bH);
-    if(counts[i]>0){ctx.font='300 9px DM Sans,sans-serif';ctx.fillStyle='rgba(61,53,48,0.7)';ctx.textAlign='center';ctx.fillText(counts[i],x+bW/2,PAD.top+cH-bH-3);}
-    ctx.font='300 8px DM Sans,sans-serif';ctx.fillStyle='rgba(110,95,82,0.5)';ctx.textAlign='center';
+    if(counts[i]>0){ctx.font='300 9px Inter,sans-serif';ctx.fillStyle='rgba(255,255,255,0.5)';ctx.textAlign='center';ctx.fillText(counts[i],x+bW/2,PAD.top+cH-bH-3);}
+    ctx.font='300 8px Inter,sans-serif';ctx.fillStyle='rgba(255,255,255,0.3)';ctx.textAlign='center';
     ctx.fillText((tide).toFixed(1),x+bW/2,H-8);
   }
-  ctx.font='300 9px DM Sans,sans-serif';ctx.fillStyle='rgba(110,95,82,0.5)';ctx.textAlign='right';
+  ctx.font='300 9px Inter,sans-serif';ctx.fillStyle='rgba(255,255,255,0.3)';ctx.textAlign='right';
   for(let v=0;v<=maxCount;v+=Math.max(1,Math.floor(maxCount/4))){
     const y=PAD.top+cH-(v/maxCount)*cH;
     ctx.fillText(v,PAD.left-4,y+3);
-    ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+cW,y);ctx.strokeStyle='rgba(160,148,132,0.12)';ctx.lineWidth=1;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+cW,y);ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=1;ctx.stroke();
   }
-  ctx.font='300 9px DM Sans,sans-serif';ctx.fillStyle='rgba(110,95,82,0.4)';ctx.textAlign='center';
+  ctx.font='300 9px Inter,sans-serif';ctx.fillStyle='rgba(110,95,82,0.4)';ctx.textAlign='center';
   ctx.fillText('Tide height at catch (m)',W/2,PAD.top-6);
 }
 
@@ -1586,16 +1586,16 @@ function drawTideOverviewChart(canvas, extremes, startMs, sunriseMsList, hoverMs
   const minH=rawMin-pad_h,maxH=rawMax+pad_h,range=(maxH-minH)||1;
   const yOf=h=>PAD.top+(1-(h-minH)/range)*cH;
 
-  ctx.fillStyle='#faf7f2';
+  ctx.fillStyle='#0f1219';
   ctx.beginPath();if(ctx.roundRect)ctx.roundRect(0,0,W,H,8);else ctx.rect(0,0,W,H);ctx.fill();
 
   // Dawn/dusk shading
   if(sunriseMsList){
     for(const {srMs,ssMs} of sunriseMsList){
       const pdS=srMs-30*60000,pdE=srMs+90*60000;
-      if(pdE>vStart&&pdS<vEnd){const x1=xOf(Math.max(pdS,vStart)),x2=xOf(Math.min(pdE,vEnd));const gd=ctx.createLinearGradient(x1,0,x2,0);gd.addColorStop(0,'rgba(210,180,130,0)');gd.addColorStop(0.4,'rgba(210,180,130,0.08)');gd.addColorStop(1,'rgba(210,180,130,0)');ctx.fillStyle=gd;ctx.fillRect(x1,PAD.top,x2-x1,cH);}
+      if(pdE>vStart&&pdS<vEnd){const x1=xOf(Math.max(pdS,vStart)),x2=xOf(Math.min(pdE,vEnd));const gd=ctx.createLinearGradient(x1,0,x2,0);gd.addColorStop(0,'rgba(251,191,36,0)');gd.addColorStop(0.4,'rgba(251,191,36,0.06)');gd.addColorStop(1,'rgba(251,191,36,0)');ctx.fillStyle=gd;ctx.fillRect(x1,PAD.top,x2-x1,cH);}
       const dkS=ssMs-60*60000,dkE=ssMs+30*60000;
-      if(dkE>vStart&&dkS<vEnd){const x1=xOf(Math.max(dkS,vStart)),x2=xOf(Math.min(dkE,vEnd));const gd=ctx.createLinearGradient(x1,0,x2,0);gd.addColorStop(0,'rgba(210,150,100,0)');gd.addColorStop(0.5,'rgba(210,150,100,0.08)');gd.addColorStop(1,'rgba(210,150,100,0)');ctx.fillStyle=gd;ctx.fillRect(x1,PAD.top,x2-x1,cH);}
+      if(dkE>vStart&&dkS<vEnd){const x1=xOf(Math.max(dkS,vStart)),x2=xOf(Math.min(dkE,vEnd));const gd=ctx.createLinearGradient(x1,0,x2,0);gd.addColorStop(0,'rgba(99,102,241,0)');gd.addColorStop(0.5,'rgba(99,102,241,0.06)');gd.addColorStop(1,'rgba(99,102,241,0)');ctx.fillStyle=gd;ctx.fillRect(x1,PAD.top,x2-x1,cH);}
     }
   }
 
@@ -1624,7 +1624,7 @@ function drawTideOverviewChart(canvas, extremes, startMs, sunriseMsList, hoverMs
   // Line
   ctx.beginPath();ctx.moveTo(xOf(pts[0].ms),yOf(pts[0].h));
   for(let i=1;i<pts.length;i++)ctx.lineTo(xOf(pts[i].ms),yOf(pts[i].h));
-  ctx.strokeStyle='rgba(122,162,132,0.75)';ctx.lineWidth=1.8;ctx.lineJoin='round';ctx.stroke();
+  ctx.strokeStyle='rgba(34,211,238,0.85)';ctx.lineWidth=1.8;ctx.lineJoin='round';ctx.stroke();
 
   // Extremes dots
   for(const ex of extremes.filter(e=>{const ms=new Date(e.time).getTime();return ms>=vStart&&ms<=vEnd;})){
@@ -1637,15 +1637,15 @@ function drawTideOverviewChart(canvas, extremes, startMs, sunriseMsList, hoverMs
 
   // H grid + labels
   const hStep=rawMax-rawMin>6?2:1;
-  ctx.font='300 10px DM Sans,sans-serif';ctx.textAlign='right';
+  ctx.font='300 10px Inter,sans-serif';ctx.textAlign='right';
   for(let hv=Math.ceil(rawMin);hv<=Math.floor(rawMax)+0.5;hv+=hStep){
     const y=yOf(hv);if(y<PAD.top-2||y>PAD.top+cH+2)continue;
-    ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+cW,y);ctx.strokeStyle='rgba(160,148,132,0.15)';ctx.lineWidth=1;ctx.stroke();
-    ctx.fillStyle='rgba(110,95,82,0.5)';ctx.fillText(hv+'m',PAD.left-4,y+3.5);
+    ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+cW,y);ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.fillText(hv+'m',PAD.left-4,y+3.5);
   }
 
   // X-axis: adaptive labels
-  ctx.textAlign='center';ctx.font='300 10px DM Sans,sans-serif';ctx.fillStyle='rgba(110,95,82,0.5)';
+  ctx.textAlign='center';ctx.font='300 10px Inter,sans-serif';ctx.fillStyle='rgba(255,255,255,0.3)';
   const vSpanD=vSpan/86400000;
   let lStep,lFmt;
   if(vSpanD<=2){lStep=6*3.6e6;lFmt=ms=>{const d=new Date(ms),h=Number(d.toLocaleTimeString('en-AU',{timeZone:TZ,hour:'2-digit',hour12:false}));return h===0?d.toLocaleDateString('en-AU',{timeZone:TZ,weekday:'short'}):h+'h';};}
@@ -1655,7 +1655,7 @@ function drawTideOverviewChart(canvas, extremes, startMs, sunriseMsList, hoverMs
   for(let ms=Math.ceil(vStart/lStep)*lStep;ms<=vEnd;ms+=lStep){
     const x=xOf(ms);if(x<PAD.left+14||x>PAD.left+cW-5)continue;
     ctx.fillText(lFmt(ms),x,H-10);
-    ctx.beginPath();ctx.moveTo(x,PAD.top);ctx.lineTo(x,PAD.top+cH);ctx.strokeStyle='rgba(160,148,132,0.2)';ctx.lineWidth=1;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x,PAD.top);ctx.lineTo(x,PAD.top+cH);ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=1;ctx.stroke();
   }
 
   // Now line
@@ -1663,7 +1663,7 @@ function drawTideOverviewChart(canvas, extremes, startMs, sunriseMsList, hoverMs
   if(nowMs>=vStart&&nowMs<=vEnd){
     const nx=xOf(nowMs);ctx.save();ctx.setLineDash([4,4]);
     ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,PAD.top+cH);
-    ctx.strokeStyle='rgba(196,135,106,0.5)';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.strokeStyle='rgba(251,146,60,0.5)';ctx.lineWidth=1.5;ctx.stroke();
     ctx.setLineDash([]);ctx.restore();
   }
 
@@ -1671,11 +1671,11 @@ function drawTideOverviewChart(canvas, extremes, startMs, sunriseMsList, hoverMs
   if(hoverMs!=null&&hoverMs>=vStart&&hoverMs<=vEnd){
     const nx=xOf(hoverMs);
     ctx.save();ctx.beginPath();ctx.moveTo(nx,PAD.top);ctx.lineTo(nx,PAD.top+cH);
-    ctx.strokeStyle='rgba(61,53,48,0.5)';ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.stroke();
     const h=interpolateTide(extremes,hoverMs),hy=yOf(h);
     ctx.beginPath();ctx.arc(nx,hy,4,0,Math.PI*2);ctx.fillStyle='rgba(122,162,132,0.9)';ctx.fill();
     ctx.strokeStyle='#78a082';ctx.lineWidth=1.5;ctx.stroke();
-    ctx.font='400 10px DM Sans,sans-serif';ctx.fillStyle='rgba(61,53,48,0.8)';
+    ctx.font='400 10px Inter,sans-serif';ctx.fillStyle='rgba(255,255,255,0.8)';
     ctx.textAlign=nx>W*0.6?'right':'left';
     ctx.fillText(h.toFixed(2)+'m',nx+(nx>W*0.6?-8:8),hy-8);
     ctx.restore();
@@ -1908,7 +1908,7 @@ function renderApp({tideData,solunar,weather,marine}) {
         const isToday = m === curMonth;
         const label = s && s.months[0] === m ? s.name : ''; // label on first month of season
         return `<div class="lk-season-cell${isToday?' today-marker':''}"
-          style="background:${s?s.color:'rgba(160,148,132,0.15)'}"
+          style="background:${s?s.color:'rgba(255,255,255,0.06)'}"
           data-season="${s?s.name:''}"
           onmouseenter="showSeasonTip(event,'${s?s.name:''}')"
           onmousemove="moveSeasonTip(event)"
@@ -2201,7 +2201,7 @@ function renderApp({tideData,solunar,weather,marine}) {
           <div class="chart-tip" id="chartTip"><span class="chart-tip-time">—</span><span class="chart-tip-ht">—</span></div>
         </div>
         <div class="chart-legend-note">
-          <div class="legend-item"><span class="legend-swatch" style="background:rgba(130,185,145,0.55)"></span>Run-in</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:rgba(34,211,238,0.5)"></span>Run-in</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(130,165,200,0.55)"></span>Run-out</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(196,135,106,0.45)"></span>Jetty barra</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(200,170,130,0.55)"></span>Low slack</div>
@@ -2219,7 +2219,7 @@ function renderApp({tideData,solunar,weather,marine}) {
       <div class="card" style="padding:20px 20px 16px">
         <canvas id="tideOverviewChart" style="display:block;width:100%;height:180px;border-radius:6px"></canvas>
         <div class="chart-legend-note">
-          <div class="legend-item"><span class="legend-swatch" style="background:rgba(130,185,145,0.55)"></span>Run-in</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:rgba(34,211,238,0.5)"></span>Run-in</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(130,165,200,0.55)"></span>Run-out</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(196,135,106,0.45)"></span>Jetty barra</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(200,170,130,0.55)"></span>Low slack</div>
@@ -2305,7 +2305,7 @@ function renderApp({tideData,solunar,weather,marine}) {
         <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-soft);display:flex;gap:12px;flex-wrap:wrap;font-size:10px;color:var(--stone-dark)">
           <span style="display:flex;align-items:center;gap:5px"><span style="width:16px;height:8px;border-radius:2px;background:var(--sage);display:inline-block"></span>Peak season</span>
           <span style="display:flex;align-items:center;gap:5px"><span style="width:16px;height:8px;border-radius:2px;background:rgba(130,170,140,0.38);display:inline-block"></span>In season</span>
-          <span style="display:flex;align-items:center;gap:5px"><span style="width:16px;height:8px;border-radius:2px;background:rgba(160,148,132,0.12);display:inline-block"></span>Off season</span>
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:16px;height:8px;border-radius:2px;background:rgba(255,255,255,0.05);display:inline-block"></span>Off season</span>
           <span style="display:flex;align-items:center;gap:5px;margin-left:auto"><span style="width:16px;height:8px;border:2px solid var(--ink);border-radius:2px;display:inline-block"></span>This month</span>
         </div>
       </div>
@@ -2368,7 +2368,7 @@ function renderApp({tideData,solunar,weather,marine}) {
         </div>
         <canvas id="combinedChart" style="display:block;width:100%;height:260px;border-radius:6px"></canvas>
         <div class="chart-legend-note" style="margin-top:10px">
-          <div class="legend-item"><span class="legend-swatch" style="background:rgba(130,185,145,0.55)"></span>Run-in</div>
+          <div class="legend-item"><span class="legend-swatch" style="background:rgba(34,211,238,0.5)"></span>Run-in</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(130,165,200,0.55)"></span>Run-out</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(196,135,106,0.45)"></span>Jetty barra</div>
           <div class="legend-item"><span class="legend-swatch" style="background:rgba(200,170,130,0.55)"></span>Low slack</div>
