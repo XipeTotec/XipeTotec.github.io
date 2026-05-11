@@ -1155,7 +1155,7 @@ async function fetchAllSolunar() {
 
 async function fetchWeather() {
   try {
-    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LNG}&current=surface_pressure,wind_speed_10m,wind_direction_10m,uv_index,temperature_2m,relative_humidity_2m&hourly=surface_pressure,temperature_2m,relative_humidity_2m&daily=sunrise,sunset,uv_index_max,precipitation_probability_max&forecast_days=7&timezone=Australia%2FDarwin`);
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LNG}&current=surface_pressure,wind_speed_10m,wind_direction_10m,uv_index,temperature_2m,relative_humidity_2m&hourly=surface_pressure,temperature_2m,relative_humidity_2m&daily=sunrise,sunset,uv_index_max,precipitation_probability_max,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,wind_direction_10m_dominant,weather_code&forecast_days=7&timezone=Australia%2FDarwin`);
     if(!r.ok)return null;
     const d=await r.json();
     const p=d.current?.surface_pressure;
@@ -1962,19 +1962,42 @@ function renderApp({tideData,solunar,weather,marine}) {
       <span class="lure-confidence ${l.conf}">${l.conf==='high'?'Recommended':l.conf==='med'?'Good option':'Worth trying'}</span>
     </div>`).join('');
 
-  // Weather daily table
+  // Weather daily cards
+  const wmoIcon=c=>{if(c==null)return'';if(c===0)return'☀️';if(c<=2)return'🌤️';if(c<=3)return'☁️';if(c<=48)return'🌫️';if(c<=55)return'🌦️';if(c<=65)return'🌧️';if(c<=77)return'❄️';if(c<=82)return'🌦️';if(c<=86)return'❄️';return'⛈️';};
+  const wmoDesc=c=>{if(c==null)return'';if(c===0)return'Clear';if(c<=2)return'Mostly clear';if(c<=3)return'Overcast';if(c<=48)return'Fog';if(c<=55)return'Drizzle';if(c<=65)return'Rain';if(c<=77)return'Snow';if(c<=82)return'Showers';if(c<=86)return'Snow showers';return'Storm';};
+  const windArrow=deg=>{const dirs=['N','NE','E','SE','S','SW','W','NW'];return dirs[Math.round(((deg%360)/45))%8];};
   let weatherDailyHTML='';
   if(weather?.daily){
-    const {time,uv_index_max,precipitation_probability_max}=weather.daily;
-    weatherDailyHTML=`<div style="overflow-x:auto;margin-top:16px"><table style="width:100%;border-collapse:collapse;font-size:11px">
-      <thead><tr>${['Day','UV Max','Rain %'].map(h=>`<th style="text-align:left;padding:6px 10px;border-bottom:1px solid var(--border);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--stone-dark)">${h}</th>`).join('')}</tr></thead>
-      <tbody>${(time||[]).slice(0,7).map((t,i)=>{
-        const d=new Date(t+'T12:00:00+09:30');
-        const lbl=i===0?'Today':d.toLocaleDateString('en-AU',{timeZone:TZ,weekday:'short',day:'numeric',month:'short'});
-        const uv=uv_index_max?.[i]??'—', rain=precipitation_probability_max?.[i]??'—';
-        return `<tr style="border-bottom:1px solid var(--border-soft)"><td style="padding:8px 10px;font-family:'Cormorant Garamond',serif;font-size:15px">${lbl}</td><td style="padding:8px 10px">${uv} ${uv>=8?'☀️☀️':uv>=6?'☀️':''}</td><td style="padding:8px 10px">${rain}%</td></tr>`;
-      }).join('')}</tbody>
-    </table></div>`;
+    const {time,uv_index_max,precipitation_probability_max,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,wind_direction_10m_dominant,weather_code}=weather.daily;
+    weatherDailyHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:12px">${(time||[]).slice(0,7).map((t,i)=>{
+      const d=new Date(t+'T12:00:00+09:30');
+      const lbl=i===0?'Today':d.toLocaleDateString('en-AU',{timeZone:TZ,weekday:'short'});
+      const date=d.toLocaleDateString('en-AU',{timeZone:TZ,day:'numeric',month:'short'});
+      const wc=weather_code?.[i], uv=uv_index_max?.[i], rain=precipitation_probability_max?.[i];
+      const tMax=temperature_2m_max?.[i]!=null?Math.round(temperature_2m_max[i]):null;
+      const tMin=temperature_2m_min?.[i]!=null?Math.round(temperature_2m_min[i]):null;
+      const wspd=wind_speed_10m_max?.[i]!=null?Math.round(wind_speed_10m_max[i]):null;
+      const wdir=wind_direction_10m_dominant?.[i];
+      const wave=marine?.dailyWave?.[i];
+      const uvColor=uv>=8?'#c0392b':uv>=6?'#e67e22':uv>=3?'#f1c40f':'#27ae60';
+      return `<div style="background:var(--cream-bg);border:1px solid var(--border-soft);border-radius:10px;padding:10px 10px 8px;display:flex;flex-direction:column;gap:4px${i===0?';border-color:var(--sage);background:#f0f6ee':''}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+          <div>
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:${i===0?'var(--green-text)':'var(--ink)'}">${lbl}</div>
+            <div style="font-size:9px;color:var(--stone-dark)">${date}</div>
+          </div>
+          <div style="font-size:22px;line-height:1">${wmoIcon(wc)}</div>
+        </div>
+        <div style="font-size:9px;color:var(--stone-dark);margin-bottom:2px">${wmoDesc(wc)}</div>
+        ${tMax!=null?`<div style="font-size:13px;font-weight:600;color:var(--ink)">${tMin!=null?tMin+'° – ':''}${tMax}°<span style="font-size:9px;color:var(--stone-dark)"> C</span></div>`:''}
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:2px">
+          ${rain!=null?`<span style="font-size:9px;background:#e8f0fc;border-radius:4px;padding:2px 5px;color:#2c5282">💧${rain}%</span>`:''}
+          ${uv!=null?`<span style="font-size:9px;background:${uvColor}22;border-radius:4px;padding:2px 5px;color:${uvColor};font-weight:600">UV ${uv}</span>`:''}
+          ${wspd!=null?`<span style="font-size:9px;background:var(--border-soft);border-radius:4px;padding:2px 5px;color:var(--stone-dark)">${windArrow(wdir||0)} ${wspd}km/h</span>`:''}
+          ${wave!=null?`<span style="font-size:9px;background:#e8f5f5;border-radius:4px;padding:2px 5px;color:#2b6777">🌊${wave.toFixed(1)}m</span>`:''}
+        </div>
+      </div>`;
+    }).join('')}</div>`;
   }
 
   // BOM tabs
