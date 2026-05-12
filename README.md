@@ -467,6 +467,7 @@ body { background: var(--sand); color: var(--ink); font-family: 'Inter', system-
 const TIDE_KEY   = 'tc_live_ec2b131800e840abe1ec5110606ead09';
 const STATION    = 'fes2022-karama';
 const TZ         = 'Australia/Darwin';
+const STORMGLASS_KEY = 'b6f84b9a-4d98-11f1-a148-0242ac120004-b6f84c08-4d98-11f1-a148-0242ac120004';
 const LAT        = -12.3877;
 const LNG        = 130.8451;
 const SOL_TZ     = 9;
@@ -1193,22 +1194,67 @@ async function fetchMarine() {
   } catch(e){return null;}
 }
 
+async function fetchAirQuality() {
+  try {
+    const r=await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LAT}&longitude=${LNG}&current=us_aqi,dust,uv_index,pm2_5,pm10&hourly=us_aqi,dust&forecast_days=2&timezone=Australia%2FDarwin`);
+    if(!r.ok) return null;
+    const d=await r.json();
+    const aqi=d.current?.us_aqi, dust=d.current?.dust, pm25=d.current?.pm2_5, pm10=d.current?.pm10;
+    let alert=null, alertLevel='ok';
+    if(dust!=null&&dust>50){alert=`Dust event · ${Math.round(dust)} µg/m³`;alertLevel='warn';}
+    else if(pm25!=null&&pm25>35){alert=`Smoke haze · PM2.5 ${Math.round(pm25)} µg/m³`;alertLevel='warn';}
+    else if(aqi!=null&&aqi>100){alert=`Air quality ${aqi} · limit outdoor exposure`;alertLevel='warn';}
+    if(aqi!=null&&aqi>150){alertLevel='bad';}
+    const aqiLabel=aqi==null?'—':aqi<=50?'Good':aqi<=100?'Moderate':aqi<=150?'Unhealthy for sensitive':aqi<=200?'Unhealthy':'Very unhealthy';
+    return {aqi,dust,pm25,pm10,alert,alertLevel,aqiLabel};
+  } catch(e){ return null; }
+}
+
+async function fetchStormglass() {
+  const SG_CACHE='nightcliff_sg_v1', SG_TTL=3600000; // 1h cache — protect free tier (10 req/day)
+  try{const c=JSON.parse(localStorage.getItem(SG_CACHE)||'null');if(c&&Date.now()-c.ts<SG_TTL)return c.data;}catch(e){}
+  try {
+    const end=Math.floor(Date.now()/1000)+86400;
+    const r=await fetch(`https://api.stormglass.io/v2/weather/point?lat=${LAT}&lng=${LNG}&params=currentSpeed,currentDirection,visibility,swellHeight,swellPeriod,swellDirection,waveHeight,wavePeriod,windWaveHeight&source=sg&end=${end}`,
+      {headers:{'Authorization':STORMGLASS_KEY}});
+    if(!r.ok) return null;
+    const d=await r.json();
+    const now=d.hours?.[0];
+    if(!now) return null;
+    const pick=v=>Array.isArray(v)?v.find(x=>x.source==='sg')?.value??v[0]?.value??null:null;
+    const data={
+      currentSpeed: pick(now.currentSpeed),
+      currentDir:   pick(now.currentDirection),
+      visibility:   pick(now.visibility),
+      swellH:       pick(now.swellHeight),
+      swellPeriod:  pick(now.swellPeriod),
+      swellDir:     pick(now.swellDirection),
+      waveH:        pick(now.waveHeight),
+      wavePeriod:   pick(now.wavePeriod),
+      windWaveH:    pick(now.windWaveHeight),
+      hours:        d.hours,
+    };
+    try{localStorage.setItem(SG_CACHE,JSON.stringify({data,ts:Date.now()}));}catch(e){}
+    return data;
+  } catch(e){ return null; }
+}
+
 async function loadAll(force=false) {
   if(!force){
     try {
       const c=JSON.parse(localStorage.getItem(CACHE_KEY)||'null');
       if(c&&Date.now()-c.ts<REFRESH_MS){
         // Main cache is fresh — but always load tide from its own long-lived cache
-        const tideData=await fetchTideData();
-        return{...c,tideData};
+        const [tideData,airQuality]=await Promise.all([fetchTideData(),fetchAirQuality()]);
+        return{...c,tideData,airQuality};
       }
     } catch(e){}
   }
-  const [tideData,solunar,weather,marine]=await Promise.all([fetchTideData(),fetchAllSolunar(),fetchWeather(),fetchMarine()]);
+  const [tideData,solunar,weather,marine,airQuality,stormglass]=await Promise.all([fetchTideData(),fetchAllSolunar(),fetchWeather(),fetchMarine(),fetchAirQuality(),fetchStormglass()]);
   // Don't store tide in the main cache — it has its own separate 7-day cache
-  const payload={solunar,weather,marine,ts:Date.now()};
+  const payload={solunar,weather,marine,airQuality,stormglass,ts:Date.now()};
   try{localStorage.setItem(CACHE_KEY,JSON.stringify(payload));}catch(e){}
-  return{tideData,solunar,weather,marine};
+  return{tideData,solunar,weather,marine,airQuality,stormglass};
 }
 
 // ── GLOBAL STATE ──────────────────────────────────────────────────────────────
@@ -1804,7 +1850,7 @@ function shareSession(btn){
 }
 
 // ── RENDER ─────────────────────────────────────────────────────────────────────
-function renderApp({tideData,solunar,weather,marine}) {
+function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
   allExtremes=tideData.extremes||[];
   allSolunar=solunar||{};
   const now=new Date(), nowMs=now.getTime(), today=todayStr();
@@ -1890,8 +1936,34 @@ function renderApp({tideData,solunar,weather,marine}) {
   // Water temp
   const tempHTML=waterTemp?`<div class="stat-value" style="font-size:24px">${waterTemp}°C</div><div class="stat-sub">${waterTemp<24?'Cool — barra sluggish':waterTemp>30?'Very warm — fish deeper midday':'Optimal barra range'}</div>`:'<div class="stat-value">—</div>';
 
-  // Wave
+  // Wave (fallback marine only)
   const waveHTML=marine?.waveH!=null?`<div class="stat-value" style="font-size:22px">${marine.waveH.toFixed(1)}m</div><div class="stat-sub">${marine.waveH<0.3?'Flat calm':marine.waveH<0.8?'Light chop':marine.waveH<1.5?'Moderate — check small craft':'Rough — caution'}</div>`:'<div class="stat-value">—</div>';
+
+  // Stormglass: tidal current, visibility, enhanced swell
+  const _d16=deg=>{const ds=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];return ds[Math.round(((deg%360)/22.5))%16];};
+  const currentHTML=stormglass?.currentSpeed!=null
+    ?`<div class="stat-value" style="font-size:22px">${stormglass.currentSpeed.toFixed(2)} <span style="font-size:11px;color:var(--stone-dark)">m/s</span></div><div class="stat-sub">${stormglass.currentDir!=null?_d16(stormglass.currentDir)+' · ':''}${stormglass.currentSpeed<0.3?'Slack':stormglass.currentSpeed<0.7?'Moderate current':'Strong current'}</div>`
+    :'<div class="stat-value" style="font-size:14px">—</div>';
+  const visHTML=stormglass?.visibility!=null
+    ?`<div class="stat-value" style="font-size:22px">${stormglass.visibility.toFixed(1)} <span style="font-size:11px;color:var(--stone-dark)">km</span></div><div class="stat-sub">${stormglass.visibility>10?'Excellent':stormglass.visibility>5?'Good':stormglass.visibility>2?'Moderate':'Poor'}</div>`
+    :'<div class="stat-value" style="font-size:14px">—</div>';
+  const swellH=stormglass?.swellH??marine?.waveH;
+  const swellHTML=swellH!=null
+    ?`<div class="stat-value" style="font-size:22px">${swellH.toFixed(1)}m</div><div class="stat-sub">${stormglass?.swellPeriod!=null?stormglass.swellPeriod.toFixed(0)+'s · ':''}${stormglass?.swellDir!=null?_d16(stormglass.swellDir)+' swell · ':''}${swellH<0.3?'Flat calm':swellH<0.8?'Light chop':swellH<1.5?'Moderate':'Rough'}</div>`
+    :'<div class="stat-value">—</div>';
+
+  // Air quality
+  const aqiColor=airQuality?.aqi==null?'var(--stone-dark)':airQuality.aqi<=50?'var(--emerald)':airQuality.aqi<=100?'var(--gold)':airQuality.aqi<=150?'var(--orange)':'var(--rose)';
+  const aqiHTML=airQuality?.aqi!=null
+    ?`<div class="stat-value" style="font-size:24px;color:${aqiColor}">${airQuality.aqi}</div><div class="stat-sub" style="color:${aqiColor}">${airQuality.aqiLabel}</div>${airQuality.pm25!=null?`<div class="stat-sub">PM2.5 ${Math.round(airQuality.pm25)} µg/m³</div>`:''}`
+    :'<div class="stat-value" style="font-size:14px">—</div>';
+  let aqiBanner='';
+  if(airQuality?.alert){
+    const aColor=airQuality.alertLevel==='bad'?'var(--rose)':'var(--gold)';
+    const aBg=airQuality.alertLevel==='bad'?'rgba(251,113,133,0.08)':'rgba(251,191,36,0.07)';
+    const aBorder=airQuality.alertLevel==='bad'?'rgba(251,113,133,0.3)':'rgba(251,191,36,0.25)';
+    aqiBanner=`<div class="fade-up" id="aqBanner" style="background:${aBg};border:1px solid ${aBorder};border-radius:16px;padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:18px">⚠</span><div style="flex:1;font-size:13px;color:${aColor}">${airQuality.alert}</div><button onclick="document.getElementById('aqBanner').remove()" style="background:none;border:none;color:var(--stone-dark);font-size:18px;cursor:pointer;padding:0;line-height:1">✕</button></div>`;
+  }
 
   // Species calendar HTML
   // Build Larrakia season bar HTML — one cell per month, coloured by season
@@ -2015,6 +2087,7 @@ function renderApp({tideData,solunar,weather,marine}) {
 
   document.getElementById('content').innerHTML = `
   <div id="tab-tides" class="tab-pane active">
+    ${aqiBanner}
     <!-- BEST DAY BANNER -->
     <div class="best-day-banner fade-up" style="background:linear-gradient(135deg,rgba(52,211,153,0.08),rgba(34,211,238,0.05));border:1px solid rgba(52,211,153,0.2);border-radius:16px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <span style="font-size:24px">🎣</span>
@@ -2130,11 +2203,23 @@ function renderApp({tideData,solunar,weather,marine}) {
         </div>
         <div class="stat-cell">
           <div class="stat-label">Swell / Chop</div>
-          ${waveHTML}
+          ${swellHTML}
         </div>
         <div class="stat-cell">
           <div class="stat-label">UV Index</div>
           ${uvHTML}
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Tidal current</div>
+          ${currentHTML}
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Visibility</div>
+          ${visHTML}
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Air quality (AQI)</div>
+          ${aqiHTML}
         </div>
       </div>
     </div>
@@ -2277,7 +2362,7 @@ function renderApp({tideData,solunar,weather,marine}) {
       </div>
     </div>
 
-    <div class="footer">Tides: TideCheck · Solunar: solunar.org · Weather: Open-Meteo · Marine: Open-Meteo Marine<br>Auto-refreshes every 30 min. Predictions are estimates.</div>
+    <div class="footer">Tides: TideCheck · Solunar: solunar.org · Weather: Open-Meteo · Marine: Open-Meteo Marine · Air quality: Open-Meteo AQ · Currents &amp; swell: Stormglass.io<br>Auto-refreshes every 30 min. Predictions are estimates.</div>
   </div>
 
   <!-- FISHING TAB -->
@@ -2325,7 +2410,10 @@ function renderApp({tideData,solunar,weather,marine}) {
         <div class="stat-cell"><div class="stat-label">Pressure</div>${pressHTML}</div>
         <div class="stat-cell"><div class="stat-label">Wind</div>${windHTML}</div>
         <div class="stat-cell"><div class="stat-label">Water temperature</div>${tempHTML}</div>
-        <div class="stat-cell"><div class="stat-label">Swell / Chop</div>${waveHTML}</div>
+        <div class="stat-cell"><div class="stat-label">Swell / Chop</div>${swellHTML}</div>
+        <div class="stat-cell"><div class="stat-label">Tidal current</div>${currentHTML}</div>
+        <div class="stat-cell"><div class="stat-label">Visibility</div>${visHTML}</div>
+        <div class="stat-cell"><div class="stat-label">Air quality (AQI)</div>${aqiHTML}</div>
         <div class="stat-cell">
           <div class="stat-label">Air temperature</div>
           <div class="stat-value" style="font-size:24px">${weather?.temp!=null?weather.temp+'°C':'—'}</div>
