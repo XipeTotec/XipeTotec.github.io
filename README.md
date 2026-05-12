@@ -1206,7 +1206,7 @@ async function fetchAllSolunar() {
 
 async function fetchWeather() {
   try {
-    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LNG}&current=surface_pressure,wind_speed_10m,wind_direction_10m,uv_index,temperature_2m,relative_humidity_2m&hourly=surface_pressure,temperature_2m,relative_humidity_2m&daily=sunrise,sunset,uv_index_max,precipitation_probability_max,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,wind_direction_10m_dominant,weather_code&forecast_days=7&timezone=Australia%2FDarwin`);
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LNG}&current=surface_pressure,wind_speed_10m,wind_direction_10m,uv_index,temperature_2m,relative_humidity_2m&hourly=surface_pressure,temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,precipitation_probability&daily=sunrise,sunset,uv_index_max,precipitation_probability_max,temperature_2m_max,temperature_2m_min,wind_speed_10m_max,wind_direction_10m_dominant,weather_code&forecast_days=7&timezone=Australia%2FDarwin`);
     if(!r.ok)return null;
     const d=await r.json();
     const p=d.current?.surface_pressure;
@@ -1224,6 +1224,9 @@ async function fetchWeather() {
       hourlyPressure: d.hourly?.surface_pressure || [],
       hourlyTemp: d.hourly?.temperature_2m || [],
       hourlyHumidity: d.hourly?.relative_humidity_2m || [],
+      hourlyWindSpeed: d.hourly?.wind_speed_10m || [],
+      hourlyWindDir: d.hourly?.wind_direction_10m || [],
+      hourlyRain: d.hourly?.precipitation_probability || [],
       daily: d.daily || null
     };
   } catch(e){return null;}
@@ -2021,6 +2024,83 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
     aqiBanner=`<div class="fade-up" id="aqBanner" style="background:${aBg};border:1px solid ${aBorder};border-radius:16px;padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:18px">⚠</span><div style="flex:1;font-size:13px;color:${aColor}">${airQuality.alert}</div><button onclick="document.getElementById('aqBanner').remove()" style="background:none;border:none;color:var(--stone-dark);font-size:18px;cursor:pointer;padding:0;line-height:1">✕</button></div>`;
   }
 
+  // Golden hour windows (dawn + dusk fishing prime time)
+  let goldenHTML='—';
+  const srMs0=weather?.daily?.sunrise?.[0]?new Date(weather.daily.sunrise[0]).getTime():null;
+  const ssMs0=weather?.daily?.sunset?.[0]?new Date(weather.daily.sunset[0]).getTime():null;
+  if(srMs0&&ssMs0){
+    const BLUE_PRE=20*60000, GOLD_POST=60*60000, GOLD_PRE=60*60000, BLUE_POST=20*60000;
+    const dawnStart=srMs0-BLUE_PRE, dawnEnd=srMs0+GOLD_POST;
+    const duskStart=ssMs0-GOLD_PRE, duskEnd=ssMs0+BLUE_POST;
+    const fmtW=ms=>fmtTime(new Date(ms));
+    const isInDawn=nowMs>=dawnStart&&nowMs<=dawnEnd;
+    const isInDusk=nowMs>=duskStart&&nowMs<=duskEnd;
+    if(isInDawn){
+      goldenHTML=`<div style="padding:5px 9px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:8px;font-size:11px;color:var(--gold)">🌅 Dawn window active · ends ${fmtW(dawnEnd)}</div><div class="stat-sub" style="margin-top:4px">${fmtW(dawnStart)} – ${fmtW(dawnEnd)}</div>`;
+    } else if(isInDusk){
+      goldenHTML=`<div style="padding:5px 9px;background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.3);border-radius:8px;font-size:11px;color:var(--orange)">🌇 Dusk window active · ends ${fmtW(duskEnd)}</div><div class="stat-sub" style="margin-top:4px">${fmtW(duskStart)} – ${fmtW(duskEnd)}</div>`;
+    } else {
+      // Find next upcoming window (check tomorrow's sunrise too)
+      const srMs1=weather.daily.sunrise?.[1]?new Date(weather.daily.sunrise[1]).getTime():null;
+      const ssMs1=weather.daily.sunset?.[1]?new Date(weather.daily.sunset[1]).getTime():null;
+      const candidates=[
+        {label:'🌅 Dawn',start:dawnStart,end:dawnEnd,ms:dawnStart,color:'var(--gold)'},
+        {label:'🌇 Dusk',start:duskStart,end:duskEnd,ms:duskStart,color:'var(--orange)'},
+        srMs1&&{label:'🌅 Dawn (tomorrow)',start:srMs1-BLUE_PRE,end:srMs1+GOLD_POST,ms:srMs1-BLUE_PRE,color:'var(--gold)'},
+      ].filter(w=>w&&w.ms>nowMs).sort((a,b)=>a.ms-b.ms);
+      const nxt=candidates[0];
+      if(nxt){
+        goldenHTML=`<div style="font-size:13px;font-weight:600;color:${nxt.color}">${nxt.label}</div><div class="stat-sub">${fmtW(nxt.start)} – ${fmtW(nxt.end)}</div><div style="margin-top:5px;font-size:11px;color:var(--stone-dark)">In <span style="color:${nxt.color}">${fmtCountdown(nxt.ms-nowMs)}</span></div>`;
+      }
+    }
+  }
+
+  // Water clarity gauge
+  let clarityScore=5; // baseline
+  if(spring) clarityScore-=2; else clarityScore+=1;
+  const rainProb=weather?.daily?.precipitation_probability_max?.[0]??0;
+  if(rainProb>60) clarityScore-=1.5; else if(rainProb>30) clarityScore-=0.5; else clarityScore+=0.5;
+  if(swellH!=null){if(swellH>1.2) clarityScore-=2; else if(swellH>0.6) clarityScore-=1; else if(swellH<0.3) clarityScore+=0.5;}
+  clarityScore=Math.max(0,Math.min(10,clarityScore));
+  const clarityLabel=clarityScore>=8?'Excellent':clarityScore>=6?'Good':clarityScore>=4?'Fair':clarityScore>=2?'Poor':'Murky';
+  const clarityColor=clarityScore>=7?'var(--emerald)':clarityScore>=5?'var(--cyan)':clarityScore>=3?'var(--gold)':'var(--rose)';
+  const clarityTip=clarityScore>=7?'Natural colours, stealth presentation':clarityScore>=5?'Natural or bright — either works':clarityScore>=3?'Bright colours, vibration lures':'Loud/noisy lures, gold or chartreuse';
+  const clarityHTML=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:5px"><div style="font-size:20px;font-weight:700;color:${clarityColor}">${clarityLabel}</div><div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${clarityScore*10}%;background:${clarityColor};border-radius:3px"></div></div></div><div class="stat-sub">${clarityTip}</div>`;
+
+  // 12-hour hourly forecast strip
+  let hourlyStripHTML='';
+  if(weather?.hourlyTime?.length){
+    const nowHrIdx=weather.hourlyTime.findIndex(t=>new Date(t).getTime()>nowMs);
+    const startIdx=Math.max(0,(nowHrIdx<0?0:nowHrIdx)-1);
+    const stripHours=weather.hourlyTime.slice(startIdx,startIdx+14);
+    const _d8=deg=>{const ds=['N','NE','E','SE','S','SW','W','NW'];return ds[Math.round(((deg%360)/45))%8];};
+    const windArrowSvg=deg=>{const r=((deg+180)%360);return `<svg width="14" height="14" viewBox="0 0 14 14"><line x1="7" y1="12" x2="7" y2="2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><polyline points="4,5 7,2 10,5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" transform="rotate(${r},7,7)"/></svg>`;};
+    hourlyStripHTML=`<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px"><div style="display:flex;gap:6px;padding:4px 4px 8px;min-width:max-content">${stripHours.map((_,i)=>{
+      const idx=startIdx+i;
+      const t=new Date(weather.hourlyTime[idx]);
+      const lbl=t.toLocaleTimeString('en-AU',{timeZone:TZ,hour:'numeric',hour12:true}).replace(':00','').replace(' ','');
+      const wspd=Math.round(weather.hourlyWindSpeed[idx]||0);
+      const wdir=weather.hourlyWindDir[idx]||0;
+      const rain=weather.hourlyRain[idx]??0;
+      const tideH=interpolateTide(allExtremes,t.getTime());
+      const tideNext=interpolateTide(allExtremes,t.getTime()+3600000);
+      const rising=tideNext>tideH;
+      const rainColor=rain>60?'var(--rose)':rain>30?'var(--gold)':'var(--stone-dark)';
+      const isNow=i===1;
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 10px;background:${isNow?'rgba(34,211,238,0.08)':'var(--sand-dark)'};border:1px solid ${isNow?'rgba(34,211,238,0.25)':'var(--border)'};border-radius:10px;min-width:56px">
+        <div style="font-size:9px;font-weight:600;color:${isNow?'var(--cyan)':'var(--stone-dark)'};text-transform:uppercase">${lbl}</div>
+        <div style="color:var(--stone-dark);display:flex;align-items:center;gap:2px" title="${_d8(wdir)} ${wspd}km/h">${windArrowSvg(wdir)}</div>
+        <div style="font-size:10px;font-weight:600;color:var(--ink)">${wspd}<span style="font-size:8px;color:var(--stone-dark)">km/h</span></div>
+        <div style="font-size:9px;color:${rainColor}">${rain}%</div>
+        <div style="font-size:13px;color:${rising?'var(--cyan)':'var(--violet)'}" title="${tideH.toFixed(1)}m ${rising?'rising':'falling'}">${rising?'↑':'↓'}</div>
+        <div style="font-size:9px;color:var(--stone-dark)">${tideH.toFixed(1)}m</div>
+      </div>`;
+    }).join('')}</div></div>
+    <div style="display:flex;gap:14px;margin-top:6px;font-size:10px;color:var(--stone-dark);flex-wrap:wrap">
+      <span>Arrow = wind direction</span><span style="color:var(--gold)">% = rain probability</span><span style="color:var(--cyan)">↑ rising</span><span style="color:var(--violet)">↓ falling</span>
+    </div>`;
+  }
+
   // Species calendar HTML
   // Build Larrakia season bar HTML — one cell per month, coloured by season
   // Each month maps to whichever season contains it
@@ -2294,6 +2374,22 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
           <div class="stat-label">Air quality (AQI)</div>
           ${aqiHTML}
         </div>
+        <div class="stat-cell">
+          <div class="stat-label">Golden hour</div>
+          ${goldenHTML}
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Water clarity</div>
+          ${clarityHTML}
+        </div>
+      </div>
+    </div>
+
+    <!-- 12H HOURLY STRIP -->
+    <div class="section fade-up">
+      <div class="section-label">Next 14 hours · wind · rain · tide</div>
+      <div class="card" style="padding:16px 20px 14px">
+        ${hourlyStripHTML||'<p style="font-size:13px;color:var(--stone-dark)">Forecast unavailable.</p>'}
       </div>
     </div>
 
@@ -2495,6 +2591,8 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
         <div class="stat-cell"><div class="stat-label">Tidal current</div>${currentHTML}</div>
         <div class="stat-cell"><div class="stat-label">Visibility</div>${visHTML}</div>
         <div class="stat-cell"><div class="stat-label">Air quality (AQI)</div>${aqiHTML}</div>
+        <div class="stat-cell"><div class="stat-label">Water clarity</div>${clarityHTML}</div>
+        <div class="stat-cell"><div class="stat-label">Golden hour</div>${goldenHTML}</div>
         <div class="stat-cell">
           <div class="stat-label">Air temperature</div>
           <div class="stat-value" style="font-size:24px">${weather?.temp!=null?weather.temp+'°C':'—'}</div>
@@ -2522,6 +2620,13 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
           <div class="stat-sub">${nextLow?nextLow.height.toFixed(2)+' m':''}</div>
           <div class="countdown">${nextLow?fmtCountdown(new Date(nextLow.time).getTime()-nowMs):''}</div>
         </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Next 14 hours · wind · rain · tide</div>
+      <div class="card" style="padding:16px 20px 14px">
+        ${hourlyStripHTML||'<p style="font-size:13px;color:var(--stone-dark)">Forecast unavailable.</p>'}
       </div>
     </div>
 
