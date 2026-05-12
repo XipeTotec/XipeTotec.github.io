@@ -1656,6 +1656,93 @@ function drawCatchAnalysisChart(canvas) {
   ctx.fillText('Tide height at catch (m)',W/2,PAD.top-6);
 }
 
+function buildCatchAnalytics() {
+  const log=JSON.parse(localStorage.getItem('nightcliff_log')||'[]');
+  if(!log.length) return '<p style="font-size:13px;color:var(--stone-dark);padding:4px 0">Log some catches to unlock your personal fishing patterns.</p>';
+  const now=new Date(), tm=now.getMonth(), ty=now.getFullYear();
+  const lm=tm===0?11:tm-1, ly=tm===0?ty-1:ty;
+  let rising=0,falling=0,thisMo=0,lastMo=0;
+  const blocks=[0,0,0,0,0,0]; // Dawn(4-7),Morning(7-10),Midday(10-14),Arvo(14-17),Dusk(17-20),Night(20-4)
+  const spMap={},lureMap={},htBuckets=Array(10).fill(0);
+  for(const e of log){
+    if(e.tideRising)rising++;else falling++;
+    const d=new Date(e.ts),m=d.getMonth(),y=d.getFullYear();
+    if(m===tm&&y===ty)thisMo++;if(m===lm&&y===ly)lastMo++;
+    const h=parseInt(d.toLocaleTimeString('en-AU',{timeZone:TZ,hour:'2-digit',hour12:false}));
+    blocks[h>=4&&h<7?0:h>=7&&h<10?1:h>=10&&h<14?2:h>=14&&h<17?3:h>=17&&h<20?4:5]++;
+    if(e.species)spMap[e.species]=(spMap[e.species]||0)+1;
+    if(e.lure)lureMap[e.lure]=(lureMap[e.lure]||0)+1;
+    if(e.tideH!=null)htBuckets[Math.min(9,Math.floor(e.tideH/0.5))]++;
+  }
+  const total=log.length;
+  const risPct=total?Math.round(rising/total*100):50;
+  const topSp=Object.entries(spMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const topLures=Object.entries(lureMap).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const blkLabels=['Dawn 4–7am','Morning 7–10am','Midday 10–2pm','Arvo 2–5pm','Dusk 5–8pm','Night'];
+  const maxBlk=Math.max(...blocks,1);
+  const bestBlkIdx=blocks.indexOf(Math.max(...blocks));
+  const maxSp=topSp[0]?.[1]||1;
+  const bestHtBucket=htBuckets.indexOf(Math.max(...htBuckets));
+  const bestHtStr=`${(bestHtBucket*0.5).toFixed(1)}–${(bestHtBucket*0.5+0.5).toFixed(1)}m`;
+
+  const blkColors=['rgba(251,191,36,0.8)','rgba(34,211,238,0.7)','rgba(167,139,250,0.7)','rgba(251,146,60,0.7)','rgba(251,113,133,0.7)','rgba(100,116,139,0.5)'];
+  const insights=[];
+  if(total>=5){
+    if(risPct>=60)insights.push(`${risPct}% of your fish are caught on rising tide`);
+    else if(100-risPct>=60)insights.push(`${100-risPct}% of your fish are caught on falling tide`);
+    else insights.push('Your catches are evenly split between rising and falling tide');
+    if(blocks[bestBlkIdx]>0)insights.push(`Best session window: ${blkLabels[bestBlkIdx]}`);
+    if(bestHtBucket>=0&&htBuckets[bestHtBucket]>0)insights.push(`Most catches at ${bestHtStr} tide height`);
+    if(topLures.length)insights.push(`Go-to rig: ${topLures[0][0]}`);
+  }
+
+  const trendArrow=thisMo>lastMo?`<span style="color:var(--emerald)">↑</span>`:thisMo<lastMo?`<span style="color:var(--rose)">↓</span>`:'→';
+
+  return `
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:16px">
+    <div style="background:var(--sand-dark);border:1px solid var(--border);border-radius:10px;padding:12px">
+      <div style="font-size:10px;color:var(--stone-dark);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.08em">Total catches</div>
+      <div style="font-family:'DM Serif Display',serif;font-size:32px;color:var(--cyan);line-height:1">${total}</div>
+      <div style="font-size:10px;color:var(--stone-dark);margin-top:4px">This month: ${thisMo} ${trendArrow} · Last: ${lastMo}</div>
+    </div>
+    <div style="background:var(--sand-dark);border:1px solid var(--border);border-radius:10px;padding:12px">
+      <div style="font-size:10px;color:var(--stone-dark);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.08em">Tide phase</div>
+      <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px">
+        <div style="flex:${risPct};background:var(--cyan)"></div>
+        <div style="flex:${100-risPct};background:var(--violet)"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:10px">
+        <span style="color:var(--cyan)">↑ ${risPct}% rising</span>
+        <span style="color:var(--violet)">↓ ${100-risPct}% falling</span>
+      </div>
+    </div>
+    ${topSp.length?`<div style="background:var(--sand-dark);border:1px solid var(--border);border-radius:10px;padding:12px;grid-column:span 1">
+      <div style="font-size:10px;color:var(--stone-dark);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.08em">Top species</div>
+      <div style="display:flex;flex-direction:column;gap:4px">${topSp.map(([sp,n])=>`<div style="display:flex;align-items:center;gap:6px"><div style="flex:1;min-width:0;font-size:11px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sp}</div><div style="width:${Math.round(n/maxSp*60)}px;height:4px;background:var(--emerald);border-radius:2px;flex-shrink:0"></div><div style="font-size:10px;color:var(--stone-dark);min-width:16px;text-align:right">${n}</div></div>`).join('')}</div>
+    </div>`:''}
+    ${topLures.length?`<div style="background:var(--sand-dark);border:1px solid var(--border);border-radius:10px;padding:12px">
+      <div style="font-size:10px;color:var(--stone-dark);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.08em">Top lures/bait</div>
+      <div style="display:flex;flex-direction:column;gap:5px">${topLures.map(([l,n],i)=>`<div style="font-size:11px;color:var(--ink)"><span style="color:var(--gold);margin-right:4px">${['①','②','③'][i]}</span>${l} <span style="color:var(--stone-dark)">(${n})</span></div>`).join('')}</div>
+    </div>`:''}
+  </div>
+
+  <div style="margin-bottom:16px">
+    <div style="font-size:10px;color:var(--stone-dark);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.08em">Catches by time of day</div>
+    <div style="display:flex;align-items:flex-end;gap:4px;height:56px">
+      ${blocks.map((n,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+        <div style="font-size:8px;color:var(--stone-dark)">${n||''}</div>
+        <div style="width:100%;background:${blkColors[i]};border-radius:3px 3px 0 0;height:${maxBlk?Math.max(3,n/maxBlk*40):0}px"></div>
+        <div style="font-size:8px;color:${i===bestBlkIdx?'var(--gold)':'var(--stone-dark)'};text-align:center;line-height:1.2">${['Dawn','Morn','Mid','Arvo','Dusk','Night'][i]}</div>
+      </div>`).join('')}
+    </div>
+  </div>
+
+  ${insights.length?`<div style="padding:10px 14px;background:rgba(34,211,238,0.06);border:1px solid rgba(34,211,238,0.15);border-radius:10px">
+    <div style="font-size:10px;color:var(--cyan);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.08em">Your patterns</div>
+    <ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:4px">${insights.map(i=>`<li style="font-size:12px;color:var(--ink-soft)">${i}</li>`).join('')}</ul>
+  </div>`:''}`;
+}
+
 function drawTideOverviewChart(canvas, extremes, startMs, sunriseMsList, hoverMs=null, viewStartMs=null, viewEndMs=null) {
   const dpr=window.devicePixelRatio||1;
   const Wcss=canvas.clientWidth||canvas.offsetWidth||600;
@@ -2721,6 +2808,13 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
 
   <!-- LOG TAB -->
   <div id="tab-log" class="tab-pane">
+    <div class="section fade-up">
+      <div class="section-label">Your fishing patterns</div>
+      <div class="card" id="catchAnalyticsCard">
+        ${buildCatchAnalytics()}
+      </div>
+    </div>
+
     <div class="section">
       <div class="section-label">Catches by tide height</div>
       <div class="card" style="padding:16px">
@@ -3050,7 +3144,13 @@ function importLog(e){
   reader.readAsText(file);
 }
 
+function refreshCatchAnalytics(){
+  const el=document.getElementById('catchAnalyticsCard');
+  if(el) el.innerHTML=buildCatchAnalytics();
+}
+
 function renderLog(){
+  refreshCatchAnalytics();
   const el=document.getElementById('logEntries'); if(!el)return;
   const search=(document.getElementById('logSearch')?.value||'').toLowerCase();
   let log=JSON.parse(localStorage.getItem('nightcliff_log')||'[]');
