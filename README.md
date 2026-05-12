@@ -1045,6 +1045,50 @@ const SPECIES = [
   { name:'Blue Salmon',     color:'#c4b9a8', peak:[3,4,5,6,7],       active:[0,1,2,8,9,10,11] },
 ];
 
+// Tide preference + optimal temp range for species conditions scoring
+const SPECIES_PREFS = {
+  'Barramundi':       { tide:'rising',  optTemp:[26,30] },
+  'Mangrove Jack':    { tide:'falling', optTemp:[25,30] },
+  'Threadfin Salmon': { tide:'rising',  optTemp:[25,29] },
+  'Giant Trevally':   { tide:'both',   optTemp:[26,30] },
+  'Queenfish':        { tide:'falling', optTemp:[27,32] },
+  'Sailfish':         { tide:'both',   optTemp:[27,31] },
+  'Blue Salmon':      { tide:'rising',  optTemp:[24,28] },
+};
+
+function computeSpeciesConditions(isRising, spring, solRating, waterTemp, weather, month) {
+  return SPECIES.map(sp => {
+    const pref = SPECIES_PREFS[sp.name] || { tide:'both', optTemp:[25,30] };
+    const isPeak = sp.peak.includes(month);
+    const isActive = sp.active.includes(month) || isPeak;
+    // Season 0–3
+    let score = isPeak ? 3 : isActive ? 1.5 : 0;
+    // Solunar 0–2
+    score += (solRating / 5) * 2;
+    // Tide preference 0–2
+    const tidesMatch = pref.tide === 'both' || (pref.tide === 'rising' && isRising) || (pref.tide === 'falling' && !isRising);
+    score += pref.tide === 'both' ? 1 : tidesMatch ? 2 : 0.3;
+    // Spring/neap 0–1
+    score += spring ? 1 : 0.3;
+    // Water temp 0–1
+    if(waterTemp != null) {
+      const [lo, hi] = pref.optTemp;
+      score += (waterTemp >= lo && waterTemp <= hi) ? 1 : (waterTemp >= lo-2 && waterTemp <= hi+2) ? 0.5 : 0;
+    }
+    // Pressure 0–1
+    if(weather) score += (weather.trendVal > -3 && weather.trendVal < 2) ? 1 : 0.3;
+    // Normalize to 0–10 (max theoretical = 3+2+2+1+1+1 = 10)
+    const out = Math.min(10, Math.round(score * 10) / 10);
+    const hints = [];
+    if(isPeak) hints.push('peak season'); else if(isActive) hints.push('in season'); else hints.push('off season');
+    if(tidesMatch && pref.tide !== 'both') hints.push(isRising ? 'rising tide ✓' : 'falling tide ✓');
+    if(solRating >= 4) hints.push(`${solRating}★ solunar`);
+    if(spring) hints.push('spring tide');
+    if(waterTemp != null && waterTemp >= pref.optTemp[0] && waterTemp <= pref.optTemp[1]) hints.push(`${waterTemp}°C optimal`);
+    return { sp, score: out, hint: hints.slice(0,3).join(' · ') };
+  }).sort((a,b) => b.score - a.score);
+}
+
 // ── LURE RECOMMENDER ─────────────────────────────────────────────────────────
 function getLureRecs(isRising, spring, waterTemp, pressure, solunarRating, waveH) {
   const murky = spring || (waveH && waveH > 0.5);
@@ -1856,6 +1900,7 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
   const now=new Date(), nowMs=now.getTime(), today=todayStr();
   const currentH=interpolateTide(allExtremes,nowMs);
   const isRising=interpolateTide(allExtremes,nowMs+600000)>interpolateTide(allExtremes,nowMs-600000);
+  const tideRateHr=parseFloat((interpolateTide(allExtremes,nowMs+3600000)-currentH).toFixed(2));
   const future=allExtremes.filter(e=>new Date(e.time).getTime()>nowMs);
   const nextHigh=future.find(e=>e.type==='high'), nextLow=future.find(e=>e.type==='low');
   const todayCond=(tideData.dailyConditions||[]).find(d=>d.date===today)||tideData.dailyConditions?.[0];
@@ -1897,8 +1942,8 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
   }
   window._sunriseMsList=sunriseMsList;
 
-  // Bite windows
-  let biteHTML='';
+  // Bite windows + solunar countdown
+  let biteHTML='', solCountdownHTML='';
   if(solToday){
     const ws=[];
     if(solToday.majorOne)ws.push({type:'major',time:solToday.majorOne});
@@ -1906,14 +1951,25 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
     if(solToday.minorOne)ws.push({type:'minor',time:solToday.minorOne});
     if(solToday.minorTwo)ws.push({type:'minor',time:solToday.minorTwo});
     if(ws.length)biteHTML=ws.map(w=>`<div class="bite-row"><span class="bite-dot ${w.type}"></span>${w.type==='major'?'Major':'Minor'}: ${w.time}</div>`).join('');
+    // Parse solunar time strings and compute countdown
+    const parseSolT=str=>{if(!str)return null;const m=str.match(/(\d+):(\d+)\s*(AM|PM)/i);if(!m)return null;let h=parseInt(m[1]),mn=parseInt(m[2]),ap=m[3].toUpperCase();if(ap==='PM'&&h!==12)h+=12;if(ap==='AM'&&h===12)h=0;return new Date(`${today}T${String(h).padStart(2,'0')}:${String(mn).padStart(2,'0')}:00+09:30`).getTime();};
+    const MAJOR_DUR=3600000, MINOR_DUR=1800000;
+    const solWins=ws.map(w=>({type:w.type,t:parseSolT(w.time),dur:w.type==='major'?MAJOR_DUR:MINOR_DUR})).filter(w=>w.t);
+    const activeWin=solWins.find(w=>nowMs>=w.t&&nowMs<=w.t+w.dur);
+    const nextWin=solWins.filter(w=>w.t>nowMs).sort((a,b)=>a.t-b.t)[0];
+    if(activeWin){const endsIn=fmtCountdown(activeWin.t+activeWin.dur-nowMs);solCountdownHTML=`<div style="margin-top:6px;padding:5px 9px;background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.25);border-radius:8px;font-size:10.5px;color:var(--cyan)">● Active ${activeWin.type} window · ends in ${endsIn}</div>`;}
+    else if(nextWin){solCountdownHTML=`<div style="margin-top:5px;font-size:10.5px;color:var(--stone-dark)">Next ${nextWin.type} in <span style="color:var(--gold)">${fmtCountdown(nextWin.t-nowMs)}</span></div>`;}
   }
 
-  // Pressure HTML
-  let pressHTML='';
+  // Pressure HTML with rate of change
+  let pressHTML='', pressBanner='';
   if(weather){
     const arr=weather.trend==='rising'?'↑':weather.trend==='falling'?'↓':'→';
-    const fn=weather.trend==='falling'?'Fish going deep':weather.trend==='rising'?'Conditions improving':'Stable';
-    pressHTML=`<div class="pressure-row"><span class="pressure-val">${weather.hPa}</span><span style="font-size:11px;color:var(--stone-dark)">hPa</span><span class="pressure-trend ${weather.trend}">${arr}</span></div><div class="stat-sub">${fn}</div>`;
+    const rv=weather.trendVal, rs=(rv>0?'+':'')+rv.toFixed(1);
+    const fn=rv<-3?'Rapid fall — fish going deep':rv<-0.5?'Falling — fish sulking':rv>3?'Rising fast — front building':rv>0.5?'Rising — conditions improving':'Stable — good conditions';
+    const rc=rv<-3?'var(--rose)':rv<-0.5?'var(--gold)':rv>3?'var(--violet)':'var(--stone-dark)';
+    pressHTML=`<div class="pressure-row"><span class="pressure-val">${weather.hPa}</span><span style="font-size:11px;color:var(--stone-dark)">hPa</span><span class="pressure-trend ${weather.trend}">${arr}</span></div><div class="stat-sub" style="color:${rc}">${fn}</div><div class="stat-sub">${rs} hPa/3h</div>`;
+    if(rv<-3)pressBanner=`<div class="fade-up" style="background:rgba(251,113,133,0.08);border:1px solid rgba(251,113,133,0.25);border-radius:16px;padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:18px">🌩</span><div style="flex:1;font-size:13px;color:var(--rose)">Pressure dropping fast (${rs} hPa/3h) — fish are going deep. Slow your presentation and fish structure.</div></div>`;
   } else pressHTML='<div class="stat-value" style="font-size:14px">—</div>';
 
   // Ramp — with countdown to opening if currently closed
@@ -2032,6 +2088,21 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
     window._bestSessionShare=`🎣 Nightcliff Tides — Best Session\n${bsDayLabel}: ${bestSession.win.label}\n${fmtTime(new Date(bestSession.win.startMs))} – ${fmtTime(new Date(bestSession.win.endMs))}\nScore: ${bestSession.score}/10 · ${bestSession.solR}-star solunar${nightSession?' · 🌙 Night session':''}\nhttps://xipetotec.github.io`;
   }
 
+  // Species conditions panel
+  const curMonth=new Date().getMonth();
+  const specCond=computeSpeciesConditions(isRising,spring,solRating,waterTemp,weather,curMonth);
+  const specCondHTML=specCond.map(({sp,score,hint})=>{
+    const bc=score>=7?'var(--emerald)':score>=5?'var(--gold)':score>=3?'var(--orange)':'var(--rose)';
+    return `<div>
+      <div style="display:grid;grid-template-columns:120px 1fr 38px;align-items:center;gap:10px;margin-bottom:3px">
+        <div style="font-size:12px;font-weight:600;color:var(--ink)">${sp.name}</div>
+        <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${score*10}%;background:${bc};border-radius:3px;transition:width 0.6s"></div></div>
+        <div style="font-size:12px;font-weight:700;color:${bc};text-align:right">${score}</div>
+      </div>
+      <div style="font-size:10px;color:var(--stone-dark);padding-left:120px;line-height:1.5">${hint}</div>
+    </div>`;
+  }).join('');
+
   // Lure cards HTML
   const lureHTML=lures.map(l=>`
     <div class="lure-card">
@@ -2087,7 +2158,7 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
 
   document.getElementById('content').innerHTML = `
   <div id="tab-tides" class="tab-pane active">
-    ${aqiBanner}
+    ${aqiBanner}${pressBanner}
     <!-- BEST DAY BANNER -->
     <div class="best-day-banner fade-up" style="background:linear-gradient(135deg,rgba(52,211,153,0.08),rgba(34,211,238,0.05));border:1px solid rgba(52,211,153,0.2);border-radius:16px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <span style="font-size:24px">🎣</span>
@@ -2145,6 +2216,7 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
             <div><span class="hero-height" id="hero-h">${currentH.toFixed(2)}</span><span class="hero-unit">m</span></div>
             <div class="hero-label">${isRising?'Rising':'Falling'} tide</div>
             ${nextEx?`<div style="font-size:11px;color:var(--stone-dark);margin-top:4px;font-style:italic">Turns ${fmtCountdown(new Date(nextEx.time).getTime()-nowMs)}</div>`:''}
+            <div style="font-size:11px;margin-top:4px;color:${Math.abs(tideRateHr)>0.4?'var(--cyan)':Math.abs(tideRateHr)>0.15?'var(--gold)':'var(--stone-dark)'}">Flow: ${tideRateHr>=0?'+':''}${tideRateHr} m/hr</div>
           </div>
           <div class="tide-progress-wrap">
             <div class="tide-progress-labels"><span>${prev?.type==='high'?'High':'Low'}</span><span>${nextEx?.type==='high'?'High':'Low'}</span></div>
@@ -2168,6 +2240,7 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
           <div style="margin:3px 0">${starsHTML(solRating,false)}</div>
           <div class="stat-sub">${solRating} of 5</div>
           ${biteHTML}
+          ${solCountdownHTML}
         </div>
         <div class="stat-cell">
           <div class="stat-label">Tidal phase</div>
@@ -2367,6 +2440,14 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
 
   <!-- FISHING TAB -->
   <div id="tab-fishing" class="tab-pane">
+    <div class="section fade-up">
+      <div class="section-label">Species conditions right now</div>
+      <div class="card">
+        <p style="font-size:11px;color:var(--stone-dark);margin-bottom:14px;line-height:1.6">Real-time score combining tide phase, solunar activity, season, water temperature and pressure. 10 = exceptional.</p>
+        <div style="display:flex;flex-direction:column;gap:10px">${specCondHTML}</div>
+      </div>
+    </div>
+
     <div class="section">
       <div class="section-label">Lure &amp; bait recommendations</div>
       <p style="font-size:12px;color:var(--stone-dark);margin-bottom:14px">Based on current conditions — tide phase, water clarity, temperature, pressure.</p>
