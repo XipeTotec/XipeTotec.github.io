@@ -264,10 +264,10 @@ body { background: var(--sand); color: var(--ink); font-family: 'Inter', system-
 /* LOADING */
 .loading-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50vh; gap: 20px; }
 .loading-dots { display: flex; gap: 8px; }
-.loading-dots span { width: 8px; height: 8px; background: var(--stone); border-radius: 50%; animation: dot-pop 1.4s ease-in-out infinite; }
+.loading-dots span { width: 8px; height: 8px; background: var(--cyan); border-radius: 50%; animation: dot-pop 1.4s ease-in-out infinite; }
 .loading-dots span:nth-child(2) { animation-delay: 0.2s; } .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes dot-pop { 0%,80%,100%{transform:scale(0.5);opacity:0.35} 40%{transform:scale(1);opacity:1} }
-.loading-text { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 20px; color: var(--stone-dark); }
+.loading-text { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 20px; color: var(--cyan); letter-spacing: 0.02em; }
 .error-card { background:rgba(251,113,133,0.08); border:1px solid rgba(251,113,133,0.2); border-radius:12px; padding:24px; color:var(--rose); font-size:13px; line-height:1.7; max-width:480px; text-align:center; }
 
 .footer { text-align:center; font-size:11px; color:var(--stone); margin-top:50px; line-height:2.1; letter-spacing:0.04em; }
@@ -418,7 +418,7 @@ body { background: var(--sand); color: var(--ink); font-family: 'Inter', system-
 .map-info-window h3 { font-family:'DM Serif Display',serif; font-size:17px; font-weight:400; color:var(--ink); margin-bottom:4px; }
 .map-info-window p { font-size:11px; color:#7a6e62; line-height:1.5; margin-bottom:6px; }
 .map-info-window .iw-meta { font-size:10px; color:#9e9082; }
-.map-info-window a { font-size:11px; color:#c4876a; text-decoration:none; }
+.map-info-window a { font-size:11px; color:var(--cyan); text-decoration:none; }
 .save-spot-form { background:var(--sand-dark); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-top:12px; }
 .save-spot-form h4 { font-family:'DM Serif Display',serif; font-size:16px; font-weight:400; margin-bottom:10px; color:var(--ink); }
 /* COMBOBOX */
@@ -524,11 +524,11 @@ function computeGoScore(isRising, nextHigh, nextLow, solunarRating, spring, pres
   const msSincePrev = prev ? nowMs - new Date(prev.time).getTime() : null;
 
   if(!isRising && msToLow && msToLow < 2*3600000) {
-    score+=3; factors.push({label:'Run-out window',color:'#82a2b9',pts:3});
+    score+=3; factors.push({label:'Run-out window',color:'#a78bfa',pts:3});
   } else if(isRising && msSincePrev && msSincePrev < 2*3600000) {
     score+=3; factors.push({label:'Run-in window',color:'#82aa8c',pts:3});
   } else if(msToHigh && Math.abs(msToHigh) < 3600000) {
-    score+=2; factors.push({label:'Jetty barra peak',color:'#c4876a',pts:2});
+    score+=2; factors.push({label:'Jetty barra peak',color:'#fb923c',pts:2});
   } else {
     score+=1; factors.push({label:'Mid tide',color:'#c4b9a8',pts:1});
   }
@@ -749,12 +749,12 @@ function drawChart(canvas, extremes, startMs, endMs, hoverMs, showWindows, canva
     for(const {srMs,ssMs} of sunriseMsList){
       if(srMs>=startMs&&srMs<=endMs){
         const x=xOf(srMs);
-        ctx.font='10px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='rgba(180,140,60,0.7)';
+        ctx.font='10px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='rgba(251,191,36,0.7)';
         ctx.fillText('☀',x,PAD.top+cH+22);
       }
       if(ssMs>=startMs&&ssMs<=endMs){
         const x=xOf(ssMs);
-        ctx.font='10px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='rgba(180,100,60,0.7)';
+        ctx.font='10px sans-serif'; ctx.textAlign='center'; ctx.fillStyle='rgba(251,146,60,0.7)';
         ctx.fillText('🌅',x,PAD.top+cH+22);
       }
     }
@@ -793,7 +793,7 @@ function drawChart(canvas, extremes, startMs, endMs, hoverMs, showWindows, canva
       // Dot
       ctx.beginPath(); ctx.arc(cx2, cy2-22, 7, 0, Math.PI*2);
       ctx.fillStyle=col; ctx.fill();
-      ctx.strokeStyle='#faf7f2'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.strokeStyle='#0f1219'; ctx.lineWidth=1.5; ctx.stroke();
 
       // Initial
       ctx.font='bold 8px Inter,sans-serif';
@@ -1038,7 +1038,7 @@ const SPECIES = [
   { name:'Barramundi',      color:'#82aa8c', peak:[3,4,5,10,11],     active:[0,1,2,6,7,8,9] },
   { name:'Mangrove Jack',   color:'#b8a082', peak:[5,6,7,8,9],       active:[0,1,2,3,4,10,11] },
   { name:'Threadfin Salmon',color:'#c8a84b', peak:[5,6,7,8,9,10],    active:[0,1,2,3,4,11] },
-  { name:'Giant Trevally',  color:'#82a2b9', peak:[4,5,6,7,8,9],     active:[0,1,2,3,10,11] },
+  { name:'Giant Trevally',  color:'#a78bfa', peak:[4,5,6,7,8,9],     active:[0,1,2,3,10,11] },
   { name:'Queenfish',       color:'#b8c9b0', peak:[5,6,7,8,9],       active:[3,4,10,11] },
   { name:'Sailfish',        color:'#d9bfb0', peak:[9,10,11,0,1],     active:[2,3,4,5,6,7,8] },
   { name:'Blue Salmon',     color:'#c4b9a8', peak:[3,4,5,6,7],       active:[0,1,2,8,9,10,11] },
@@ -1535,7 +1535,7 @@ function drawCatchAnalysisChart(canvas) {
   ctx.fillStyle='#0f1219';
   ctx.beginPath();if(ctx.roundRect)ctx.roundRect(0,0,W,H,8);else ctx.rect(0,0,W,H);ctx.fill();
   if(!log.length){
-    ctx.font='300 12px Inter,sans-serif';ctx.fillStyle='rgba(110,95,82,0.4)';ctx.textAlign='center';
+    ctx.font='300 12px Inter,sans-serif';ctx.fillStyle='rgba(255,255,255,0.25)';ctx.textAlign='center';
     ctx.fillText('Log some catches to see analysis',W/2,H/2); return;
   }
   // Bucket catches by tide height into 10 buckets (0.0-0.5m, 0.5-1.0m, ... 4.5-5.0m)
@@ -1559,7 +1559,7 @@ function drawCatchAnalysisChart(canvas) {
     ctx.fillText(v,PAD.left-4,y+3);
     ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(PAD.left+cW,y);ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=1;ctx.stroke();
   }
-  ctx.font='300 9px Inter,sans-serif';ctx.fillStyle='rgba(110,95,82,0.4)';ctx.textAlign='center';
+  ctx.font='300 9px Inter,sans-serif';ctx.fillStyle='rgba(255,255,255,0.25)';ctx.textAlign='center';
   ctx.fillText('Tide height at catch (m)',W/2,PAD.top-6);
 }
 
@@ -1631,7 +1631,7 @@ function drawTideOverviewChart(canvas, extremes, startMs, sunriseMsList, hoverMs
     const ms=new Date(ex.time).getTime(),x=xOf(ms),y=yOf(ex.height),hi=ex.type==='high';
     ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);
     ctx.fillStyle=hi?'rgba(120,160,130,0.9)':'rgba(130,162,185,0.9)';ctx.fill();
-    ctx.strokeStyle=hi?'#78a082':'#82a2b9';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.strokeStyle=hi?'#34d399':'#a78bfa';ctx.lineWidth=1.5;ctx.stroke();
   }
   ctx.restore(); // end clip
 
@@ -1674,7 +1674,7 @@ function drawTideOverviewChart(canvas, extremes, startMs, sunriseMsList, hoverMs
     ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=1.5;ctx.setLineDash([]);ctx.stroke();
     const h=interpolateTide(extremes,hoverMs),hy=yOf(h);
     ctx.beginPath();ctx.arc(nx,hy,4,0,Math.PI*2);ctx.fillStyle='rgba(122,162,132,0.9)';ctx.fill();
-    ctx.strokeStyle='#78a082';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.strokeStyle='#34d399';ctx.lineWidth=1.5;ctx.stroke();
     ctx.font='400 10px Inter,sans-serif';ctx.fillStyle='rgba(255,255,255,0.8)';
     ctx.textAlign=nx>W*0.6?'right':'left';
     ctx.fillText(h.toFixed(2)+'m',nx+(nx>W*0.6?-8:8),hy-8);
@@ -2300,7 +2300,7 @@ function renderApp({tideData,solunar,weather,marine}) {
           <div class="lk-legend-item"><div class="lk-legend-swatch" style="background:#c8a84b"></div>Damibila</div>
           <div class="lk-legend-item"><div class="lk-legend-swatch" style="background:#a8c4b8"></div>Dinidjanggama</div>
           <div class="lk-legend-item"><div class="lk-legend-swatch" style="background:#d4b896"></div>Gurrulwa</div>
-          <div class="lk-legend-item"><div class="lk-legend-swatch" style="background:#c4876a"></div>Dalirrgang</div>
+          <div class="lk-legend-item"><div class="lk-legend-swatch" style="background:#fb923c"></div>Dalirrgang</div>
         </div>
         <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-soft);display:flex;gap:12px;flex-wrap:wrap;font-size:10px;color:var(--stone-dark)">
           <span style="display:flex;align-items:center;gap:5px"><span style="width:16px;height:8px;border-radius:2px;background:var(--sage);display:inline-block"></span>Peak season</span>
@@ -2510,7 +2510,7 @@ function renderApp({tideData,solunar,weather,marine}) {
       <div class="section-label">My fishing spots · Nightcliff &amp; Darwin</div>
       <div class="spots-toolbar">
         <button class="spot-chip active" data-filter="all" onclick="filterMapSpots(this)"><span class="chip-dot" style="background:var(--cyan)"></span>All spots</button>
-        <button class="spot-chip" data-filter="preset" onclick="filterMapSpots(this)"><span class="chip-dot" style="background:#82a2b9"></span>Darwin classics</button>
+        <button class="spot-chip" data-filter="preset" onclick="filterMapSpots(this)"><span class="chip-dot" style="background:#a78bfa"></span>Darwin classics</button>
         <button class="spot-chip" data-filter="custom" onclick="filterMapSpots(this)"><span class="chip-dot" style="background:#82aa8c"></span>My spots</button>
         <button class="spot-chip" data-filter="catches" onclick="filterMapSpots(this)"><span class="chip-dot" style="background:#c8a84b"></span>Catch locations</button>
         <button class="log-btn" style="margin-left:auto;padding:5px 14px;font-size:11px" onclick="startAddSpot()">+ Add spot</button>
@@ -2818,7 +2818,7 @@ function viewPhoto(id){
 }
 
 // ── CATCH OVERLAY ─────────────────────────────────────────────────────────────
-const SPECIES_COLORS = ['#82aa8c','#c4876a','#c8a84b','#82a2b9','#b8a082','#a08cb8','#b8c9b0','#d9826a'];
+const SPECIES_COLORS = ['#34d399','#fb923c','#fbbf24','#a78bfa','#22d3ee','#818cf8','#6ee7b7','#fb7185'];
 function speciesColor(name) {
   let h=0; for(let i=0;i<name.length;i++) h=(h*31+name.charCodeAt(i))&0xffff;
   return SPECIES_COLORS[h%SPECIES_COLORS.length];
@@ -3038,7 +3038,7 @@ function renderAllMapMarkers() {
 
   // Preset spots — blue pins
   PRESET_SPOTS.forEach(sp => {
-    const marker = makePinMarker({ lat:sp.lat, lng:sp.lng }, '#82a2b9', sp.icon, gMap);
+    const marker = makePinMarker({ lat:sp.lat, lng:sp.lng }, '#a78bfa', sp.icon, gMap);
     marker.addListener('click', () => {
       infoWindow.setContent(`
         <div class="map-info-window">
