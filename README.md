@@ -75,8 +75,9 @@ body { background: var(--sand); color: var(--ink); font-family: 'Outfit', system
 /* TODAY GRID */
 .cond-group { margin-bottom: 10px; }
 .cond-group-label { font-size: 8px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--stone-dark); opacity: 0.65; margin-bottom: 7px; padding-left: 2px; }
-.loc-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
-.loc-pill { background: none; border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 11px; font-family: 'Outfit', sans-serif; color: var(--stone-dark); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.location-bar { display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding: 12px 0 4px; margin-top: 10px; border-top: 1px solid var(--border-soft); }
+.location-bar::-webkit-scrollbar { display: none; }
+.loc-pill { background: none; border: 1px solid var(--border); border-radius: 20px; padding: 6px 15px; font-size: 12px; font-family: 'Outfit', sans-serif; color: var(--stone-dark); cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }
 .loc-pill:hover { background: var(--sand-dark); color: var(--ink); border-color: var(--border-soft); }
 .loc-pill.active { background: rgba(34,211,238,0.08); border-color: rgba(34,211,238,0.35); color: var(--cyan); font-weight: 500; }
 .loc-tip { font-size: 12px; color: var(--ink-soft); line-height: 1.65; padding: 12px 16px; background: rgba(255,255,255,0.025); border-radius: 12px; border: 1px solid var(--border-soft); margin-bottom: 14px; }
@@ -451,6 +452,7 @@ body { background: var(--sand); color: var(--ink); font-family: 'Outfit', system
         <div class="stat-sub" id="goldenHour" style="margin-top:2px;font-size:10px;color:var(--stone-dark)"></div>
       </div>
     </div>
+    <div id="locationBar" class="location-bar"></div>
   </header>
 
   <nav class="nav-tabs">
@@ -1077,10 +1079,15 @@ function buildLocTip() {
   return `<span style="color:var(--ink);font-weight:500">${loc.emoji} ${loc.name}</span> — ${loc.tips[0]}`;
 }
 function buildFishingTipsHTML() {
-  // Called from fishing tab — returns tip cards for active location
   const loc=activeLoc();
   return loc.tips.map(t=>`<div class="tip-card">${t}</div>`).join('');
 }
+function initLocationBar() {
+  const bar=document.getElementById('locationBar');
+  if(!bar) return;
+  bar.innerHTML=LOCATIONS.map(l=>`<button class="loc-pill${l.id===activeLocId?' active':''}" data-loc="${l.id}" onclick="setLocation('${l.id}')">${l.emoji} ${l.short}</button>`).join('');
+}
+document.addEventListener('DOMContentLoaded', initLocationBar);
 
 const SPECIES = [
   { name:'Barramundi',      color:'#82aa8c', peak:[3,4,5,10,11],     active:[0,1,2,6,7,8,9] },
@@ -2422,12 +2429,7 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
     <!-- TODAY -->
     <div class="section fade-up">
       <div class="section-label">Conditions right now</div>
-
-      <!-- Location selector -->
-      <div class="loc-pills">
-        ${LOCATIONS.map(l=>`<button class="loc-pill${l.id===activeLocId?' active':''}" data-loc="${l.id}" onclick="setLocation('${l.id}')">${l.emoji} ${l.short}</button>`).join('')}
-      </div>
-      <div class="loc-tip" id="locTip">${buildLocTip()}</div>
+      <div class="loc-tip" id="locTip" style="margin-bottom:14px">${buildLocTip()}</div>
 
       <!-- TIDE & SOLUNAR -->
       <div class="cond-group">
@@ -2709,9 +2711,6 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
 
     <div class="section">
       <div class="section-label">Spot tips</div>
-      <div class="loc-pills" style="margin-bottom:14px">
-        ${LOCATIONS.map(l=>`<button class="loc-pill${l.id===activeLocId?' active':''}" data-loc="${l.id}" onclick="setLocation('${l.id}')">${l.emoji} ${l.short}</button>`).join('')}
-      </div>
       <div id="fishingTips">${buildFishingTipsHTML()}</div>
     </div>
   </div>
