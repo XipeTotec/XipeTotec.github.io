@@ -39,16 +39,14 @@ body { background: var(--sand); color: var(--ink); font-family: 'Outfit', system
 .tab-pane.active { display: block; }
 
 /* HEADER */
-.header { padding: 20px 0 16px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
-.header-left h1 { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-size: clamp(28px,5vw,44px); color: var(--ink); letter-spacing: -0.02em; line-height: 1; font-style: italic; }
-.header-left h1 em { font-style: italic; color: var(--cyan); }
-.header-left .sub { font-size: 11px; color: var(--stone-dark); margin-top: 5px; letter-spacing: 0.04em; }
-.site-logo { height: clamp(72px,14vw,108px); width: auto; display: block; filter: drop-shadow(0 4px 18px rgba(0,0,0,0.55)); transition: transform 0.2s; }
-.site-logo:hover { transform: scale(1.03); }
+.header { padding: 0 0 16px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+.site-banner { width: 100%; display: block; border-radius: 16px; margin-bottom: 14px; object-fit: cover; max-height: 200px; }
+.header-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.header-left .sub { font-size: 11px; color: var(--stone-dark); letter-spacing: 0.04em; }
 .header-right { text-align: right; }
 .clock { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-size: clamp(22px,4vw,36px); color: var(--ink-soft); letter-spacing: 0.02em; line-height: 1; }
 .clock-date { font-size: 9px; color: var(--stone-dark); margin-top: 5px; letter-spacing: 0.12em; text-transform: uppercase; }
-.header-controls { display: flex; gap: 10px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.header-controls { display: flex; gap: 10px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
 .refresh-btn { background: none; border: 1px solid var(--border); border-radius: 20px; padding: 5px 14px; font-size: 11px; font-family: 'Outfit', sans-serif; color: var(--stone-dark); cursor: pointer; letter-spacing: 0.08em; text-transform: uppercase; transition: all 0.2s; }
 .refresh-btn:hover { background: var(--sand-dark); color: var(--ink); }
 .refresh-btn:disabled { opacity: 0.4; cursor: default; }
@@ -75,6 +73,13 @@ body { background: var(--sand); color: var(--ink); font-family: 'Outfit', system
 .go-factor-dot { width: 7px; height: 7px; border-radius: 50%; }
 
 /* TODAY GRID */
+.cond-group { margin-bottom: 10px; }
+.cond-group-label { font-size: 8px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--stone-dark); opacity: 0.65; margin-bottom: 7px; padding-left: 2px; }
+.loc-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+.loc-pill { background: none; border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 11px; font-family: 'Outfit', sans-serif; color: var(--stone-dark); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.loc-pill:hover { background: var(--sand-dark); color: var(--ink); border-color: var(--border-soft); }
+.loc-pill.active { background: rgba(34,211,238,0.08); border-color: rgba(34,211,238,0.35); color: var(--cyan); font-weight: 500; }
+.loc-tip { font-size: 12px; color: var(--ink-soft); line-height: 1.65; padding: 12px 16px; background: rgba(255,255,255,0.025); border-radius: 12px; border: 1px solid var(--border-soft); margin-bottom: 14px; }
 .today-grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); grid-auto-rows: auto; }
 .hero-cell { grid-column: 1/-1; background: linear-gradient(145deg,#0d1f3c,#0f2545); border: 1px solid rgba(34,211,238,0.15); border-radius: 18px; display: flex; flex-direction: row; align-items: center; justify-content: center; padding: 22px 28px; gap: 28px; flex-wrap: wrap; }
 @media(min-width:600px) { .hero-cell { grid-column: span 2; } }
@@ -280,10 +285,9 @@ body { background: var(--sand); color: var(--ink); font-family: 'Outfit', system
   /* ── APP SHELL ── */
   .app { padding:0 14px calc(72px + env(safe-area-inset-bottom,8px)); }
 
-  /* ── HEADER: compact single row ── */
-  .header { padding:14px 0 12px; margin-bottom:16px; gap:10px; }
-  .site-logo { height: clamp(60px,18vw,88px); }
-  .header-left .sub { font-size:12px; margin-top:6px; }
+  /* ── HEADER: compact ── */
+  .header { padding:0 0 12px; margin-bottom:16px; }
+  .site-banner { border-radius:10px; margin-bottom:10px; max-height:140px; }
   .header-controls { margin-top:6px; gap:8px; }
   .refresh-btn { padding:8px 16px; font-size:12px; }
   .last-updated { font-size:11px; }
@@ -432,18 +436,20 @@ body { background: var(--sand); color: var(--ink); font-family: 'Outfit', system
 <body>
 <div class="app">
   <header class="header">
-    <div class="header-left">
-      <img src="/logo.png" alt="Nightcliff · Darwin NT" class="site-logo">
-      <div class="sub" style="margin-top:8px">Darwin NT &nbsp;·&nbsp; <span id="date">—</span></div>
-      <div class="header-controls">
-        <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">↻ Refresh</button>
-        <span class="last-updated" id="lastUpdated"></span>
+    <img src="/banner.png" alt="Nightcliff · Darwin NT" class="site-banner">
+    <div class="header-bar">
+      <div class="header-left">
+        <div class="sub">Darwin NT &nbsp;·&nbsp; <span id="date">—</span></div>
+        <div class="header-controls">
+          <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">↻ Refresh</button>
+          <span class="last-updated" id="lastUpdated"></span>
+        </div>
       </div>
-    </div>
-    <div class="header-right">
-      <div class="live-badge"><div class="live-dot"></div>Live</div>
-      <div class="clock" id="clock" style="margin-top:8px">—</div>
-      <div class="stat-sub" id="goldenHour" style="margin-top:2px;font-size:10px;color:var(--stone-dark)"></div>
+      <div class="header-right">
+        <div class="live-badge"><div class="live-dot"></div>Live</div>
+        <div class="clock" id="clock" style="margin-top:6px">—</div>
+        <div class="stat-sub" id="goldenHour" style="margin-top:2px;font-size:10px;color:var(--stone-dark)"></div>
+      </div>
     </div>
   </header>
 
@@ -1037,6 +1043,45 @@ const MONTHS_FULL = ['January','February','March','April','May','June','July','A
 const MONTHS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
 
 // Species data (kept for fish calendar rows)
+const LOCATIONS = [
+  { id:'jetty',   name:'Nightcliff Jetty', short:'Jetty',    emoji:'🪝', tidePref:'both',    rampMin:0.8,
+    species:['Barramundi','Giant Trevally','Mangrove Jack'],
+    tips:['Fish the concrete pylons on the shaded side — barra hold at structure edges.','Best windows: last 2h of run-out and first 2h of run-in.','After dark, work the light-dark boundary under the jetty lights.'] },
+  { id:'rapid',   name:'Rapid Creek',      short:'Rapid Ck', emoji:'🌿', tidePref:'rising',  rampMin:0.6,
+    species:['Barramundi','Mangrove Jack','Blue Salmon'],
+    tips:['Rising tide floods mangrove edges — cast lures into the shadows along the bank.','Fish the channel drain exit 1–2h after the low for stacked barra.','Spring tides push massive baitfish runs into the creek mouth.'] },
+  { id:'lee',     name:'Lee Point',         short:'Lee Pt',   emoji:'🏖', tidePref:'falling', rampMin:null,
+    species:['Queenfish','Giant Trevally','Threadfin Salmon'],
+    tips:['Falling tide concentrates baitfish along the sandy gutter — work fast surface lures.','Queenfish and GT patrol the point at first light. Hit it early.','Best on light SE breeze — NW wind creates rough conditions here.'] },
+  { id:'casuarina',name:'Casuarina Beach',  short:'Casuarina',emoji:'🌊', tidePref:'mid',     rampMin:null,
+    species:['Threadfin Salmon','Giant Trevally','Queenfish','Blue Salmon'],
+    tips:['Sandy gutter active at mid tide — salmon chase baitfish along the break.','Rock platforms at south end hold jack and GT at low tide.','Metal slugs and poppers worked fast along the beach. Cover ground.'] },
+  { id:'reef',    name:'Nightcliff Reef',   short:'Reef',     emoji:'🪨', tidePref:'falling', rampMin:null,
+    species:['Mangrove Jack','Giant Trevally','Queenfish'],
+    tips:['Rocky reef platform — accessible 2h either side of low tide only.','GT and jack ambush baitfish at the reef edge on the drop.','Watch surge — non-slip footwear essential, never fish alone here.'] },
+];
+
+let activeLocId = localStorage.getItem('nightcliff_loc') || 'jetty';
+function activeLoc() { return LOCATIONS.find(l=>l.id===activeLocId)||LOCATIONS[0]; }
+function setLocation(id) {
+  activeLocId=id;
+  try{localStorage.setItem('nightcliff_loc',id);}catch(e){}
+  document.querySelectorAll('.loc-pill').forEach(p=>p.classList.toggle('active',p.dataset.loc===id));
+  const lt=document.getElementById('locTip'); if(lt) lt.innerHTML=buildLocTip();
+  const ft=document.getElementById('fishingTips'); if(ft) ft.innerHTML=buildFishingTipsHTML();
+  // Update ramp label
+  const rl=document.getElementById('rampLocLabel'); if(rl) rl.textContent=activeLoc().name;
+}
+function buildLocTip() {
+  const loc=activeLoc();
+  return `<span style="color:var(--ink);font-weight:500">${loc.emoji} ${loc.name}</span> — ${loc.tips[0]}`;
+}
+function buildFishingTipsHTML() {
+  // Called from fishing tab — returns tip cards for active location
+  const loc=activeLoc();
+  return loc.tips.map(t=>`<div class="tip-card">${t}</div>`).join('');
+}
+
 const SPECIES = [
   { name:'Barramundi',      color:'#82aa8c', peak:[3,4,5,10,11],     active:[0,1,2,6,7,8,9] },
   { name:'Mangrove Jack',   color:'#b8a082', peak:[5,6,7,8,9],       active:[0,1,2,3,4,10,11] },
@@ -2376,99 +2421,100 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
 
     <!-- TODAY -->
     <div class="section fade-up">
-      <div class="section-label">Today's conditions</div>
-      <div class="today-grid">
-        <div class="hero-cell">
-          <div class="hero-main">
-            <div class="hero-arrow">${isRising?'↑':'↓'}</div>
-            <div><span class="hero-height" id="hero-h">${currentH.toFixed(2)}</span><span class="hero-unit">m</span></div>
-            <div class="hero-label">${isRising?'Rising':'Falling'} tide</div>
-            ${nextEx?`<div style="font-size:11px;color:var(--stone-dark);margin-top:4px;font-style:italic">Turns ${fmtCountdown(new Date(nextEx.time).getTime()-nowMs)}</div>`:''}
-            <div style="font-size:11px;margin-top:4px;color:${Math.abs(tideRateHr)>0.4?'var(--cyan)':Math.abs(tideRateHr)>0.15?'var(--gold)':'var(--stone-dark)'}">Flow: ${tideRateHr>=0?'+':''}${tideRateHr} m/hr</div>
+      <div class="section-label">Conditions right now</div>
+
+      <!-- Location selector -->
+      <div class="loc-pills">
+        ${LOCATIONS.map(l=>`<button class="loc-pill${l.id===activeLocId?' active':''}" data-loc="${l.id}" onclick="setLocation('${l.id}')">${l.emoji} ${l.short}</button>`).join('')}
+      </div>
+      <div class="loc-tip" id="locTip">${buildLocTip()}</div>
+
+      <!-- TIDE & SOLUNAR -->
+      <div class="cond-group">
+        <div class="cond-group-label">Tide &amp; Solunar</div>
+        <div class="today-grid">
+          <div class="hero-cell">
+            <div class="hero-main">
+              <div class="hero-arrow">${isRising?'↑':'↓'}</div>
+              <div><span class="hero-height" id="hero-h">${currentH.toFixed(2)}</span><span class="hero-unit">m</span></div>
+              <div class="hero-label">${isRising?'Rising':'Falling'} tide</div>
+              ${nextEx?`<div style="font-size:11px;color:var(--stone-dark);margin-top:4px;font-style:italic">Turns ${fmtCountdown(new Date(nextEx.time).getTime()-nowMs)}</div>`:''}
+              <div style="font-size:11px;margin-top:4px;color:${Math.abs(tideRateHr)>0.4?'var(--cyan)':Math.abs(tideRateHr)>0.15?'var(--gold)':'var(--stone-dark)'}">Flow: ${tideRateHr>=0?'+':''}${tideRateHr} m/hr</div>
+            </div>
+            <div class="tide-progress-wrap">
+              <div class="tide-progress-labels"><span>${prev?.type==='high'?'High':'Low'}</span><span>${nextEx?.type==='high'?'High':'Low'}</span></div>
+              <div class="tide-progress-track"><div class="tide-progress-fill ${isRising?'rising':'falling'}" id="progress-fill" style="width:${progressPct}%"></div></div>
+            </div>
           </div>
-          <div class="tide-progress-wrap">
-            <div class="tide-progress-labels"><span>${prev?.type==='high'?'High':'Low'}</span><span>${nextEx?.type==='high'?'High':'Low'}</span></div>
-            <div class="tide-progress-track"><div class="tide-progress-fill ${isRising?'rising':'falling'}" id="progress-fill" style="width:${progressPct}%"></div></div>
+          <div class="stat-cell">
+            <div class="stat-label">Next high</div>
+            <div class="stat-value">${nextHigh?fmtTime(new Date(nextHigh.time)):'—'}</div>
+            <div class="stat-sub">${nextHigh?nextHigh.height.toFixed(2)+' m':''}</div>
+            <div class="countdown" id="cd-high">${nextHigh?fmtCountdown(new Date(nextHigh.time).getTime()-nowMs):''}</div>
           </div>
+          <div class="stat-cell">
+            <div class="stat-label">Next low</div>
+            <div class="stat-value">${nextLow?fmtTime(new Date(nextLow.time)):'—'}</div>
+            <div class="stat-sub">${nextLow?nextLow.height.toFixed(2)+' m':''}</div>
+            <div class="countdown" id="cd-low">${nextLow?fmtCountdown(new Date(nextLow.time).getTime()-nowMs):''}</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-label">Solunar fishing</div>
+            <div style="margin:3px 0">${starsHTML(solRating,false)}</div>
+            <div class="stat-sub">${solRating} of 5</div>
+            ${biteHTML}${solCountdownHTML}
+          </div>
+          <div class="stat-cell">
+            <div class="stat-label">Tidal phase</div>
+            <span class="phase-pill ${todayCond?.springNeap||'neap'}">${todayCond?.springNeap||'neap'}</span>
+            <div class="stat-sub" style="margin-top:5px">${spring?'Strong currents':'Moderate flow'}</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-label">Tidal current</div>
+            ${currentHTML}
+          </div>
+          <div class="stat-cell">
+            <div class="stat-label">Sunrise · Sunset</div>
+            <div class="stat-value" style="font-size:17px;margin-top:4px">☀ ${fmtSunTime(todayCond?.sunrise)}</div>
+            <div class="stat-value" style="font-size:17px;margin-top:2px">🌅 ${fmtSunTime(todayCond?.sunset)}</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-label">Moon</div>
+            <div class="moon-emoji">${moonIcon(todayCond?.moonPhase)}</div>
+            <div class="stat-sub">${todayCond?.moonPhase||'—'}</div>
+            <div class="stat-sub">${todayCond?.moonIllumination!=null?todayCond.moonIllumination+'% illuminated':''}</div>
+          </div>
+          ${activeLoc().rampMin!=null?`<div class="stat-cell"><div class="stat-label">Boat ramp · <span id="rampLocLabel">${activeLoc().name}</span></div>${rampHTML}</div>`:''}
         </div>
-        <div class="stat-cell">
-          <div class="stat-label">Next high</div>
-          <div class="stat-value">${nextHigh?fmtTime(new Date(nextHigh.time)):'—'}</div>
-          <div class="stat-sub">${nextHigh?nextHigh.height.toFixed(2)+' m':''}</div>
-          <div class="countdown" id="cd-high">${nextHigh?fmtCountdown(new Date(nextHigh.time).getTime()-nowMs):''}</div>
+      </div>
+
+      <!-- WEATHER & SKY -->
+      <div class="cond-group">
+        <div class="cond-group-label">Weather &amp; Sky</div>
+        <div class="today-grid">
+          <div class="stat-cell"><div class="stat-label">Wind</div>${windHTML}</div>
+          <div class="stat-cell"><div class="stat-label">Pressure</div>${pressHTML}</div>
+          <div class="stat-cell"><div class="stat-label">UV Index</div>${uvHTML}</div>
+          <div class="stat-cell"><div class="stat-label">Golden hour</div>${goldenHTML}</div>
         </div>
-        <div class="stat-cell">
-          <div class="stat-label">Next low</div>
-          <div class="stat-value">${nextLow?fmtTime(new Date(nextLow.time)):'—'}</div>
-          <div class="stat-sub">${nextLow?nextLow.height.toFixed(2)+' m':''}</div>
-          <div class="countdown" id="cd-low">${nextLow?fmtCountdown(new Date(nextLow.time).getTime()-nowMs):''}</div>
+      </div>
+
+      <!-- WATER & SWELL -->
+      <div class="cond-group">
+        <div class="cond-group-label">Water &amp; Swell</div>
+        <div class="today-grid">
+          <div class="stat-cell"><div class="stat-label">Water temp</div>${tempHTML}</div>
+          <div class="stat-cell"><div class="stat-label">Swell / Chop</div>${swellHTML}</div>
+          <div class="stat-cell"><div class="stat-label">Water clarity</div>${clarityHTML}</div>
+          <div class="stat-cell"><div class="stat-label">Visibility</div>${visHTML}</div>
         </div>
-        <div class="stat-cell">
-          <div class="stat-label">Solunar fishing</div>
-          <div style="margin:3px 0">${starsHTML(solRating,false)}</div>
-          <div class="stat-sub">${solRating} of 5</div>
-          ${biteHTML}
-          ${solCountdownHTML}
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Tidal phase</div>
-          <span class="phase-pill ${todayCond?.springNeap||'neap'}">${todayCond?.springNeap||'neap'}</span>
-          <div class="stat-sub" style="margin-top:5px">${spring?'Strong currents':'Moderate flow'}</div>
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Sunrise · Sunset</div>
-          <div class="stat-value" style="font-size:17px;margin-top:4px">☀ ${fmtSunTime(todayCond?.sunrise)}</div>
-          <div class="stat-value" style="font-size:17px;margin-top:2px">🌅 ${fmtSunTime(todayCond?.sunset)}</div>
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Moon</div>
-          <div class="moon-emoji">${moonIcon(todayCond?.moonPhase)}</div>
-          <div class="stat-sub">${todayCond?.moonPhase||'—'}</div>
-          <div class="stat-sub">${todayCond?.moonIllumination!=null?todayCond.moonIllumination+'% illuminated':''}</div>
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Boat ramp</div>
-          ${rampHTML}
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Pressure</div>
-          ${pressHTML}
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Wind</div>
-          ${windHTML}
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Water temp</div>
-          ${tempHTML}
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Swell / Chop</div>
-          ${swellHTML}
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">UV Index</div>
-          ${uvHTML}
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Tidal current</div>
-          ${currentHTML}
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Visibility</div>
-          ${visHTML}
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Air quality (AQI)</div>
-          ${aqiHTML}
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Golden hour</div>
-          ${goldenHTML}
-        </div>
-        <div class="stat-cell">
-          <div class="stat-label">Water clarity</div>
-          ${clarityHTML}
+      </div>
+
+      <!-- ENVIRONMENT -->
+      <div class="cond-group">
+        <div class="cond-group-label">Environment</div>
+        <div class="today-grid">
+          <div class="stat-cell"><div class="stat-label">Air quality (AQI)</div>${aqiHTML}</div>
         </div>
       </div>
     </div>
@@ -2662,8 +2708,11 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
     </div>
 
     <div class="section">
-      <div class="section-label">Fishing notes</div>
-      ${tips.map(t=>`<div class="tip-card">${t}</div>`).join('')}
+      <div class="section-label">Spot tips</div>
+      <div class="loc-pills" style="margin-bottom:14px">
+        ${LOCATIONS.map(l=>`<button class="loc-pill${l.id===activeLocId?' active':''}" data-loc="${l.id}" onclick="setLocation('${l.id}')">${l.emoji} ${l.short}</button>`).join('')}
+      </div>
+      <div id="fishingTips">${buildFishingTipsHTML()}</div>
     </div>
   </div>
 
