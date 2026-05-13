@@ -40,7 +40,7 @@ body { background: var(--sand); color: var(--ink); font-family: 'Outfit', system
 
 /* HEADER */
 .header { padding: 0 0 16px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
-.site-banner { width: 100%; display: block; border-radius: 16px; margin-bottom: 14px; object-fit: cover; max-height: 200px; }
+.site-banner { width: 100%; height: auto; display: block; border-radius: 16px; margin-bottom: 14px; }
 .header-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .header-left .sub { font-size: 11px; color: var(--stone-dark); letter-spacing: 0.04em; }
 .header-right { text-align: right; }
@@ -287,7 +287,7 @@ body { background: var(--sand); color: var(--ink); font-family: 'Outfit', system
 
   /* ── HEADER: compact ── */
   .header { padding:0 0 12px; margin-bottom:16px; }
-  .site-banner { border-radius:10px; margin-bottom:10px; max-height:140px; }
+  .site-banner { border-radius:10px; margin-bottom:10px; }
   .header-controls { margin-top:6px; gap:8px; }
   .refresh-btn { padding:8px 16px; font-size:12px; }
   .last-updated { font-size:11px; }
