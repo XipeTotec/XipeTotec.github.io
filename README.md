@@ -43,6 +43,8 @@ body { background: var(--sand); color: var(--ink); font-family: 'Outfit', system
 .header-left h1 { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-size: clamp(28px,5vw,44px); color: var(--ink); letter-spacing: -0.02em; line-height: 1; font-style: italic; }
 .header-left h1 em { font-style: italic; color: var(--cyan); }
 .header-left .sub { font-size: 11px; color: var(--stone-dark); margin-top: 5px; letter-spacing: 0.04em; }
+.site-logo { height: clamp(72px,14vw,108px); width: auto; display: block; filter: drop-shadow(0 4px 18px rgba(0,0,0,0.55)); transition: transform 0.2s; }
+.site-logo:hover { transform: scale(1.03); }
 .header-right { text-align: right; }
 .clock { font-family: 'Cormorant Garamond', serif; font-weight: 300; font-size: clamp(22px,4vw,36px); color: var(--ink-soft); letter-spacing: 0.02em; line-height: 1; }
 .clock-date { font-size: 9px; color: var(--stone-dark); margin-top: 5px; letter-spacing: 0.12em; text-transform: uppercase; }
@@ -280,8 +282,8 @@ body { background: var(--sand); color: var(--ink); font-family: 'Outfit', system
 
   /* ── HEADER: compact single row ── */
   .header { padding:14px 0 12px; margin-bottom:16px; gap:10px; }
-  .header-left h1 { font-size:22px; }
-  .header-left .sub { font-size:12px; margin-top:3px; }
+  .site-logo { height: clamp(60px,18vw,88px); }
+  .header-left .sub { font-size:12px; margin-top:6px; }
   .header-controls { margin-top:6px; gap:8px; }
   .refresh-btn { padding:8px 16px; font-size:12px; }
   .last-updated { font-size:11px; }
@@ -431,8 +433,8 @@ body { background: var(--sand); color: var(--ink); font-family: 'Outfit', system
 <div class="app">
   <header class="header">
     <div class="header-left">
-      <h1>Nightcliff <em>Tides</em></h1>
-      <div class="sub">Darwin NT &nbsp;·&nbsp; <span id="date">—</span></div>
+      <img src="/logo.png" alt="Nightcliff · Darwin NT" class="site-logo">
+      <div class="sub" style="margin-top:8px">Darwin NT &nbsp;·&nbsp; <span id="date">—</span></div>
       <div class="header-controls">
         <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()">↻ Refresh</button>
         <span class="last-updated" id="lastUpdated"></span>
