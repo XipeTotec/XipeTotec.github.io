@@ -1071,8 +1071,8 @@ function setLocation(id) {
   document.querySelectorAll('.loc-pill').forEach(p=>p.classList.toggle('active',p.dataset.loc===id));
   const lt=document.getElementById('locTip'); if(lt) lt.innerHTML=buildLocTip();
   const ft=document.getElementById('fishingTips'); if(ft) ft.innerHTML=buildFishingTipsHTML();
-  // Update ramp label
   const rl=document.getElementById('rampLocLabel'); if(rl) rl.textContent=activeLoc().name;
+  const wl=document.getElementById('weatherLocLabel'); if(wl) wl.textContent=activeLoc().name;
 }
 function buildLocTip() {
   const loc=activeLoc();
@@ -2718,7 +2718,7 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
   <!-- WEATHER TAB -->
   <div id="tab-weather" class="tab-pane">
     <div class="section">
-      <div class="section-label">Current conditions</div>
+      <div class="section-label">Conditions at <span id="weatherLocLabel">${activeLoc().name}</span></div>
       <div class="today-grid">
         <div class="stat-cell"><div class="stat-label">Pressure</div>${pressHTML}</div>
         <div class="stat-cell"><div class="stat-label">Wind</div>${windHTML}</div>
