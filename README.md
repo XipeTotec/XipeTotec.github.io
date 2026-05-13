@@ -2256,7 +2256,6 @@ function renderApp({tideData,solunar,weather,marine,airQuality,stormglass}) {
   }
 
   // Species conditions panel
-  const curMonth=new Date().getMonth();
   const specCond=computeSpeciesConditions(isRising,spring,solRating,waterTemp,weather,curMonth);
   const specCondHTML=specCond.map(({sp,score,hint})=>{
     const bc=score>=7?'var(--emerald)':score>=5?'var(--gold)':score>=3?'var(--orange)':'var(--rose)';
