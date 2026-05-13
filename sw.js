@@ -1,10 +1,10 @@
-const CACHE='nightcliff-v9';
-const ASSETS=['/','/README.md','/logo.png'];
+const CACHE='nightcliff-v10';
+const ASSETS=['/','/README.md','/logo.png','/banner.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(
   caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
   .then(()=>self.clients.claim())
-  .then(()=>self.clients.matchAll({type:'window'}).then(cls=>cls.forEach(c=>c.postMessage({type:'SW_UPDATED',version:'nightcliff-v9'}))))
+  .then(()=>self.clients.matchAll({type:'window'}).then(cls=>cls.forEach(c=>c.postMessage({type:'SW_UPDATED',version:'nightcliff-v10'}))))
 ));
 self.addEventListener('fetch',e=>{
   if(!e.request.url.startsWith(self.location.origin))return;
