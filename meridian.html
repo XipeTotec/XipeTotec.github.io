@@ -710,6 +710,7 @@ const MODES = {
   FLAG:["Flags","Which country flies this flag?"],
   MIX:["Mix","All four, shuffled"],
   FLAGMAP:["Flag to map","See a flag, then tap its country"],
+  CAPMAP:["Capital to map","See a capital, then tap its country"],
   SHAPE:["Outlines","Name the country from its shape alone"],
   NEIGH:["Neighbours","Who shares a border with whom?"],
   CONT:["Continents","Beginner: which continent is it in?"],
@@ -725,9 +726,9 @@ const MODES = {
   TF:["True or false","Quickfire facts about countries"],
   LANDMARKS:["Landmarks","Famous sites: name the country, then find them"]
 };
-const MODE_GROUPS=[["Flags",["FLAG","FLAGMAP"]],["Locate",["FIND","NAME","SHAPE"]],["Quiz",["CAPITAL","CAPREV","CONT","NEIGH","ODD","NUMBERS","TF","MIX"]],["Places",["PEAKS","RIVERS","LAKES","LANDMARKS"]],["Challenges",["LIVES","STREAK","SPRINT"]]];
+const MODE_GROUPS=[["Flags",["FLAG","FLAGMAP"]],["Locate",["FIND","NAME","SHAPE","CAPMAP"]],["Quiz",["CAPITAL","CAPREV","CONT","NEIGH","ODD","NUMBERS","TF","MIX"]],["Places",["PEAKS","RIVERS","LAKES","LANDMARKS"]],["Challenges",["LIVES","STREAK","SPRINT"]]];
 const CHALLENGES=new Set(["LIVES","STREAK","SPRINT"]);
-const KIND_SETS={MIX:["FIND","NAME","CAPITAL","FLAG"],LIVES:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],STREAK:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],SPRINT:["NAME","FLAG","CAPITAL","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],NUMBERS:["BIGGER","BIGGER","POPBAND"],TF:["TF"]};
+const KIND_SETS={MIX:["FIND","NAME","CAPITAL","FLAG"],LIVES:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],STREAK:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],SPRINT:["NAME","FLAG","CAPITAL","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],NUMBERS:["BIGGER","BIGGER","POPBAND"],TF:["TF"]};
 const CONT_LABELS=["Africa","Asia","Europe","North America","South America","Oceania"];
 const LIVES_OPTS=[3,5,10], SPRINT_OPTS=[30,60,120], HL_KINDS=["NAME","CAPITAL","CONT","NEIGH","SHAPE","PEAKNAME","RIVERNAME","RIVERFLOW","RIVERTHRU","LAKENAME","POPBAND","LMNAME","LMCOUNTRY"];
 const NO_REC=new Set(["ODD","TF","BIGGER","POPBAND"]);       // these don't prove you know where a country is, so they stay off Your map
@@ -1778,7 +1779,7 @@ function makeTF(pool,all,t){
   return null;
 }
 function feasible(kind,c){
-  if(kind==="CAPREV") return !!c.capital;
+  if(kind==="CAPREV"||kind==="CAPMAP") return !!c.capital;
   if(kind==="POPBAND") return !!c.facts.pop;
   if(kind==="BIGGER") return !!(c.facts.pop||c.facts.gdp);
   if(kind==="CAPITAL") return !!c.capital;
@@ -1847,11 +1848,12 @@ function makeNeighbours(near,t){
   return {kind:"NEIGH",target:t,prompt:`Which of these borders ${t.name}?`,choices:shuffle([ans.name,...decoys.slice(0,3).map(c=>c.name)]),answer:ans.name,neighbors};
 }
 function makeQuestion(pool,all,kind,t){
-  const ok=c=>c!==t&&((kind!=="CAPITAL"&&kind!=="CAPREV")||c.capital);
+  const ok=c=>c!==t&&((kind!=="CAPITAL"&&kind!=="CAPREV"&&kind!=="CAPMAP")||c.capital);
   const byDist=list=>list.filter(ok).sort((a,b)=>Math.hypot(a.gcx-t.gcx,a.gcy-t.gcy)-Math.hypot(b.gcx-t.gcx,b.gcy-t.gcy));
   let near=shuffle(byDist(pool).slice(0,10)).slice(0,3);
   if(near.length<3) near=near.concat(byDist(all).filter(c=>!near.includes(c)).slice(0,3-near.length));
   if(kind==="FIND") return {kind,target:t,prompt:"Find",choices:[],answer:t.name};
+  if(kind==="CAPMAP") return {kind:"FIND",capOnly:true,target:t,prompt:"Find",choices:[],answer:t.name};
   if(kind==="FLAGMAP") return {kind:"FIND",flagOnly:true,target:t,prompt:"Find",choices:[],answer:t.name};
   if(kind==="NAME") return {kind,target:t,prompt:"Which country is highlighted?",choices:shuffle([...near.map(c=>c.name),t.name]),answer:t.name};
   if(kind==="SHAPE") return {kind,target:t,prompt:"Which country has this outline?",choices:shuffle([...near.map(c=>c.name),t.name]),answer:t.name};
@@ -2141,7 +2143,7 @@ function lock(ok,pts,q,wrongHit,speed=0,timedOut=false){ if(game) game.lockedAt=
     recordResult(q.target.iso, ok&&(q.kind!=="FIND"||g.attempts===0));
     if(g.elim) g.done[q.target.iso]=ok?"ok":"bad";
   }
-  if(ok){ const kk=q.flagOnly?"FLAGMAP":q.peak?"PEAK":q.lm?"LANDMARK":q.river?"RIVER":q.lake?"LAKE":q.kind; counters.byKind[kk]=(counters.byKind[kk]||0)+1; counters.correct++; saveCounters(); }
+  if(ok){ const kk=q.flagOnly?"FLAGMAP":q.capOnly?"CAPMAP":q.peak?"PEAK":q.lm?"LANDMARK":q.river?"RIVER":q.lake?"LAKE":q.kind; counters.byKind[kk]=(counters.byKind[kk]||0)+1; counters.correct++; saveCounters(); }
   Object.assign(g,{locked:true,ok,pts,speed,timedOut,score:g.score+pts,
     streak:ok?g.streak+1:0,bestStreak:ok?Math.max(g.bestStreak,g.streak+1):g.bestStreak,correct:g.correct+(ok?1:0),
     marks:{...(pairQ(q)?{[q.other.iso]:PAL.nb}:{}),...(q.kind==="LMCOUNTRY"?{[q.target.country.iso]:PAL.nb}:{}),...(q.kind==="RIVERTHRU"?{[q.riverObj.iso]:PAL.nb}:{}),...(q.kind==="NEIGH"?Object.fromEntries(q.neighbors.map(i=>[i,PAL.nb])):q.kind==="ODD"?Object.fromEntries(q.group.map(i=>[i,PAL.nb])):{}),...(wrongHit?{[wrongHit]:PAL.bad}:{}),[q.target.iso]:ok?PAL.ok:PAL.amber}});
@@ -2321,7 +2323,7 @@ const CARD_ICON={where:["globe","locate"],diff:["target","chal"],count:["hash","
 const cardsHtml=cards=>cards.map(([k,l,v,s,ic])=>{ const [i0,cat]=ic?[ic,"quiz"]:(CARD_ICON[k]||["sliders","quiz"]);
   const c=k==="mode"?"cat-"+catOf(curMode):"cat-"+cat;
   return `<button class="ocard" data-card="${k}" data-msg="${esc(s)}"><span class="oi chipic ${c}">${ico(i0,19)}</span><span class="ot"><span class="v">${esc(v)}</span><span class="s"><b class="k">${l}</b> · ${esc(s)}</span></span></button>`; }).join("");
-const MODE_ICON={FLAG:"flag",FLAGMAP:"pin",FIND:"search",NAME:"tag",SHAPE:"shape",CAPITAL:"landmark",CONT:"globe",NEIGH:"link",ODD:"target",MIX:"shuffle",LIVES:"heart",STREAK:"flame",SPRINT:"timer",PEAKS:"mountain",RIVERS:"river",LAKES:"droplet",CAPREV:"swap",NUMBERS:"scale",TF:"question",LANDMARKS:"monument"};
+const MODE_ICON={FLAG:"flag",FLAGMAP:"pin",CAPMAP:"landmark",FIND:"search",NAME:"tag",SHAPE:"shape",CAPITAL:"landmark",CONT:"globe",NEIGH:"link",ODD:"target",MIX:"shuffle",LIVES:"heart",STREAK:"flame",SPRINT:"timer",PEAKS:"mountain",RIVERS:"river",LAKES:"droplet",CAPREV:"swap",NUMBERS:"scale",TF:"question",LANDMARKS:"monument"};
 const CAT_OF={Flags:"flags",Locate:"locate",Quiz:"quiz",Places:"physical",Challenges:"chal"};
 const catOf=k=>{ const g=MODE_GROUPS.find(([,ks])=>ks.includes(k)); return g?CAT_OF[g[0]]:"quiz"; };
 const refreshSetup=()=>{ renderHome(); renderStudy(); };
@@ -2408,6 +2410,7 @@ function renderPlay(){
   $("score").textContent=g.score; $("streak").textContent=g.streak>=2?`${g.streak} in a row`:"";
   let p;
   if(q.kind==="FLAG") p=`${flagImg(q.target,40)}<span>${esc(q.prompt)}</span>`;
+  else if(q.kind==="FIND"&&q.capOnly) p=`<div><small>Tap the country whose capital is</small><div class="big inl">${esc(q.target.capital)}</div></div>`;
   else if(q.kind==="FIND"&&q.flagOnly) p=`${flagImg(q.target,40)}<span>Tap the country with this flag</span>`;
   else if(q.kind==="CONT") p=`${flagImg(q.target,32)}<span>${esc(q.prompt)}</span>`;
   else if(q.kind==="FIND"&&q.lm) p=`<div><small>Find the landmark</small><div class="big inl">${esc(q.target.name)}</div></div>`;
