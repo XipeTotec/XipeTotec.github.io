@@ -2322,7 +2322,7 @@ function renderSheet(){
     const tog=(attr,on,name,desc)=>`<button class="toggle" ${attr}="1" role="switch" aria-checked="${on}" style="margin-top:8px;background:var(--panel-hi)"><div><b>${name}</b><small>${desc}</small></div><span class="sw"></span></button>`;
     html=MODE_GROUPS.map(([g0,ks])=>`<p class="grp cat-${CAT_OF[g0]}">${g0}</p><div class="tiles">${ks.map(tile).join("")}</div>`).join("")+
       `<p class="grp cat-learn">Learn</p><div class="tiles"><button class="tile wide" data-gostudy="1"><span class="ti chipic cat-learn">${ico("book",19)}</span><div><b>Study mode</b><small>Flashcards with the map, then quiz yourself</small></div></button></div>`+
-      `<p class="grp">Round options</p>`+tog("data-smart",smart,"Smart review","Countries you struggle with come up more often.")+tog("data-elim",elim,"Eliminate","Answered countries turn grey on the map, so you can see what's left."); }
+      `<p class="grp">Round options</p>`+tog("data-smart",smart,"Smart review","Countries you struggle with come up more often.")+tog("data-elim",elim,"Eliminate","Answered countries turn grey on the map, so you can see what's left.")+tog("data-terr",territories,"Territories",`Adds Greenland, Puerto Rico, Hong Kong and other places that aren't sovereign states${world?" ("+(world.quizAll.length-world.quizSov.length)+" more)":""}.`); }
   else if(sheetKind==="region"){ title=curMode==="CONT"?"Region":"Countries";
     const tl=themeList(), pick1=g=>tl.filter(x=>x.group===g);
     const tiles=pick1("fixed").map(x=>`<button class="tile ${theme===x.id?"sel":""}" data-tsel="${x.id}"><span class="ti chipic cat-quiz">${ico(x.icon,19)}</span><div class="tt"><b>${x.label}</b><small>${x.members.length} countries</small></div></button>`).join("");
@@ -2355,12 +2355,13 @@ function renderSheet(){
   for(const el of [pn.querySelector(".grab"),pn.querySelector(".sheethead")]){ el.style.touchAction="none"; el.addEventListener("pointerdown",start); el.addEventListener("pointermove",move); el.addEventListener("pointerup",end); el.addEventListener("pointercancel",end); } })();
 function sheetClick(e){
   if(e.target.closest("#sheetScrim,#sheetClose,#sheetDone")) return closeSheet();
-  const o=e.target.closest("[data-mode],[data-d],[data-n],[data-c],[data-elim],[data-smart],[data-lives],[data-sprint],[data-tsel],[data-gostudy],[data-leave]"); if(!o) return; const d=o.dataset;
+  const o=e.target.closest("[data-mode],[data-d],[data-n],[data-c],[data-elim],[data-smart],[data-terr],[data-lives],[data-sprint],[data-tsel],[data-gostudy],[data-leave]"); if(!o) return; const d=o.dataset;
   if(d.leave){ closeSheet(); quitRound(); return; }
   if(d.gostudy){ closeSheet(); showTab("study"); return; }
   if(d.lives){ livesN=+d.lives; store.setRaw("meridian_lives",String(livesN)); closeSheet(); refreshSetup(); return; }
   if(d.sprint){ sprintS=+d.sprint; store.setRaw("meridian_sprint",String(sprintS)); closeSheet(); refreshSetup(); return; }
   if(d.elim){ elim=!elim; store.setRaw("meridian_elim",elim?"1":"0"); renderSheet(); refreshSetup(); return; }          // these two stay open
+  if(d.terr){ territories=!territories; store.setRaw("meridian_terr",territories?"1":"0"); world.setTerritories(territories); renderSheet(); refreshSetup(); renderHome(); renderSettings(); return; }
   if(d.smart){ smart=!smart; store.setRaw("meridian_smart",smart?"1":"0"); renderSheet(); refreshSetup(); return; }
   if(d.tsel){ theme=theme===d.tsel?"":d.tsel; regions.clear(); store.setRaw("meridian_themesel",theme); store.setRaw("meridian_regions",""); closeSheet(); refreshSetup(); return; }
   if(d.mode){ curMode=d.mode; store.setRaw("meridian_mode",curMode); closeSheet(); }
