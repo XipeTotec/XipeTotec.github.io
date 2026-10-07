@@ -434,6 +434,40 @@ h1{font-size:40px}
 /* result */
 .rtile .rv{font-size:21px}
 #prompt.long{font-size:15.5px;line-height:1.2}
+
+/* ---- desktop: wider screens get a real layout instead of a phone column ---- */
+@media (min-width:900px) and (min-height:540px){
+  .screen{max-width:780px}
+  .screen.center{max-width:560px}
+  #tabs{left:50%;right:auto;width:min(780px,100%);transform:translateX(-50%);border-radius:18px 18px 0 0;border:1px solid var(--hair);border-bottom:0}
+  #tabs button{cursor:pointer}#tabs button:hover{color:var(--text)}
+  .tiles button:hover,.ocard:hover,#choices button:not(.ok):not(.bad):not(.off):hover,.chips button:hover,.opt:hover,.toggle:hover{filter:brightness(1.12)}
+  /* the round: map on the left, question on the right */
+  #play{max-width:none;display:grid;grid-template-columns:minmax(0,1fr) 410px;grid-template-rows:auto minmax(0,1fr);column-gap:16px;padding-left:20px;padding-right:20px}
+  #play .top{grid-column:1/-1;padding:12px 4px;max-width:1500px;width:100%;margin:0 auto}
+  #play .mapwrap{grid-column:1;grid-row:2;margin-bottom:20px;border-radius:20px;overflow:hidden;box-shadow:0 0 0 1px var(--hair)}
+  #play .panel{grid-column:2;grid-row:2;height:auto;margin-bottom:20px;border-radius:20px;padding:24px;overflow:auto;justify-content:flex-start;box-shadow:0 0 0 1px var(--hair)}
+  #prompt{height:auto;min-height:64px;font-size:25px}
+  #prompt .big{font-size:32px}
+  #prompt small{font-size:13px}
+  #status{height:auto;min-height:38px;font-size:15px;margin:6px 0 14px}
+  #status button{padding:8px 16px;font-size:15px;background:var(--panel-hi)}
+  #choices{grid-template-columns:1fr;gap:10px}
+  #choices.c6{grid-template-columns:1fr 1fr}
+  #choices button{height:54px;font-size:16px;border-radius:14px;text-align:left;padding:0 18px}
+  #choices.c6 button{text-align:center;padding:0 8px}
+  #play .panel,#play .mapwrap{max-width:none}
+  /* bottom sheets become centred dialogs */
+  .sheet{align-items:center}
+  .sheet .panel2{max-width:560px;max-height:86%;border-radius:24px;padding-bottom:22px;transform:translateY(18px) scale(.97);opacity:0;transition:transform .3s cubic-bezier(.22,1,.36,1),opacity .25s}
+  .sheet.open .panel2{transform:none;opacity:1}
+  .sheet .grab{display:none}
+}
+@media (min-width:1400px) and (min-height:700px){
+  #play{grid-template-columns:minmax(0,1fr) 460px}
+  #prompt{font-size:28px}#prompt .big{font-size:36px}
+  #choices button{height:58px;font-size:17px}
+}
 </style>
 </head>
 <body>
@@ -2527,6 +2561,12 @@ $("playBtn").addEventListener("click",()=>startGame(curMode));
 $("cards").addEventListener("click",e=>{ const b=e.target.closest("[data-card]"); if(!b) return; if(b.dataset.card==="none") return toast(b.dataset.msg); openSheet(b.dataset.card); });
 $("sheet").addEventListener("click",sheetClick);
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&sheetKind) closeSheet(); });
+/* keyboard on desktop: 1-6 answer, Enter / Space / right arrow continue */
+document.addEventListener("keydown",e=>{
+  if(e.repeat||e.ctrlKey||e.metaKey||e.altKey||sheetKind||!game||$("play").classList.contains("hidden")||/INPUT|TEXTAREA|SELECT/.test((e.target||{}).tagName||"")) return;
+  if(/^[1-6]$/.test(e.key)&&!game.locked){ const b=$("choices").querySelectorAll("button")[+e.key-1]; if(b){ e.preventDefault(); b.click(); } }
+  else if(game.locked&&!game.sprint&&(e.key==="Enter"||e.key===" "||e.key==="ArrowRight")){ e.preventDefault(); if(performance.now()-(game.lockedAt||0)>200) nextQuestion(); }
+});
 $("sumBtn").addEventListener("click",()=>showTab("settings"));
 $("tabs").addEventListener("click",e=>{ const b=e.target.closest("button[data-tab]"); if(b) showTab(b.dataset.tab); });
 $("weeklyBtn").addEventListener("click",()=>{ const W=weeklyTheme(); if(W) startTheme(W.id); });
