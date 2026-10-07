@@ -1347,6 +1347,11 @@ class MapView {
     const ns=Math.min(Math.max(this.s*k,this.fit),this.fit*MAX_ZOOM), f=ns/this.s;
     this.ox=this.cx(ns,px-(px-this.ox)*f); this.oy=this.cy(ns,py-(py-this.oy)*f); this.s=ns; this.draw();
   }
+  inView(t){                                           // is this country / peak already on screen (flat map only)?
+    if(this.globe||!this.inited||!t) return false; const s=this.s; let x,y;
+    if(t.main){ const b=t.main; x=(b.l+b.r)/2; y=(b.t+b.b)/2; } else if(t.lon!=null&&t.lat!=null){ [x,y]=PROJ.fwd(t.lon,t.lat); } else return false;
+    let cx=this.ox+x*s; const cy=this.oy+y*s; if(PROJ.wrap){ const P=PROJ.w*s; cx-=P*Math.round((cx-this.w/2)/P); }
+    return cx>24&&cx<this.w-24&&cy>24&&cy<this.h-24; }
   run(country,instant=false,pad=4){
     if(!this.inited){ this.pending=country; return; }
     if(this.globe) return this.runGlobe(country,instant,pad);
@@ -2035,7 +2040,8 @@ function beginQuestion(){
     marks:showT?{[q.target.iso]:PAL.amber}:pairQ(q)?{[q.target.iso]:PAL.amber,[q.other.iso]:PAL.amber}:{},limit:game.sprint?game.sprintS:limit,qStart:now,deadline:game.sprint?game.sprintEnd:now+limit*1000,pausedAt:0});
   gameMap.solo=q.kind==="SHAPE"?q.target.iso:null;
   gameMap.pickPeaks=!!(q.peak||q.lm)&&q.kind==="FIND"; gameMap.pickLakes=!!q.lake&&q.kind==="FIND";
-  gameMap.setMarks(game.marks); gameMap.run(pairQ(q)?[q.target,q.other]:showT?q.target:null,false,focusPad(q,false));
+  gameMap.setMarks(game.marks);
+  if(pairQ(q)||showT||game.i===0) gameMap.run(pairQ(q)?[q.target,q.other]:showT?q.target:null,false,focusPad(q,false));   // locate questions keep the view you set; the button resets it
   gameMap.setPulses(showT&&q.kind!=="SHAPE"?[{iso:q.target.iso,color:PAL.amber}]:[]);
   renderPlay(); startTimer();
 }
@@ -2086,7 +2092,7 @@ function lock(ok,pts,q,wrongHit,speed=0,timedOut=false){ if(game) game.lockedAt=
     if(g.mode==="STREAK") g.over=true;
     if(g.sprint){ g.sprintEnd-=3000; g.deadline=g.sprintEnd; }                  // a miss costs 3 seconds
   }
-  gameMap.solo=null; gameMap.setMarks(g.marks); gameMap.run(q.kind==="ODD"?[q.target,...q.groupC]:pairQ(q)?[q.target,q.other]:q.kind==="RIVERTHRU"?[q.target,q.riverObj]:q.target,false,focusPad(q,true)); gameMap.setPulses([{iso:q.target.iso,color:ok?PAL.ok:PAL.amber}]);
+  gameMap.solo=null; gameMap.setMarks(g.marks); if(!(q.kind==="FIND"&&gameMap.inView(q.target))) gameMap.run(q.kind==="ODD"?[q.target,...q.groupC]:pairQ(q)?[q.target,q.other]:q.kind==="RIVERTHRU"?[q.target,q.riverObj]:q.target,false,focusPad(q,true)); gameMap.setPulses([{iso:q.target.iso,color:ok?PAL.ok:PAL.amber}]);
   buzz(ok?15:[40,40,40]); renderPlay();
   if(g.sprint){ const id=gameId, idx=g.i; setTimeout(()=>{ if(id===gameId&&game===g&&g.locked&&g.i===idx&&!$("play").classList.contains("hidden")) nextQuestion(); },ok?450:900); }
 }
