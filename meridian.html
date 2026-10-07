@@ -436,7 +436,7 @@ h1{font-size:40px}
 #prompt.long{font-size:15.5px;line-height:1.2}
 
 /* ---- desktop: wider screens get a real layout instead of a phone column ---- */
-@media (min-width:900px) and (min-height:540px){
+@media (min-width:900px) and (min-height:540px) and (hover:hover) and (pointer:fine){
   .screen{max-width:780px}
   .screen.center{max-width:560px}
   #tabs{left:50%;right:auto;width:min(780px,100%);transform:translateX(-50%);border-radius:18px 18px 0 0;border:1px solid var(--hair);border-bottom:0}
@@ -462,6 +462,14 @@ h1{font-size:40px}
   .sheet .panel2{max-width:560px;max-height:86%;border-radius:24px;padding-bottom:22px;transform:translateY(18px) scale(.97);opacity:0;transition:transform .3s cubic-bezier(.22,1,.36,1),opacity .25s}
   .sheet.open .panel2{transform:none;opacity:1}
   .sheet .grab{display:none}
+}
+/* phones and tablets on their side: map beside the question instead of squeezed above it */
+@media (orientation:landscape) and (max-height:600px) and (min-width:600px) and (hover:none){
+  #play{max-width:none;display:grid;grid-template-columns:minmax(0,1fr) min(360px,44vw);grid-template-rows:auto minmax(0,1fr);column-gap:10px;padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right))}
+  #play .top{grid-column:1/-1;padding:4px}
+  #play .mapwrap{grid-column:1;grid-row:2;margin-bottom:10px;border-radius:14px;overflow:hidden}
+  #play .panel{grid-column:2;grid-row:2;height:auto;margin-bottom:10px;border-radius:14px;overflow:auto;justify-content:flex-start}
+  #choices{grid-template-columns:1fr 1fr}
 }
 @media (min-width:1400px) and (min-height:700px){
   #play{grid-template-columns:minmax(0,1fr) 460px}
