@@ -1354,7 +1354,7 @@ class MapView {
   zoomAt(px,py,k){
     if(this.globe){ this.g.z=Math.min(80,Math.max(.8,this.g.z*k)); this.draw(); this.drawOverlay(); return; }
     const ns=Math.min(Math.max(this.s*k,this.fit),this.fit*MAX_ZOOM), f=ns/this.s;
-    this.ox=this.cx(ns,px-(px-this.ox)*f); this.oy=this.cy(ns,py-(py-this.oy)*f); this.s=ns; this.draw();
+    this.ox=this.cx(ns,px-(px-this.ox)*f); this.oy=this.cy(ns,py-(py-this.oy)*f); this.s=ns; this.schedule("draw");
   }
   inView(t){                                           // is this country / peak already on screen (flat map only)?
     if(this.globe||!this.inited||!t) return false; const s=this.s; let x,y;
@@ -1397,6 +1397,33 @@ class MapView {
   draw(){
     if(!this.w) return;
     if(this.globe) return this.drawGlobe();
+    this._cache=null; this.drawFlat();
+  }
+  /* Dragging the flat map: the picture itself doesn't change, it only slides. So the map is painted once into a
+     bigger off-screen canvas and then just moved around, and repainted only when the edge of that canvas is reached. */
+  panDraw(){
+    if(!this.w||this.globe||!this.world) return this.draw();
+    const d=this.dpr, m=Math.round(Math.min(260,Math.max(120,Math.min(this.w,this.h)*.4)));
+    let C=this._cache;
+    const ok=C&&C.s===this.s&&C.pid===PROJ.id&&C.w===this.w&&C.h===this.h&&C.d===d&&C.m===m&&Math.abs(this.ox-C.ox)<=m-6&&Math.abs(this.oy-C.oy)<=m-6;
+    if(!ok){
+      const W=Math.round((this.w+2*m)*d), H=Math.round((this.h+2*m)*d);
+      if(W*H>3.2e7){ this._cache=null; return this.drawFlat(); }               // too big to cache: just paint
+      const cv=(C&&C.cv)||document.createElement("canvas"); if(cv.width!==W||cv.height!==H){ cv.width=W; cv.height=H; }
+      const keep=[this.ctx,this.w,this.h,this.ox,this.oy];
+      this.ctx=cv.getContext("2d"); this.w=keep[1]+2*m; this.h=keep[2]+2*m; this.ox=keep[3]+m; this.oy=keep[4]+m;
+      try{ this.drawFlat(); } finally{ [this.ctx,this.w,this.h,this.ox,this.oy]=keep; }
+      C=this._cache={cv,ox:this.ox,oy:this.oy,s:this.s,pid:PROJ.id,w:this.w,h:this.h,d,m};
+    }
+    const c=this.ctx; c.setTransform(1,0,0,1,0,0);
+    c.drawImage(C.cv,Math.round((this.ox-C.ox-m)*d),Math.round((this.oy-C.oy-m)*d));
+  }
+  schedule(kind){                                       // many pointer / wheel events can arrive per frame: paint once
+    if(kind==="pan"&&this._want!=="draw") this._want="pan"; else this._want="draw";
+    if(this._raf2) return; this._raf2=requestAnimationFrame(()=>{ this._raf2=0; const w=this._want; this._want="";
+      if(this.globe) return; if(w==="pan") this.panDraw(); else this.draw(); });
+  }
+  drawFlat(){
     const c=this.ctx,d=this.dpr,s=this.s, wrap=PROJ.wrap;
     c.setTransform(d,0,0,d,0,0); c.fillStyle=PAL.deep; c.fillRect(0,0,this.w,this.h);
     if(!this.world) return;
@@ -1539,13 +1566,14 @@ class MapView {
         if(down && Math.hypot(now[0]-down.p[0],now[1]-down.p[1])>6) moved=true;
         if(moved&&this.globe){ const k=.95/this.gR()/RAD; cancelAnimationFrame(this.raf);
           this.g.lon=((this.g.lon-(now[0]-prev[0])*k+540)%360)-180; this.g.lat=Math.max(-85,Math.min(85,this.g.lat+(now[1]-prev[1])*k)); this.draw(); this.drawOverlay(); }
-        else if(moved){ this.ox=this.cx(this.s,this.ox+now[0]-prev[0]); this.oy=this.cy(this.s,this.oy+now[1]-prev[1]); this.draw(); }
+        else if(moved){ this.ox=this.cx(this.s,this.ox+now[0]-prev[0]); this.oy=this.cy(this.s,this.oy+now[1]-prev[1]); this.schedule("pan"); }
       } else if(ptrs.size===2){
         const [a,b]=[...ptrs.values()], dist=Math.hypot(a[0]-b[0],a[1]-b[1]);
         if(lastDist) this.zoomAt((a[0]+b[0])/2,(a[1]+b[1])/2,dist/lastDist);
         lastDist=dist;
       } });
     const up=e=>{ const wasOne=ptrs.size===1; ptrs.delete(e.pointerId);
+      if(wasOne&&moved&&!this.globe&&this._cache){ this._want=""; this.draw(); }      // settle on an exact repaint
       if(wasOne && down && !moved && performance.now()-down.t<500 && this.onTap && this.world){
         let c; if(this.pickLakes&&this.lakes) c=this.hitLake(down.p[0],down.p[1]); else if(this.pickPeaks&&this.peaks) c=this.hitPeak(down.p[0],down.p[1]); else if(this.globe) c=this.hitGlobe(down.p[0],down.p[1]); else { let [wx,wy]=this.toWorld(down.p[0],down.p[1]); if(PROJ.wrap) wx=((wx%360)+360)%360; c=this.world.hit(wx,wy,(settings.tiny?24:14)/this.s); }
         if(c) this.onTap(c); else if(this.onBlank) this.onBlank(); }
