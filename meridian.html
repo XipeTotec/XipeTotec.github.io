@@ -666,8 +666,20 @@ function activeSel(){
   if(!names.length) return null; const st=new Set(names); st.ks=ks; return st;
 }
 const inSel=(sel,k)=>sel.ks?inRegions(k,sel.ks):sel.has(k.facts.continent);
-function toneOf(k,sel){
+/* with no borders the only thing telling two neighbours apart is their colour, so give neighbours different ones */
+const NB_COLS=["#2E6E8E","#3D8B78","#6B5FA8","#8B5A84","#4C7DB8","#5E8450"];
+function borderlessColour(k){
+  const w=k.world||world; if(!w) return NB_COLS[k.hv%NB_COLS.length];
+  if(!w._nbCol||w._nbColN!==w.countries.length){ const nb=w.neighbors(), col=new Map();
+    const order=[...w.countries].sort((a,b)=>((nb.get(b.iso)||{size:0}).size)-((nb.get(a.iso)||{size:0}).size));
+    for(const c of order){ const used=new Set(); for(const i of (nb.get(c.iso)||[])) if(col.has(i)) used.add(col.get(i));
+      let x=c.hv%NB_COLS.length, t=0; while(used.has(x)&&t++<NB_COLS.length) x=(x+1)%NB_COLS.length; col.set(c.iso,x); }
+    w._nbCol=col; w._nbColN=w.countries.length; }
+  return NB_COLS[w._nbCol.get(k.iso)||0];
+}
+function toneOf(k,sel,nb){
   const p=settings.palette;
+  if(nb&&p!=="CALM"){ const ai0=activeIsos(); if(ai0&&!ai0.has(k.iso)) return DIM_COL; if(sel&&!inSel(sel,k)) return DIM_COL; return borderlessColour(k); }
   if(p==="CALM") return PAL.tones[k.hv%PAL.tones.length];
   const ai=activeIsos(); if(ai&&!ai.has(k.iso)) return DIM_COL;
   if(sel&&!inSel(sel,k)) return DIM_COL;
@@ -1427,7 +1439,7 @@ class MapView {
     const c=this.ctx,d=this.dpr,s=this.s, wrap=PROJ.wrap;
     c.setTransform(d,0,0,d,0,0); c.fillStyle=PAL.deep; c.fillRect(0,0,this.w,this.h);
     if(!this.world) return;
-    const sel=activeSel(), solo=this.solo, xmin=-this.ox/s, xmax=(this.w-this.ox)/s;
+    const sel=activeSel(), solo=this.solo, nb=!!this.noBorders, xmin=-this.ox/s, xmax=(this.w-this.ox)/s;
     const k0=wrap?Math.floor(xmin/360):0, k1=wrap?Math.floor(xmax/360):0;
     for(let ci=k0;ci<=k1;ci++){                                             // copies of the world side by side, so the date line isn't an edge
       const off=ci*360, vis=k=>!wrap||(k.bounds.r+off>=xmin-2&&k.bounds.l+off<=xmax+2);
@@ -1437,17 +1449,17 @@ class MapView {
       if(settings.grid){ c.strokeStyle=PAL.grid; c.lineWidth=.8/s; c.stroke(PROJ.grid); }
       c.strokeStyle=PAL.border; c.lineWidth=1.1/s; c.lineJoin="round";
       for(const k of this.world.countries){ if(this.marks[k.iso]||(solo&&k.iso!==solo)||!vis(k)) continue;
-        c.fillStyle=this.done[k.iso]?PAL.done:toneOf(k,sel); c.fill(k.path,"evenodd"); c.stroke(k.edge); }
+        c.fillStyle=this.done[k.iso]?PAL.done:toneOf(k,sel,nb); c.fill(k.path,"evenodd"); if(!nb) c.stroke(k.edge); }
       for(const k of this.world.countries){ if(solo||this.done[k.iso]!=="bad"||this.marks[k.iso]||!vis(k)) continue;   // eliminated but missed: grey with a red edge
         c.strokeStyle=PAL.bad; c.lineWidth=1.8/s; c.stroke(k.edge); }
       c.strokeStyle=PAL.border; c.lineWidth=1.1/s;
       for(const k of this.world.countries){ const col=this.marks[k.iso]; if(!col||(solo&&k.iso!==solo)||!vis(k)) continue;
-        c.fillStyle=col; c.fill(k.path,"evenodd"); c.stroke(k.edge); }
+        c.fillStyle=col; c.fill(k.path,"evenodd"); if(!nb) c.stroke(k.edge); }
       if(settings.tiny&&!solo){                                               // dots for countries too small to see
         for(const k of this.world.countries){ if(!k.valid||!this.world.quizSet.has(k)||!vis(k)) continue;
           const b=k.main; if(Math.max(b.r-b.l,b.b-b.t)*s>=8) continue;
           const mk=this.marks[k.iso]; if(!mk&&sel&&!inSel(sel,k)&&settings.palette!=="CALM") continue;
-          c.beginPath(); c.arc((b.l+b.r)/2,(b.t+b.b)/2,(mk?7:5)/s,0,6.2832); c.fillStyle=mk||(this.done[k.iso]?PAL.done:toneOf(k,sel)); c.fill();
+          c.beginPath(); c.arc((b.l+b.r)/2,(b.t+b.b)/2,(mk?7:5)/s,0,6.2832); c.fillStyle=mk||(this.done[k.iso]?PAL.done:toneOf(k,sel,nb)); c.fill();
           c.lineWidth=1.2/s; c.strokeStyle="rgba(255,255,255,.75)"; c.stroke(); } }
       if(this.lakes){ c.strokeStyle=PAL.border; c.lineWidth=1/s;
         for(const lk of this.lakes){ if(this.marks[lk.iso]) continue; c.fillStyle=PAL.lake; c.fill(lk.path(),"evenodd"); c.stroke(lk.path()); }
@@ -1487,7 +1499,7 @@ class MapView {
       for(let la=-60;la<=60;la+=30){ let pen=false; for(let lo=-180;lo<=180;lo+=5) pen=seg(lo,la,!pen); }
       c.stroke(); }
     c.strokeStyle=PAL.border; c.lineWidth=1; c.lineJoin="round";
-    const sel=activeSel(), solo=this.solo, paths=new Map(), info=[];
+    const sel=activeSel(), solo=this.solo, nb=!!this.noBorders, paths=new Map(), info=[];
     for(const k of this.world.countries){ if(k.iso==="AQ") continue;
       const v=k.gc.v, rho=k.gc.rho, cz=B.cb*B.ca*v[0]+B.cb*B.sa*v[1]+B.sb*v[2];
       if(rho<1.5&&cz<-Math.sin(rho)) continue;                                  // wholly behind the globe
@@ -1496,9 +1508,9 @@ class MapView {
       const P=new Path2D(); let any=false; for(const poly of k.polys) for(const ring of poly.g3) any=this.ringPath(P,ring,B,R,cx,cy)||any;
       if(any){ paths.set(k,P); info.push([k,sx,sy,cz]); } }
     for(const [k,P] of paths){ if(this.marks[k.iso]||(solo&&k.iso!==solo)) continue;
-      c.fillStyle=this.done[k.iso]?PAL.done:toneOf(k,sel); c.fill(P,"evenodd"); c.stroke(P); }
+      c.fillStyle=this.done[k.iso]?PAL.done:toneOf(k,sel,nb); c.fill(P,"evenodd"); if(!nb) c.stroke(P); }
     if(!solo){ c.lineWidth=1.8; c.strokeStyle=PAL.bad; for(const [k,P] of paths) if(this.done[k.iso]==="bad"&&!this.marks[k.iso]) c.stroke(P); c.lineWidth=1; c.strokeStyle=PAL.border; }
-    for(const [k,P] of paths){ const col=this.marks[k.iso]; if(!col||(solo&&k.iso!==solo)) continue; c.fillStyle=col; c.fill(P,"evenodd"); c.stroke(P); }
+    for(const [k,P] of paths){ const col=this.marks[k.iso]; if(!col||(solo&&k.iso!==solo)) continue; c.fillStyle=col; c.fill(P,"evenodd"); if(!nb) c.stroke(P); }
     const shade=c.createRadialGradient(cx-R*.3,cy-R*.35,R*.2,cx,cy,R*1.01);          // a little shading so it reads as a ball
     shade.addColorStop(0,"rgba(255,255,255,.08)"); shade.addColorStop(.6,"rgba(0,0,0,0)"); shade.addColorStop(1,"rgba(0,0,0,.32)");
     c.beginPath(); c.arc(cx,cy,R,0,6.2832); c.fillStyle=shade; c.fill();
@@ -1506,7 +1518,7 @@ class MapView {
       for(const [k,sx,sy,cz] of info){ if(!k.valid||!this.world.quizSet.has(k)||cz<.05) continue;
         if(2*R*Math.sin(Math.min(k.gc.rho,1.5))>=7) continue;
         const mk=this.marks[k.iso]; if(!mk&&sel&&!inSel(sel,k)&&settings.palette!=="CALM") continue;
-        c.beginPath(); c.arc(sx,sy,mk?7:5,0,6.2832); c.fillStyle=mk||(this.done[k.iso]?PAL.done:toneOf(k,sel)); c.fill();
+        c.beginPath(); c.arc(sx,sy,mk?7:5,0,6.2832); c.fillStyle=mk||(this.done[k.iso]?PAL.done:toneOf(k,sel,nb)); c.fill();
         c.lineWidth=1.2; c.strokeStyle="rgba(255,255,255,.75)"; c.stroke(); } }
     if(this.lakes){ c.strokeStyle=PAL.border; c.lineWidth=1;
       const draw=(lk,col)=>{ const P=new Path2D(); let any=false; for(const pl of lk.rings3) for(const ring of pl) any=this.ringPath(P,ring,B,R,cx,cy)||any; if(any){ c.fillStyle=col; c.fill(P,"evenodd"); c.stroke(P); } };
@@ -1593,8 +1605,9 @@ let territories=store.getRaw("meridian_terr")==="1";
 let timed=store.getRaw("meridian_timed")!=="0";
 let smart=store.getRaw("meridian_smart")==="1";   // Smart review: weak countries come up more often
 let theme=store.getRaw("meridian_themesel")||"";   // a themed set of countries instead of a region
+let borderless=store.getRaw("meridian_nobord")==="1";   // No borders: countries are told apart by colour alone
 let elim=store.getRaw("meridian_elim")==="1";   // Eliminate: answered countries turn grey on the map
-const bestKey=(m,d,tag,tm,n,tr,el,vr,sr)=>`meridian_${m}_${d}`+(tag?`_${tag}`:"")+(tm?"_T":"")+(n!==10?`_n${n}`:"")+(tr?"_X":"")+(el?"_E":"")+(vr?`_${vr}`:"")+(sr?"_R":"");
+const bestKey=(m,d,tag,tm,n,tr,el,vr,sr)=>`meridian_${m}_${d}`+(tag?`_${tag}`:"")+(tm?"_T":"")+(n!==10?`_n${n}`:"")+(tr?"_X":"")+(el?"_E":"")+(vr?`_${vr}`:"")+(sr?"_R":"")+(borderless?"_NB":"");
 const regionKeys=()=>[...regions].sort();
 const regionLabel=ks=>ks.map(k=>CONTINENTS[k]?CONTINENTS[k].label:k).join(", ");
 function regionGeo(ks){                              // lon/lat centre and angular size of the chosen regions, for the globe
@@ -2064,7 +2077,7 @@ function launch(mode,qs,ks,practice,extra){
   game={mode,diff:difficulty,regions:ks,count:practice?qs.length:qCount,terr:territories,timed,practice,elim:elim&&!practice,globe:settings.globe,done:{},qs,i:0,score:0,streak:0,bestStreak:0,correct:0,
         attempts:0,locked:false,picked:null,ok:false,pts:0,speed:0,timedOut:false,marks:{},results:[],answerMs:0,
         qStart:0,deadline:0,limit:CHOICE_LIMIT,pausedAt:0,...(extra||{})};
-  gameId++; gameMap.done=game.done; gameMap.homeView=regionView(ks); gameMap.homeGeo=regionGeo(ks);
+  gameId++; gameMap.done=game.done; gameMap.homeView=regionView(ks); gameMap.homeGeo=regionGeo(ks); gameMap.noBorders=borderless;
   gameMap.setPeaks(game.peaks?(game.lmk?lmList():PEAKOBJS):null); gameMap.setRivers(game.rivers?RIVEROBJS:null); gameMap.setLakes(game.lakes?LAKEOBJS:null);
   game.qs.slice(0,15).forEach(q=>{ if(q.peak||q.river||q.lake||q.lm) return; const im=new Image(); im.src=flagUrl(q.target); });   // warm the flag cache
   show("play"); beginQuestion();
@@ -2232,7 +2245,7 @@ function show(id){
 }
 function showTab(tab){ if(tab==="home") renderHome(); else if(tab==="study") renderStudy(); else if(tab==="stats") renderStats(); else if(tab==="settings") renderSettings(); show(tab); }
 
-const settingsSummary=()=>`${smart?"Smart review · ":""}${elim?"Eliminate · ":""}${timed?"Timed":"Untimed"} · ${territories?"with territories":"sovereign states"} · ${PROJECTIONS[settings.proj].label} map`;
+const settingsSummary=()=>`${smart?"Smart review · ":""}${elim?"Eliminate · ":""}${borderless?"No borders · ":""}${timed?"Timed":"Untimed"} · ${territories?"with territories":"sovereign states"} · ${PROJECTIONS[settings.proj].label} map`;
 function renderSettings(){
   $("projChips").innerHTML=Object.entries(PROJECTIONS).map(([k,p])=>`<button data-p="${k}" class="${k===settings.proj?"sel":""}">${p.label}</button>`).join("");
   $("projDesc").textContent=PROJECTIONS[settings.proj].desc+(PROJ.wrap?" Wraps at the date line.":" Doesn't wrap, so use Flat or Miller for Oceania.");
@@ -2322,7 +2335,7 @@ function renderSheet(){
     const tog=(attr,on,name,desc)=>`<button class="toggle" ${attr}="1" role="switch" aria-checked="${on}" style="margin-top:8px;background:var(--panel-hi)"><div><b>${name}</b><small>${desc}</small></div><span class="sw"></span></button>`;
     html=MODE_GROUPS.map(([g0,ks])=>`<p class="grp cat-${CAT_OF[g0]}">${g0}</p><div class="tiles">${ks.map(tile).join("")}</div>`).join("")+
       `<p class="grp cat-learn">Learn</p><div class="tiles"><button class="tile wide" data-gostudy="1"><span class="ti chipic cat-learn">${ico("book",19)}</span><div><b>Study mode</b><small>Flashcards with the map, then quiz yourself</small></div></button></div>`+
-      `<p class="grp">Round options</p>`+tog("data-smart",smart,"Smart review","Countries you struggle with come up more often.")+tog("data-elim",elim,"Eliminate","Answered countries turn grey on the map, so you can see what's left.")+tog("data-terr",territories,"Territories",`Adds Greenland, Puerto Rico, Hong Kong and other places that aren't sovereign states${world?" ("+(world.quizAll.length-world.quizSov.length)+" more)":""}.`); }
+      `<p class="grp">Round options</p>`+tog("data-smart",smart,"Smart review","Countries you struggle with come up more often.")+tog("data-elim",elim,"Eliminate","Answered countries turn grey on the map, so you can see what's left.")+tog("data-nobord",borderless,"No borders","Hides every outline, so you tell neighbours apart by colour alone. Best with Eliminate.")+tog("data-terr",territories,"Territories",`Adds Greenland, Puerto Rico, Hong Kong and other places that aren't sovereign states${world?" ("+(world.quizAll.length-world.quizSov.length)+" more)":""}.`); }
   else if(sheetKind==="region"){ title=curMode==="CONT"?"Region":"Countries";
     const tl=themeList(), pick1=g=>tl.filter(x=>x.group===g);
     const tiles=pick1("fixed").map(x=>`<button class="tile ${theme===x.id?"sel":""}" data-tsel="${x.id}"><span class="ti chipic cat-quiz">${ico(x.icon,19)}</span><div class="tt"><b>${x.label}</b><small>${x.members.length} countries</small></div></button>`).join("");
@@ -2355,13 +2368,14 @@ function renderSheet(){
   for(const el of [pn.querySelector(".grab"),pn.querySelector(".sheethead")]){ el.style.touchAction="none"; el.addEventListener("pointerdown",start); el.addEventListener("pointermove",move); el.addEventListener("pointerup",end); el.addEventListener("pointercancel",end); } })();
 function sheetClick(e){
   if(e.target.closest("#sheetScrim,#sheetClose,#sheetDone")) return closeSheet();
-  const o=e.target.closest("[data-mode],[data-d],[data-n],[data-c],[data-elim],[data-smart],[data-terr],[data-lives],[data-sprint],[data-tsel],[data-gostudy],[data-leave]"); if(!o) return; const d=o.dataset;
+  const o=e.target.closest("[data-mode],[data-d],[data-n],[data-c],[data-elim],[data-smart],[data-terr],[data-nobord],[data-lives],[data-sprint],[data-tsel],[data-gostudy],[data-leave]"); if(!o) return; const d=o.dataset;
   if(d.leave){ closeSheet(); quitRound(); return; }
   if(d.gostudy){ closeSheet(); showTab("study"); return; }
   if(d.lives){ livesN=+d.lives; store.setRaw("meridian_lives",String(livesN)); closeSheet(); refreshSetup(); return; }
   if(d.sprint){ sprintS=+d.sprint; store.setRaw("meridian_sprint",String(sprintS)); closeSheet(); refreshSetup(); return; }
   if(d.elim){ elim=!elim; store.setRaw("meridian_elim",elim?"1":"0"); renderSheet(); refreshSetup(); return; }          // these two stay open
   if(d.terr){ territories=!territories; store.setRaw("meridian_terr",territories?"1":"0"); world.setTerritories(territories); renderSheet(); refreshSetup(); renderHome(); renderSettings(); return; }
+  if(d.nobord){ borderless=!borderless; store.setRaw("meridian_nobord",borderless?"1":"0"); renderSheet(); refreshSetup(); return; }
   if(d.smart){ smart=!smart; store.setRaw("meridian_smart",smart?"1":"0"); renderSheet(); refreshSetup(); return; }
   if(d.tsel){ theme=theme===d.tsel?"":d.tsel; regions.clear(); store.setRaw("meridian_themesel",theme); store.setRaw("meridian_regions",""); closeSheet(); refreshSetup(); return; }
   if(d.mode){ curMode=d.mode; store.setRaw("meridian_mode",curMode); closeSheet(); }
