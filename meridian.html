@@ -437,14 +437,23 @@ h1{font-size:40px}
 
 /* ---- desktop: wider screens get a real layout instead of a phone column ---- */
 @media (min-width:900px) and (min-height:540px) and (hover:hover) and (pointer:fine){
-  .screen{max-width:780px}
+  .screen{max-width:920px}
+  #home{max-width:1180px}
   .screen.center{max-width:560px}
-  #tabs{left:50%;right:auto;width:min(780px,100%);transform:translateX(-50%);border-radius:18px 18px 0 0;border:1px solid var(--hair);border-bottom:0}
+  #tabs{left:50%;right:auto;width:min(1180px,100%);transform:translateX(-50%);border-radius:18px 18px 0 0;border:1px solid var(--hair);border-bottom:0}
   #tabs button{cursor:pointer}#tabs button:hover{color:var(--text)}
   .tiles button:hover,.ocard:hover,#choices button:not(.ok):not(.bad):not(.off):hover,.chips button:hover,.opt:hover,.toggle:hover{filter:brightness(1.12)}
+  /* home: setup on the right, today on the left */
+  #home .menu{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);column-gap:28px;align-items:start}
+  #home .menu>.play{grid-column:1/-1;grid-row:1}
+  #home .menu>.cap:nth-of-type(1){grid-column:1;grid-row:2}
+  #home .menu>.duo{grid-column:1;grid-row:3;display:flex;flex-direction:column;gap:10px}
+  #home .menu>.cap:nth-of-type(3){grid-column:2;grid-row:2}
+  #home .menu>#cards{grid-column:2;grid-row:3}
+  #home .menu>.summary{grid-column:1/-1;grid-row:4}
   /* the round: map on the left, question on the right */
   #play{max-width:none;display:grid;grid-template-columns:minmax(0,1fr) 410px;grid-template-rows:auto minmax(0,1fr);column-gap:16px;padding-left:20px;padding-right:20px}
-  #play .top{grid-column:1/-1;padding:12px 4px;max-width:1500px;width:100%;margin:0 auto}
+  #play .top{grid-column:1/-1;padding:12px 4px}
   #play .mapwrap{grid-column:1;grid-row:2;margin-bottom:20px;border-radius:20px;overflow:hidden;box-shadow:0 0 0 1px var(--hair)}
   #play .panel{grid-column:2;grid-row:2;height:auto;margin-bottom:20px;border-radius:20px;padding:24px;overflow:auto;justify-content:flex-start;box-shadow:0 0 0 1px var(--hair)}
   #prompt{height:auto;min-height:64px;font-size:25px}
