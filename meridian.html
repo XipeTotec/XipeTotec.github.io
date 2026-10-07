@@ -668,18 +668,26 @@ function activeSel(){
 const inSel=(sel,k)=>sel.ks?inRegions(k,sel.ks):sel.has(k.facts.continent);
 /* with no borders the only thing telling two neighbours apart is their colour, so give neighbours different ones */
 const NB_COLS=["#2E6E8E","#3D8B78","#6B5FA8","#8B5A84","#4C7DB8","#5E8450"];
+const NB_COLS_CB=["#2B5C8A","#8A7FC0","#3C9A98","#8C6A4F","#5B7184","#B35F9E"];      // colour-blind friendly: also spread by lightness, and clear of the amber/blue highlights
+const scaleHex=(hex,f)=>{ const n=parseInt(hex.slice(1),16), cl=v=>Math.min(255,Math.round(v*f)); return `rgb(${cl(n>>16)},${cl((n>>8)&255)},${cl(n&255)})`; };
+const STEPS=[.72,.86,1,1.14,1.28,1.42], ALT=[0,3,1,4,2,5];                              // light/dark steps of one colour, shuffled so neighbouring steps contrast
+let _nbSet=null,_nbKey="";
+function nbColours(){                                                                   // six map colours for the current palette, colour-blind setting and theme
+  const p=settings.palette, key=p+"|"+settings.cb+"|"+PAL.tones[1]+"|"+DIM_COL; if(key===_nbKey) return _nbSet;
+  _nbKey=key; _nbSet=p==="ONE"?ALT.map(i=>scaleHex(ONE_COL,STEPS[i])):p==="CALM"?ALT.map(i=>scaleHex(PAL.tones[1],STEPS[i])):settings.cb?NB_COLS_CB:NB_COLS;
+  return _nbSet; }
 function borderlessColour(k){
-  const w=k.world||world; if(!w) return NB_COLS[k.hv%NB_COLS.length];
+  const w=k.world||world; if(!w) return nbColours()[k.hv%6];
   if(!w._nbCol||w._nbColN!==w.countries.length){ const nb=w.neighbors(), col=new Map();
     const order=[...w.countries].sort((a,b)=>((nb.get(b.iso)||{size:0}).size)-((nb.get(a.iso)||{size:0}).size));
     for(const c of order){ const used=new Set(); for(const i of (nb.get(c.iso)||[])) if(col.has(i)) used.add(col.get(i));
-      let x=c.hv%NB_COLS.length, t=0; while(used.has(x)&&t++<NB_COLS.length) x=(x+1)%NB_COLS.length; col.set(c.iso,x); }
+      let x=c.hv%6, t=0; while(used.has(x)&&t++<6) x=(x+1)%6; col.set(c.iso,x); }
     w._nbCol=col; w._nbColN=w.countries.length; }
-  return NB_COLS[w._nbCol.get(k.iso)||0];
+  return nbColours()[w._nbCol.get(k.iso)||0];
 }
 function toneOf(k,sel,nb){
   const p=settings.palette;
-  if(nb&&p!=="CALM"){ const ai0=activeIsos(); if(ai0&&!ai0.has(k.iso)) return DIM_COL; if(sel&&!inSel(sel,k)) return DIM_COL; return borderlessColour(k); }
+  if(nb){ if(p!=="CALM"){ const ai0=activeIsos(); if(ai0&&!ai0.has(k.iso)) return DIM_COL; if(sel&&!inSel(sel,k)) return DIM_COL; } return borderlessColour(k); }
   if(p==="CALM") return PAL.tones[k.hv%PAL.tones.length];
   const ai=activeIsos(); if(ai&&!ai.has(k.iso)) return DIM_COL;
   if(sel&&!inSel(sel,k)) return DIM_COL;
