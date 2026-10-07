@@ -2144,6 +2144,8 @@ function launch(mode,qs,ks,practice,extra){
   show("play"); beginQuestion();
 }
 const focusPad=(q,reveal)=>q.kind==="BIGGER"?1.6:q.lake?1.6:q.river&&q.kind!=="RIVERTHRU"?1.5:q.kind==="PEAKHIGH"?1.6:q.kind==="ODD"?1.5:q.kind==="SHAPE"?(reveal?5:1.7):q.kind==="CONT"?8:q.kind==="NEIGH"?(reveal?6:7):4;
+/* keep the player's view when everything the question is about is already on screen (outlines always frame their shape) */
+const stay=(q,list,reveal)=>q.kind!=="SHAPE"&&list.every(t=>t&&gameMap.inView(t));
 function beginQuestion(){
   const q=game.qs[game.i], showT=HL_KINDS.includes(q.kind);
   const now=performance.now(), limit=q.kind==="FIND"?FIND_LIMIT:CHOICE_LIMIT;
@@ -2152,7 +2154,7 @@ function beginQuestion(){
   gameMap.solo=q.kind==="SHAPE"?q.target.iso:null;
   gameMap.pickPeaks=!!(q.peak||q.lm)&&q.kind==="FIND"; gameMap.pickLakes=!!q.lake&&q.kind==="FIND";
   gameMap.setMarks(game.marks);
-  if(pairQ(q)||showT||game.i===0) gameMap.run(pairQ(q)?[q.target,q.other]:showT?q.target:null,false,focusPad(q,false));   // locate questions keep the view you set; the button resets it
+  if(game.i===0||((pairQ(q)||showT)&&!stay(q,pairQ(q)?[q.target,q.other]:[q.target],false))) gameMap.run(pairQ(q)?[q.target,q.other]:showT?q.target:null,false,focusPad(q,false));   // locate questions keep the view you set; the button resets it
   gameMap.setPulses(showT&&q.kind!=="SHAPE"?[{iso:q.target.iso,color:PAL.amber}]:[]);
   renderPlay(); startTimer();
 }
@@ -2203,7 +2205,7 @@ function lock(ok,pts,q,wrongHit,speed=0,timedOut=false){ if(game) game.lockedAt=
     if(g.mode==="STREAK") g.over=true;
     if(g.sprint){ g.sprintEnd-=3000; g.deadline=g.sprintEnd; }                  // a miss costs 3 seconds
   }
-  gameMap.solo=null; gameMap.setMarks(g.marks); if(!(q.kind==="FIND"&&gameMap.inView(q.target))) gameMap.run(q.kind==="ODD"?[q.target,...q.groupC]:pairQ(q)?[q.target,q.other]:q.kind==="RIVERTHRU"?[q.target,q.riverObj]:q.target,false,focusPad(q,true)); gameMap.setPulses([{iso:q.target.iso,color:ok?PAL.ok:PAL.amber}]);
+  gameMap.solo=null; gameMap.setMarks(g.marks); if(!stay(q,q.kind==="ODD"?[q.target,...q.groupC]:pairQ(q)?[q.target,q.other]:q.kind==="RIVERTHRU"?[q.target,q.riverObj]:[q.target],true)) gameMap.run(q.kind==="ODD"?[q.target,...q.groupC]:pairQ(q)?[q.target,q.other]:q.kind==="RIVERTHRU"?[q.target,q.riverObj]:q.target,false,focusPad(q,true)); gameMap.setPulses([{iso:q.target.iso,color:ok?PAL.ok:PAL.amber}]);
   buzz(ok?15:[40,40,40]); renderPlay();
   if(g.sprint){ const id=gameId, idx=g.i; setTimeout(()=>{ if(id===gameId&&game===g&&g.locked&&g.i===idx&&!$("play").classList.contains("hidden")) nextQuestion(); },ok?450:900); }
 }
