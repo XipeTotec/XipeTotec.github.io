@@ -485,6 +485,11 @@ h1{font-size:40px}
   #prompt{font-size:28px}#prompt .big{font-size:36px}
   #choices button{height:58px;font-size:17px}
 }
+#home.packed .duo,#home.packed .menu>.cap:nth-of-type(1){display:none}
+@media (min-width:900px) and (min-height:540px) and (hover:hover) and (pointer:fine){
+  #home.packed .menu{grid-template-columns:minmax(0,1fr)}
+  #home.packed .menu>.cap:nth-of-type(3),#home.packed .menu>#cards{grid-column:1}
+}
 </style>
 </head>
 <body>
@@ -638,6 +643,24 @@ h1{font-size:40px}
 "use strict";
 /* ============================== data ============================== */
 const CAPITALS = {"AF": "Kabul", "AL": "Tirana", "DZ": "Algiers", "AO": "Luanda", "AR": "Buenos Aires", "AM": "Yerevan", "AU": "Canberra", "AT": "Vienna", "AZ": "Baku", "BS": "Nassau", "BD": "Dhaka", "BY": "Minsk", "BE": "Brussels", "BZ": "Belmopan", "BJ": "Porto-Novo", "BT": "Thimphu", "BO": "Sucre", "BA": "Sarajevo", "BW": "Gaborone", "BR": "Brasília", "BN": "Bandar Seri Begawan", "BG": "Sofia", "BF": "Ouagadougou", "BI": "Gitega", "KH": "Phnom Penh", "CM": "Yaoundé", "CA": "Ottawa", "CF": "Bangui", "TD": "N'Djamena", "CL": "Santiago", "CN": "Beijing", "CO": "Bogotá", "CG": "Brazzaville", "CD": "Kinshasa", "CR": "San José", "CI": "Yamoussoukro", "HR": "Zagreb", "CU": "Havana", "CY": "Nicosia", "CZ": "Prague", "DK": "Copenhagen", "DJ": "Djibouti", "DO": "Santo Domingo", "EC": "Quito", "EG": "Cairo", "SV": "San Salvador", "GQ": "Malabo", "ER": "Asmara", "EE": "Tallinn", "SZ": "Mbabane", "ET": "Addis Ababa", "FJ": "Suva", "FI": "Helsinki", "FR": "Paris", "GA": "Libreville", "GM": "Banjul", "GE": "Tbilisi", "DE": "Berlin", "GH": "Accra", "GR": "Athens", "GL": "Nuuk", "GT": "Guatemala City", "GN": "Conakry", "GW": "Bissau", "GY": "Georgetown", "HT": "Port-au-Prince", "HN": "Tegucigalpa", "HU": "Budapest", "IS": "Reykjavík", "IN": "New Delhi", "ID": "Jakarta", "IR": "Tehran", "IQ": "Baghdad", "IE": "Dublin", "IL": "Jerusalem", "IT": "Rome", "JM": "Kingston", "JP": "Tokyo", "JO": "Amman", "KZ": "Astana", "KE": "Nairobi", "XK": "Pristina", "KW": "Kuwait City", "KG": "Bishkek", "LA": "Vientiane", "LV": "Riga", "LB": "Beirut", "LS": "Maseru", "LR": "Monrovia", "LY": "Tripoli", "LT": "Vilnius", "LU": "Luxembourg", "MG": "Antananarivo", "MW": "Lilongwe", "MY": "Kuala Lumpur", "ML": "Bamako", "MR": "Nouakchott", "MX": "Mexico City", "MD": "Chișinău", "MN": "Ulaanbaatar", "ME": "Podgorica", "MA": "Rabat", "MZ": "Maputo", "MM": "Naypyidaw", "NA": "Windhoek", "NP": "Kathmandu", "NL": "Amsterdam", "NZ": "Wellington", "NI": "Managua", "NE": "Niamey", "NG": "Abuja", "KP": "Pyongyang", "MK": "Skopje", "NO": "Oslo", "OM": "Muscat", "PK": "Islamabad", "PA": "Panama City", "PG": "Port Moresby", "PY": "Asunción", "PE": "Lima", "PH": "Manila", "PL": "Warsaw", "PT": "Lisbon", "QA": "Doha", "RO": "Bucharest", "RU": "Moscow", "RW": "Kigali", "SA": "Riyadh", "SN": "Dakar", "RS": "Belgrade", "SL": "Freetown", "SK": "Bratislava", "SI": "Ljubljana", "SB": "Honiara", "SO": "Mogadishu", "ZA": "Pretoria", "KR": "Seoul", "SS": "Juba", "ES": "Madrid", "LK": "Sri Jayawardenepura Kotte", "SD": "Khartoum", "SR": "Paramaribo", "SE": "Stockholm", "CH": "Bern", "SY": "Damascus", "TW": "Taipei", "TJ": "Dushanbe", "TZ": "Dodoma", "TH": "Bangkok", "TL": "Dili", "TG": "Lomé", "TT": "Port of Spain", "TN": "Tunis", "TR": "Ankara", "TM": "Ashgabat", "UG": "Kampala", "UA": "Kyiv", "AE": "Abu Dhabi", "GB": "London", "US": "Washington, D.C.", "UY": "Montevideo", "UZ": "Tashkent", "VU": "Port Vila", "VE": "Caracas", "VN": "Hanoi", "YE": "Sana'a", "ZM": "Lusaka", "ZW": "Harare", "SG": "Singapore", "MT": "Valletta", "BH": "Manama", "MV": "Malé", "AD": "Andorra la Vella", "AG": "Saint John's", "BB": "Bridgetown", "CV": "Praia", "KM": "Moroni", "DM": "Roseau", "GD": "Saint George's", "KI": "Tarawa", "KN": "Basseterre", "LC": "Castries", "LI": "Vaduz", "MC": "Monaco", "MH": "Majuro", "FM": "Palikir", "MU": "Port Louis", "NR": "Yaren", "PW": "Ngerulmud", "WS": "Apia", "SM": "San Marino", "ST": "São Tomé", "SC": "Victoria", "TO": "Nukuʻalofa", "TV": "Funafuti", "VC": "Kingstown", "VA": "Vatican City"};
+
+/* ---- map packs: a second set of regions to play on, besides the world. US states first. ---- */
+// name, postal code, capital, census region, census division
+const US_STATES=[["Alabama","AL","Montgomery","South","East South Central"],["Alaska","AK","Juneau","West","Pacific"],["Arizona","AZ","Phoenix","West","Mountain"],["Arkansas","AR","Little Rock","South","West South Central"],
+["California","CA","Sacramento","West","Pacific"],["Colorado","CO","Denver","West","Mountain"],["Connecticut","CT","Hartford","Northeast","New England"],["Delaware","DE","Dover","South","South Atlantic"],
+["District of Columbia","DC","Washington, D.C.","South","South Atlantic"],["Florida","FL","Tallahassee","South","South Atlantic"],["Georgia","GA","Atlanta","South","South Atlantic"],["Hawaii","HI","Honolulu","West","Pacific"],
+["Idaho","ID","Boise","West","Mountain"],["Illinois","IL","Springfield","Midwest","East North Central"],["Indiana","IN","Indianapolis","Midwest","East North Central"],["Iowa","IA","Des Moines","Midwest","West North Central"],
+["Kansas","KS","Topeka","Midwest","West North Central"],["Kentucky","KY","Frankfort","South","East South Central"],["Louisiana","LA","Baton Rouge","South","West South Central"],["Maine","ME","Augusta","Northeast","New England"],
+["Maryland","MD","Annapolis","South","South Atlantic"],["Massachusetts","MA","Boston","Northeast","New England"],["Michigan","MI","Lansing","Midwest","East North Central"],["Minnesota","MN","Saint Paul","Midwest","West North Central"],
+["Mississippi","MS","Jackson","South","East South Central"],["Missouri","MO","Jefferson City","Midwest","West North Central"],["Montana","MT","Helena","West","Mountain"],["Nebraska","NE","Lincoln","Midwest","West North Central"],
+["Nevada","NV","Carson City","West","Mountain"],["New Hampshire","NH","Concord","Northeast","New England"],["New Jersey","NJ","Trenton","Northeast","Middle Atlantic"],["New Mexico","NM","Santa Fe","West","Mountain"],
+["New York","NY","Albany","Northeast","Middle Atlantic"],["North Carolina","NC","Raleigh","South","South Atlantic"],["North Dakota","ND","Bismarck","Midwest","West North Central"],["Ohio","OH","Columbus","Midwest","East North Central"],
+["Oklahoma","OK","Oklahoma City","South","West South Central"],["Oregon","OR","Salem","West","Pacific"],["Pennsylvania","PA","Harrisburg","Northeast","Middle Atlantic"],["Rhode Island","RI","Providence","Northeast","New England"],
+["South Carolina","SC","Columbia","South","South Atlantic"],["South Dakota","SD","Pierre","Midwest","West North Central"],["Tennessee","TN","Nashville","South","East South Central"],["Texas","TX","Austin","South","West South Central"],
+["Utah","UT","Salt Lake City","West","Mountain"],["Vermont","VT","Montpelier","Northeast","New England"],["Virginia","VA","Richmond","South","South Atlantic"],["Washington","WA","Olympia","West","Pacific"],
+["West Virginia","WV","Charleston","South","South Atlantic"],["Wisconsin","WI","Madison","Midwest","East North Central"],["Wyoming","WY","Cheyenne","West","Mountain"]];
+const STATE_BY_NAME=Object.fromEntries(US_STATES.map(r=>[r[0],r]));
+US_STATES.forEach(r=>{ CAPITALS["US-"+r[1]]=r[2]; });
 const NAMES = {"Dem. Rep. Congo": "DR Congo", "Central African Rep.": "Central African Republic", "Bosnia and Herz.": "Bosnia and Herzegovina", "S. Sudan": "South Sudan", "Eq. Guinea": "Equatorial Guinea", "eSwatini": "Eswatini", "Dominican Rep.": "Dominican Republic", "Solomon Is.": "Solomon Islands", "Falkland Is.": "Falkland Islands", "N. Cyprus": "Northern Cyprus", "Macedonia": "North Macedonia", "W. Sahara": "Western Sahara", "Fr. S. Antarctic Lands": "French Southern Lands", "Czech Rep.": "Czechia", "Timor-Leste": "Timor-Leste", "Antigua and Barb.": "Antigua and Barbuda", "St. Kitts and Nevis": "Saint Kitts and Nevis", "St. Vin. and Gren.": "Saint Vincent and the Grenadines", "Marshall Is.": "Marshall Islands", "Vatican": "Vatican City", "São Tomé and Principe": "São Tomé and Príncipe", "Dem. Rep. Korea": "North Korea", "Korea": "South Korea", "Lao PDR": "Laos", "Congo": "Republic of the Congo", "Cabo Verde": "Cape Verde", "Faeroe Is.": "Faroe Islands", "Fr. Polynesia": "French Polynesia", "Cayman Is.": "Cayman Islands", "Turks and Caicos Is.": "Turks and Caicos", "U.S. Virgin Is.": "US Virgin Islands", "N. Mariana Is.": "Northern Mariana Islands", "Br. Indian Ocean Ter.": "British Indian Ocean Territory", "Micronesia": "Micronesia", "Saint Lucia": "Saint Lucia"};
 const ISO_BY_NAME = {"France":"FR","Norway":"NO","Kosovo":"XK"};
 /* 50m has all the microstates (Monaco, Malta, Singapore, Maldives, Pacific islands...). 110m is a lighter fallback. */
@@ -648,7 +671,7 @@ const SOURCES = [
   "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_110m_admin_0_countries.geojson"
 ];
 /* Map colours: only the regions you are playing are coloured, everything else fades back. */
-const CONT_COL={"Europe":"#3F7FD0","Asia":"#7C66CF","Africa":"#CB8057","North America":"#2AA0AE","South America":"#6FA84A","Oceania":"#C65A9C"};
+const CONT_COL={"Northeast":"#3F7FD0","Midwest":"#6FA84A","South":"#CB8057","West":"#7C66CF","Europe":"#3F7FD0","Asia":"#7C66CF","Africa":"#CB8057","North America":"#2AA0AE","South America":"#6FA84A","Oceania":"#C65A9C"};
 const ONE_COL="#2C93B8"; let DIM_COL="#1D3141";
 const PALETTES={
   FOCUS:{label:"Focus",desc:"Your selected regions glow in their own colour and the rest fades into the background. With the whole world selected, each continent gets one colour."},
@@ -1011,10 +1034,29 @@ const BIGREGIONS=()=>Object.keys(CONTINENTS).filter(k=>k!=="ALL"&&!CONTINENTS[k]
 const inRegions=(c,ks)=>{ const L=ks.map(k=>CONTINENTS[k]).filter(r=>r&&r.key); if(!L.length) return true;
   return L.some(r=>r.key===c.facts.continent&&(!r.sub||r.sub.includes(c.facts.subregion))); };
 /* default camera view of a region in the *current* projection */
-const viewOf=k=>{ const b=(PROJ.wrap&&CONTINENTS[k].wbox)||CONTINENTS[k].box; if(!b) return null; let l=1e9,t=1e9,r=-1e9,bt=-1e9;
+const viewOf=k=>boxView((PROJ.wrap&&CONTINENTS[k].wbox)||CONTINENTS[k].box);
+const boxView=b=>{ if(!b) return null; let l=1e9,t=1e9,r=-1e9,bt=-1e9;
   for(let i=0;i<=6;i++) for(let j=0;j<=6;j++){ const p=PROJ.fwd(b[0]+(b[2]-b[0])*i/6,b[1]+(b[3]-b[1])*j/6);
     l=Math.min(l,p[0]); r=Math.max(r,p[0]); t=Math.min(t,p[1]); bt=Math.max(bt,p[1]); }
   return {l,r,t,b:bt}; };
+const CONTINENTS_WORLD={...CONTINENTS};
+const US_REGIONS={
+  ALL:{label:"All",key:null,box:null},
+  NORTHEAST:{label:"Northeast",key:"Northeast",box:[-80.5,38.5,-66.5,47.5]},
+  MIDWEST:{label:"Midwest",key:"Midwest",box:[-104.5,36,-80,49.5]},
+  SOUTH:{label:"South",key:"South",box:[-107,24.5,-75,40]},
+  WEST:{label:"West",key:"West",box:[-168,18.5,-102,71],wbox:[-168,18.5,-102,71]}
+};
+const PACKS={
+  WORLD:{label:"World",blurb:"Every country",unit:"country",units:"countries",where:"World",box:null,modes:null},
+  USA:{label:"United States",blurb:"The 50 states and DC",unit:"state",units:"states",where:"United States",box:[-168,19,-65,71],
+       modes:["FIND","NAME","SHAPE","CAPMAP","CAPITAL","CAPREV","NEIGH","ODD","MIX","LIVES","STREAK","SPRINT"],regions:US_REGIONS}
+};
+let pack="WORLD";
+const worlds={WORLD:null,USA:null};
+const UNITS=()=>PACKS[pack].units, UNIT=()=>PACKS[pack].unit;
+const inPack=m=>!PACKS[pack].modes||PACKS[pack].modes.includes(m);
+const PACK_BAD=new Set(["FLAG","FLAGMAP","CONT","BIGGER","POPBAND","TF"]);   // kinds that need data a state doesnt have
 const DIFFS = {EASY:["Easy","Well known",50,.4], MEDIUM:["Medium","Most places",110,.7], HARD:["Hard","Everything",1000,1]};
 
 const $ = id => document.getElementById(id);
@@ -1137,7 +1179,7 @@ function inRing(r,x,y){ let ins=false; const n=r.length/2; for(let i=0,j=n-1;i<n
 function inBox(b,x,y){ return x>=b.l && x<=b.r && y>=b.t && y<=b.b; }
 function distBox(b,x,y){ const dx=Math.max(b.l-x,0,x-b.r), dy=Math.max(b.t-y,0,y-b.b); return Math.hypot(dx,dy); }
 const flagUrl=c=>`https://flagcdn.com/w320/${c.iso.toLowerCase()}.png`;
-const flagImg=(c,h)=>c.valid?`<img class="flagimg" style="height:${h}px" src="${flagUrl(c)}" alt="Flag of ${esc(c.name)}" data-e="${c.flag}" draggable="false">`:"";
+const flagImg=(c,h)=>c.valid&&c.iso.length===2?`<img class="flagimg" style="height:${h}px" src="${flagUrl(c)}" alt="Flag of ${esc(c.name)}" data-e="${c.flag}" draggable="false">`:"";
 /* if a flag image can't load (offline, unknown territory) fall back to the emoji flag */
 document.addEventListener("error",e=>{ const t=e.target;
   if(t&&t.classList&&t.classList.contains("flagimg")){ const s=document.createElement("span"); s.className="flagfb";
@@ -1181,8 +1223,8 @@ class Country {
     this.gcx=(this.mainPoly.gb.l+this.mainPoly.gb.r)/2; this.gcy=(this.mainPoly.gb.t+this.mainPoly.gb.b)/2;   // geographic centre, for "nearby" wrong answers
     this.area=polys.reduce((s,p)=>s+p.area,0);
     this.hv=hash(iso);
-    this.valid=/^[A-Z]{2}$/.test(iso);
-    this.flag=this.valid?flagOf(iso):"";
+    this.valid=/^([A-Z]{2}|US-[A-Z]{2})$/.test(iso);
+    this.flag=this.valid&&iso.length===2?flagOf(iso):"";
     this.capital=CAPITALS[iso]||null;
     this.rebuild();
   }
@@ -1250,7 +1292,7 @@ class World {
   }
 }
 
-function parseWorld(json){
+function parseWorld(json,states=false){
   const out=[];
   const first=(p,...keys)=>{ for(const k of keys){ const v=p[k]; if(v!=null && String(v).trim() && v!=="-99") return String(v); } return null; };
   const toRing=r=>{ const a=new Float32Array(r.length*2); for(let i=0;i<r.length;i++){ a[2*i]=r[i][0]; a[2*i+1]=r[i][1]; } return densify(a); };
@@ -1258,22 +1300,24 @@ function parseWorld(json){
   for(const f of json.features||[]){
     const p=f.properties||{}, g=f.geometry; if(!g) continue;
     const raw=first(p,"NAME","name","ADMIN","admin"); if(!raw || raw==="Antarctica") continue;
-    const iso=(first(p,"ISO_A2_EH","ISO_A2","ISO3166-1-Alpha-2","iso_a2")||ISO_BY_NAME[raw]||"--").toUpperCase();
+    const st=states?STATE_BY_NAME[raw]:null; if(states&&(!st||(first(p,"iso_a2","ISO_A2","admin","ADMIN")&&!/^(US|United States)/i.test(first(p,"iso_a2","ISO_A2")||first(p,"admin","ADMIN"))))) continue;
+    const iso=st?"US-"+st[1]:(first(p,"ISO_A2_EH","ISO_A2","ISO3166-1-Alpha-2","iso_a2")||ISO_BY_NAME[raw]||"--").toUpperCase();
     let polys=[];
     if(g.type==="Polygon") polys=[toPoly(g.coordinates)];
     else if(g.type==="MultiPolygon") polys=g.coordinates.map(toPoly);
     else continue;
     const num=(...ks)=>{ for(const k of ks){ const v=Number(p[k]); if(p[k]!=null && isFinite(v) && v>0) return v; } return null; };
-    const facts={pop:num("POP_EST","pop_est"), gdp:num("GDP_MD","GDP_MD_EST","gdp_md_est"),
+    const facts=st?{pop:null,gdp:null,continent:st[3],subregion:st[4]}:{pop:num("POP_EST","pop_est"), gdp:num("GDP_MD","GDP_MD_EST","gdp_md_est"),
       continent:first(p,"CONTINENT","continent"), subregion:first(p,"SUBREGION","subregion")};
     const adm=first(p,"ADMIN","admin"), sovName=first(p,"SOVEREIGNT","sovereignt"), type=first(p,"TYPE","type")||"";
     let sov=true;
-    if(adm&&sovName) sov=(adm===sovName)&&!/disputed|indeterminate|lease/i.test(type);
+    if(!st&&adm&&sovName) sov=(adm===sovName)&&!/disputed|indeterminate|lease/i.test(type);
     if(ALWAYS_SOVEREIGN.includes(raw)||ALWAYS_SOVEREIGN.includes(adm)) sov=true;
     if(polys.length) out.push(new Country(iso,NAMES[raw]||raw,polys,facts,sov));
   }
-  if(!out.length) throw new Error("No countries found");
-  return new World(out);
+  if(!out.length) throw new Error(states?"No states found":"No countries found");
+  if(states&&out.length<40) throw new Error("Too few states");
+  const w=new World(out); w._pid=PROJ.id; if(states) w.isStates=true; return w;
 }
 
 /* ============================== map view ============================== */
@@ -1616,15 +1660,15 @@ let smart=store.getRaw("meridian_smart")==="1";   // Smart review: weak countrie
 let theme=store.getRaw("meridian_themesel")||"";   // a themed set of countries instead of a region
 let borderless=store.getRaw("meridian_nobord")==="1";   // No borders: countries are told apart by colour alone
 let elim=store.getRaw("meridian_elim")==="1";   // Eliminate: answered countries turn grey on the map
-const bestKey=(m,d,tag,tm,n,tr,el,vr,sr)=>`meridian_${m}_${d}`+(tag?`_${tag}`:"")+(tm?"_T":"")+(n!==10?`_n${n}`:"")+(tr?"_X":"")+(el?"_E":"")+(vr?`_${vr}`:"")+(sr?"_R":"")+(borderless?"_NB":"");
+const bestKey=(m,d,tag,tm,n,tr,el,vr,sr)=>`meridian_${m}_${d}`+(tag?`_${tag}`:"")+(tm?"_T":"")+(n!==10?`_n${n}`:"")+(tr?"_X":"")+(el?"_E":"")+(vr?`_${vr}`:"")+(sr?"_R":"")+(borderless?"_NB":"")+(pack!=="WORLD"?"_"+pack:"");
 const regionKeys=()=>[...regions].sort();
 const regionLabel=ks=>ks.map(k=>CONTINENTS[k]?CONTINENTS[k].label:k).join(", ");
 function regionGeo(ks){                              // lon/lat centre and angular size of the chosen regions, for the globe
-  const bs=ks.map(k=>CONTINENTS[k].wbox||CONTINENTS[k].box).filter(Boolean); if(!bs.length) return null;
+  const bs=ks.map(k=>CONTINENTS[k].wbox||CONTINENTS[k].box).filter(Boolean); if(!bs.length){ if(PACKS[pack].box) bs.push(PACKS[pack].box); else return null; }
   const l=Math.min(...bs.map(b=>b[0])), r=Math.max(...bs.map(b=>b[2])), s=Math.min(...bs.map(b=>b[1])), n=Math.max(...bs.map(b=>b[3])), lat=(s+n)/2;
   return {lon:(l+r)/2,lat,rho:Math.max((r-l)/2*Math.cos(lat*RAD),(n-s)/2)*RAD};
 }
-function regionView(ks){ const bs=ks.map(viewOf).filter(Boolean); if(!bs.length) return null;
+function regionView(ks){ const bs=ks.map(viewOf).filter(Boolean); if(!bs.length){ const b=boxView(PACKS[pack].box); return b; }
   return {l:Math.min(...bs.map(b=>b.l)),r:Math.max(...bs.map(b=>b.r)),t:Math.min(...bs.map(b=>b.t)),b:Math.max(...bs.map(b=>b.b))}; }
 const histRegion=x=>x.regions?regionLabel(x.regions):(x.cont&&x.cont!=="ALL"?(CONTINENTS[x.cont]?CONTINENTS[x.cont].label:x.cont):"");
 function loadHistory(){ try{ return JSON.parse(store.getRaw("meridian_history")||"[]") }catch(e){ return [] } }
@@ -1632,10 +1676,10 @@ function pushHistory(e){ const h=loadHistory(); h.push(e); store.setRaw("meridia
 
 /* ---- themed sets, built from the map data we already have ---- */
 const LANDLOCKED=new Set("AF AD AM AT AZ BY BT BO BW BF BI CF TD CZ SZ ET HU XK KZ LA LS LI LU MW ML MD MN NP NE MK PY RW SM RS SK SS CH TJ TM UG VA UZ ZM ZW".split(" "));
-let _themes=null,_themesKey=-1;
+let _themes=null,_themesKey='';
 function themeList(){
   if(!world) return [];
-  const key=world.quiz.length; if(_themes&&_themesKey===key) return _themes;
+  const key=pack+world.quiz.length; if(_themes&&_themesKey===key) return _themes;
   const q=world.quiz, out=[];
   const add=(id,icon,label,blurb,members,group="fixed",short)=>{ if(members.length>=6) out.push({id,icon,label,blurb,members,group,short}); };
   add("islands","island","Island nations","No land borders",q.filter(c=>nbOf(c).size===0));
@@ -1646,9 +1690,9 @@ function themeList(){
   add("big25","expand","25 biggest","By area",byArea.slice(0,25)); add("small25","shrink","25 smallest","By area",byArea.slice(-25));
   add("pop30","users","30 most populous","By population",q.filter(c=>(world.popRank[c.iso]||999)<=30));
   const L={}; for(const c of q){ const ch=(c.name[0]||"").toUpperCase(); if(/[A-Z]/.test(ch)) (L[ch]||(L[ch]=[])).push(c); }
-  for(const [ch,m] of Object.entries(L).sort()) if(m.length>=10) add("L_"+ch,"type",`Starting with ${ch}`,`${m.length} countries`,m,"letter",ch);
+  for(const [ch,m] of Object.entries(L).sort()) if(m.length>=10) add("L_"+ch,"type",`Starting with ${ch}`,`${m.length} ${UNITS()}`,m,"letter",ch);
   const S={}; for(const c of q){ const s=c.facts.subregion; if(s&&!/seven seas/i.test(s)) (S[s]||(S[s]=[])).push(c); }
-  for(const [s,m] of Object.entries(S).sort()) add("S_"+s,"map",s,`${m.length} countries`,m,"sub",s);
+  for(const [s,m] of Object.entries(S).sort()) add("S_"+s,"map",s,`${m.length} ${UNITS()}`,m,"sub",s);
   _themes=out; _themesKey=key; return out;
 }
 const themeById=id=>themeList().find(t=>t.id===id)||null;
@@ -1662,7 +1706,7 @@ let _aiKey="",_aiSet=null;
 function activeIsos(){                                         // while a themed round (or the home screen) is showing a theme, only its countries are lit
   if(!world) return null;
   const id=game?((!game.practice&&!game.daily&&game.theme)||""):effTheme(curMode);
-  const key=id+"|"+world.quiz.length; if(key!==_aiKey){ _aiKey=key; const T=id&&themeById(id); _aiSet=T?new Set(T.members.map(c=>c.iso)):null; }
+  const key=id+"|"+pack+world.quiz.length; if(key!==_aiKey){ _aiKey=key; const T=id&&themeById(id); _aiSet=T?new Set(T.members.map(c=>c.iso)):null; }
   return _aiSet;
 }
 /* ---- smart review: weak countries are likelier to come up ---- */
@@ -1674,7 +1718,7 @@ function buildPool(diff,ks,th){
   const all=world.quiz;
   const inCont=ks.length?all.filter(c=>inRegions(c,ks)):all;
   const sorted=[...inCont].sort((x,y)=>y.area-x.area);
-  const take=ks.length?Math.max(12,Math.ceil(sorted.length*DIFFS[diff][3])):DIFFS[diff][2];
+  const take=(ks.length||pack!=="WORLD")?Math.max(12,Math.ceil(sorted.length*(pack!=="WORLD"&&!ks.length?[.5,.8,1][Object.keys(DIFFS).indexOf(diff)]:DIFFS[diff][3]))):DIFFS[diff][2];
   return {all,pool:sorted.slice(0,take)};
 }
 const bigEnough=c=>{ const g=c.mainPoly.gb; return Math.max(g.r-g.l,g.b-g.t)>=1.5; };       // outlines of tiny places are unreadable
@@ -1779,6 +1823,7 @@ function makeTF(pool,all,t){
   return null;
 }
 function feasible(kind,c){
+  if(pack!=="WORLD"&&PACK_BAD.has(kind)) return false;
   if(kind==="CAPREV"||kind==="CAPMAP") return !!c.capital;
   if(kind==="POPBAND") return !!c.facts.pop;
   if(kind==="BIGGER") return !!(c.facts.pop||c.facts.gdp);
@@ -1848,6 +1893,12 @@ function makeNeighbours(near,t){
   return {kind:"NEIGH",target:t,prompt:`Which of these borders ${t.name}?`,choices:shuffle([ans.name,...decoys.slice(0,3).map(c=>c.name)]),answer:ans.name,neighbors};
 }
 function makeQuestion(pool,all,kind,t){
+  const q=makeQuestionCore(pool,all,kind,t);
+  if(q&&pack!=="WORLD"){ const fix=x=>String(x).replace(/\bcountries\b/g,"states").replace(/\bcountry\b/g,"state").replace(/\bCountries\b/g,"States").replace(/\bCountry\b/g,"State");
+    if(q.prompt) q.prompt=fix(q.prompt); if(q.why) q.why=fix(q.why); }
+  return q;
+}
+function makeQuestionCore(pool,all,kind,t){
   const ok=c=>c!==t&&((kind!=="CAPITAL"&&kind!=="CAPREV"&&kind!=="CAPMAP")||c.capital);
   const byDist=list=>list.filter(ok).sort((a,b)=>Math.hypot(a.gcx-t.gcx,a.gcy-t.gcy)-Math.hypot(b.gcx-t.gcx,b.gcy-t.gcy));
   let near=shuffle(byDist(pool).slice(0,10)).slice(0,3);
@@ -1962,8 +2013,8 @@ let counters=(()=>{ const d={rounds:0,correct:0,perfect:0,practice:0,globe:0,stu
   try{ return {...d,...JSON.parse(store.getRaw(CNT_KEY)||"{}")}; }catch(e){ return d; } })();
 let achDone=(()=>{ try{ return JSON.parse(store.getRaw(ACH_KEY)||"{}"); }catch(e){ return {}; } })();
 const saveCounters=()=>store.setRaw(CNT_KEY,JSON.stringify(counters));
-const seenCount=()=>world.quiz.filter(c=>records[c.iso]).length;
-const levelCount=(min,list=world.quiz)=>list.filter(c=>levelOf(records[c.iso])>=min).length;
+const seenCount=()=>pack!=="WORLD"?0:world.quiz.filter(c=>records[c.iso]).length;
+const levelCount=(min,list=world.quiz)=>pack!=="WORLD"?0:list.filter(c=>levelOf(records[c.iso])>=min).length;
 const CONT_ICON={"Europe":"globe","Asia":"globe","Africa":"globe","North America":"globe","South America":"globe","Oceania":"globe"};
 function achievementList(){
   const a=[
@@ -2255,7 +2306,7 @@ function show(id){
 }
 function showTab(tab){ if(tab==="home") renderHome(); else if(tab==="study") renderStudy(); else if(tab==="stats") renderStats(); else if(tab==="settings") renderSettings(); show(tab); }
 
-const settingsSummary=()=>`${smart?"Smart review · ":""}${elim?"Eliminate · ":""}${borderless?"No borders · ":""}${timed?"Timed":"Untimed"} · ${territories?"with territories":"sovereign states"} · ${PROJECTIONS[settings.proj].label} map`;
+const settingsSummary=()=>`${smart?"Smart review · ":""}${elim?"Eliminate · ":""}${borderless?"No borders · ":""}${timed?"Timed":"Untimed"} · ${pack!=="WORLD"?"US states":territories?"with territories":"sovereign states"} · ${PROJECTIONS[settings.proj].label} map`;
 function renderSettings(){
   $("projChips").innerHTML=Object.entries(PROJECTIONS).map(([k,p])=>`<button data-p="${k}" class="${k===settings.proj?"sel":""}">${p.label}</button>`).join("");
   $("projDesc").textContent=PROJECTIONS[settings.proj].desc+(PROJ.wrap?" Wraps at the date line.":" Doesn't wrap, so use Flat or Miller for Oceania.");
@@ -2278,11 +2329,11 @@ function renderPalette(){
 function setProjection(id){
   if(!PROJECTIONS[id]||id===settings.proj) return;
   settings.proj=id; store.setRaw("meridian_proj",id);
-  PROJ=makeProj(id); world.setProjection(); MAPS.forEach(m=>m.onProjection());
+  PROJ=makeProj(id); world.setProjection(); world._pid=PROJ.id; MAPS.forEach(m=>m.onProjection());
   renderSettings(); renderHome();
 }
 function openSettings(){ renderSettings(); show("settings"); }
-const dispRegion=()=>(curMode==="CONT"||theme)?"World":regions.size===0?"World":regions.size<=2?regionLabel(regionKeys()):`${regions.size} regions`;
+const dispRegion=()=>(curMode==="CONT"||theme)?PACKS[pack].where:regions.size===0?PACKS[pack].where:regions.size<=2?regionLabel(regionKeys()):`${regions.size} regions`;
 function regionCount(){ if(theme){ const T=themeById(theme); if(T) return T.members.length; } const ks=regionKeys(); return ks.length?world.quiz.filter(c=>inRegions(c,ks)).length:world.quiz.length; }
 const variantOf=m=>m==="LIVES"?"L"+livesN:m==="SPRINT"?"S"+sprintS:"";
 const effTheme=m=>m==="CONT"?"":theme;
@@ -2291,8 +2342,8 @@ const bestNow=m=>{ const th=effTheme(m); return store.get(bestKey(m,th?"HARD":di
 function renderHome(){
   $("sumBtn").innerHTML=`${esc(settingsSummary())} · <b>Change</b>`;
   $("timedBtn").setAttribute("aria-checked",timed);
-  $("terrBtn").setAttribute("aria-checked",territories);
-  $("sub").textContent=`${world.quiz.length} ${territories?"countries and territories":"sovereign states"} to learn.`;
+  $("terrBtn").setAttribute("aria-checked",territories); $("terrBtn").style.display=pack==="WORLD"?"":"none";
+  $("sub").textContent=pack!=="WORLD"?`${world.quiz.length} ${UNITS()} to learn.`:`${world.quiz.length} ${territories?"countries and territories":"sovereign states"} to learn.`;
   const dd=dailyDone(), st=dailyStreak();
   $("dailyBtn").classList.toggle("complete",!!dd);
   $("dailySub").textContent=dd?`${dd.score} pts today. Tap to replay (doesn't count).`:(st?`Play today's 10 to keep your streak.`:"The same 10 for everyone today.");
@@ -2302,24 +2353,25 @@ function renderHome(){
   const T=themeById(effTheme(curMode)), best=bestNow(curMode);
   $("playSub").textContent=[MODES[curMode][0],...(T?[T.label]:[DIFFS[difficulty][0],dispRegion()]),...(smart?["Smart"]:[]),...(elim?["Eliminate"]:[])].join(" · ");
   $("playBest").textContent=best?`Best ${best}`:"";
-  $("cards").innerHTML=cardsHtml(setupCards(curMode,false));
+  $("cards").innerHTML=cardsHtml([["pack","Map",PACKS[pack].label,PACKS[pack].blurb,pack==="WORLD"?"globe":"map"],...setupCards(curMode,false)]);
+  $("home").classList.toggle("packed",pack!=="WORLD");
 }
 function setupCards(mode,forStudy){                              // shared by the Play tab and the Study tab
   const T=themeById(effTheme(mode));
   const where=mode==="CONT"?["none","Region","World","This mode always uses every region"]
-    :T?["region","Theme",T.label,`${T.members.length} countries`,T.icon]
+    :T?["region","Theme",T.label,`${T.members.length} ${UNITS()}`,T.icon]
     :mode==="PEAKS"?["region","Region",dispRegion(),`${peakPool(difficulty,regionKeys()).length} peaks`]
     :mode==="LANDMARKS"?["region","Region",dispRegion(),`${lmPool(difficulty,regionKeys()).length} landmarks`]
     :mode==="RIVERS"?["region","Region",dispRegion(),RIVEROBJS?`${riverPool(difficulty,regionKeys()).length} rivers`:"Downloads on first play"]
     :mode==="LAKES"?["region","Region",dispRegion(),LAKEOBJS?`${lakePool(difficulty,regionKeys()).length} lakes`:"Downloads on first play"]
-    :["region","Region",dispRegion(),`${regionCount()} countries`];
+    :["region","Region",dispRegion(),`${regionCount()} ${UNITS()}`];
   const diff=T?["none","Difficulty","All","Themes use every country in the set"]:["diff","Difficulty",DIFFS[difficulty][0],DIFFS[difficulty][1]];
   if(forStudy) return [where,diff];
   const last=mode==="LIVES"?["count","Lives",String(livesN),"before the run ends"]:mode==="SPRINT"?["count","Time",sprintS+" s","a miss costs 3 seconds"]:mode==="STREAK"?["none","Rules","Sudden death","one miss ends the run"]
     :["count","Questions",qCount==="ALL"?"All":String(qCount),qCount==="ALL"?`${mode==="PEAKS"?peakPool(difficulty,regionKeys()).length:mode==="LANDMARKS"?lmPool(difficulty,regionKeys()).length:mode==="RIVERS"?(RIVEROBJS?riverPool(difficulty,regionKeys()).length:"up to 70"):mode==="LAKES"?(LAKEOBJS?lakePool(difficulty,regionKeys()).length:"up to 60"):buildPool(T?"HARD":difficulty,effRegions(mode),effTheme(mode)).pool.length} in this pool`:"per round"];
   return [["mode","Game mode",MODES[mode][0],MODES[mode][1],MODE_ICON[mode]],where,diff,last];
 }
-const CARD_ICON={where:["globe","locate"],diff:["target","chal"],count:["hash","quiz"],none:["lock","chal"],region:["globe","locate"]};
+const CARD_ICON={pack:["map","locate"],where:["globe","locate"],diff:["target","chal"],count:["hash","quiz"],none:["lock","chal"],region:["globe","locate"]};
 const cardsHtml=cards=>cards.map(([k,l,v,s,ic])=>{ const [i0,cat]=ic?[ic,"quiz"]:(CARD_ICON[k]||["sliders","quiz"]);
   const c=k==="mode"?"cat-"+catOf(curMode):"cat-"+cat;
   return `<button class="ocard" data-card="${k}" data-msg="${esc(s)}"><span class="oi chipic ${c}">${ico(i0,19)}</span><span class="ot"><span class="v">${esc(v)}</span><span class="s"><b class="k">${l}</b> · ${esc(s)}</span></span></button>`; }).join("");
@@ -2343,22 +2395,24 @@ function renderSheet(){
     const tile=k=>{ const [t0,b0]=MODES[k], best=bestNow(k);
       return `<button class="tile ${k===curMode?"sel":""}" data-mode="${k}"><span class="ti chipic cat-${catOf(k)}">${ico(MODE_ICON[k],19)}</span><div class="tt"><b>${t0}</b><small>${b0}</small></div>${best?`<em>${best}</em>`:""}</button>`; };
     const tog=(attr,on,name,desc)=>`<button class="toggle" ${attr}="1" role="switch" aria-checked="${on}" style="margin-top:8px;background:var(--panel-hi)"><div><b>${name}</b><small>${desc}</small></div><span class="sw"></span></button>`;
-    html=MODE_GROUPS.map(([g0,ks])=>`<p class="grp cat-${CAT_OF[g0]}">${g0}</p><div class="tiles">${ks.map(tile).join("")}</div>`).join("")+
+    html=MODE_GROUPS.map(([g0,ks0])=>[g0,ks0.filter(inPack)]).filter(([,ks])=>ks.length).map(([g0,ks])=>`<p class="grp cat-${CAT_OF[g0]}">${g0}</p><div class="tiles">${ks.map(tile).join("")}</div>`).join("")+
       `<p class="grp cat-learn">Learn</p><div class="tiles"><button class="tile wide" data-gostudy="1"><span class="ti chipic cat-learn">${ico("book",19)}</span><div><b>Study mode</b><small>Flashcards with the map, then quiz yourself</small></div></button></div>`+
-      `<p class="grp">Round options</p>`+tog("data-smart",smart,"Smart review","Countries you struggle with come up more often.")+tog("data-elim",elim,"Eliminate","Answered countries turn grey on the map, so you can see what's left.")+tog("data-nobord",borderless,"No borders","Hides every outline, so you tell neighbours apart by colour alone. Best with Eliminate.")+tog("data-terr",territories,"Territories",`Adds Greenland, Puerto Rico, Hong Kong and other places that aren't sovereign states${world?" ("+(world.quizAll.length-world.quizSov.length)+" more)":""}.`); }
+      `<p class="grp">Round options</p>`+tog("data-smart",smart,"Smart review","Countries you struggle with come up more often.")+tog("data-elim",elim,"Eliminate","Answered countries turn grey on the map, so you can see what's left.")+tog("data-nobord",borderless,"No borders","Hides every outline, so you tell neighbours apart by colour alone. Best with Eliminate.")+(pack!=="WORLD"?"":tog("data-terr",territories,"Territories",`Adds Greenland, Puerto Rico, Hong Kong and other places that aren't sovereign states${world?" ("+(world.quizAll.length-world.quizSov.length)+" more)":""}.`)); }
   else if(sheetKind==="region"){ title=curMode==="CONT"?"Region":"Countries";
     const tl=themeList(), pick1=g=>tl.filter(x=>x.group===g);
-    const tiles=pick1("fixed").map(x=>`<button class="tile ${theme===x.id?"sel":""}" data-tsel="${x.id}"><span class="ti chipic cat-quiz">${ico(x.icon,19)}</span><div class="tt"><b>${x.label}</b><small>${x.members.length} countries</small></div></button>`).join("");
+    const tiles=pick1("fixed").map(x=>`<button class="tile ${theme===x.id?"sel":""}" data-tsel="${x.id}"><span class="ti chipic cat-quiz">${ico(x.icon,19)}</span><div class="tt"><b>${x.label}</b><small>${x.members.length} ${UNITS()}</small></div></button>`).join("");
     const chips=g=>pick1(g).map(x=>`<button data-tsel="${x.id}" class="${theme===x.id?"sel":""}">${esc(x.short)}</button>`).join("");
     html=`<p class="grp">Regions<span>pick one or several</span></p><div class="chips wrapchips">`+
       Object.entries(CONTINENTS).filter(([k,c])=>!c.sub).map(([k,c])=>`<button data-c="${k}" class="${(k==="ALL"?(regions.size===0&&!theme):regions.has(k))?"sel":""}">${c.label}</button>`).join("")+
-      `</div><p class="grp" style="margin-top:10px">Pacific<span>Oceania in two halves</span></p><div class="chips wrapchips">`+
-      Object.entries(CONTINENTS).filter(([k,c])=>c.sub).map(([k,c])=>`<button data-c="${k}" class="${regions.has(k)?"sel":""}">${c.label}</button>`).join("")+
-      `</div><p class="note">${curMode==="PEAKS"?peakPool(difficulty,regionKeys()).length+" peaks":curMode==="LANDMARKS"?lmPool(difficulty,regionKeys()).length+" landmarks":curMode==="RIVERS"?(RIVEROBJS?riverPool(difficulty,regionKeys()).length+" rivers":"Rivers are matched to continents after the first download"):curMode==="LAKES"?(LAKEOBJS?lakePool(difficulty,regionKeys()).length+" lakes":"Lakes are matched to continents after the first download"):regionCount()+" countries"} in this selection.</p>`+
-      (tiles?`<p class="grp">Themes<span>a set of countries with something in common</span></p><div class="tiles">${tiles}</div>`:"")+
+      `</div>`+(Object.values(CONTINENTS).some(c=>c.sub)?`<p class="grp" style="margin-top:10px">Pacific<span>Oceania in two halves</span></p><div class="chips wrapchips">`+
+      Object.entries(CONTINENTS).filter(([k,c])=>c.sub).map(([k,c])=>`<button data-c="${k}" class="${regions.has(k)?"sel":""}">${c.label}</button>`).join("")+`</div>`:"")+
+      `<p class="note">${curMode==="PEAKS"?peakPool(difficulty,regionKeys()).length+" peaks":curMode==="LANDMARKS"?lmPool(difficulty,regionKeys()).length+" landmarks":curMode==="RIVERS"?(RIVEROBJS?riverPool(difficulty,regionKeys()).length+" rivers":"Rivers are matched to continents after the first download"):curMode==="LAKES"?(LAKEOBJS?lakePool(difficulty,regionKeys()).length+" lakes":"Lakes are matched to continents after the first download"):regionCount()+" "+UNITS()} in this selection.</p>`+
+      (tiles?`<p class="grp">Themes<span>a set of ${UNITS()} with something in common</span></p><div class="tiles">${tiles}</div>`:"")+
       (pick1("letter").length?`<p class="grp">Starting with</p><div class="chips wrapchips">${chips("letter")}</div>`:"")+
       (pick1("sub").length?`<p class="grp">Sub-regions</p><div class="chips wrapchips">${chips("sub")}</div>`:"")+
       `<button class="done" id="sheetDone">Done</button>`; }
+  else if(sheetKind==="pack"){ title="Map";
+    html=Object.entries(PACKS).map(([k,P])=>`<button class="opt ${k===pack?"sel":""}" data-pack="${k}"><div><b>${P.label}</b><small>${P.blurb}${k!=="WORLD"&&!worlds[k]?" (downloads on first use)":""}</small></div></button>`).join("")+`<p class="note">Each map keeps its own scores. Progress on your map is tracked separately too.</p>`; }
   else if(sheetKind==="diff"){ title="Difficulty";
     html=Object.entries(DIFFS).map(([k,[l,s]])=>`<button class="opt ${k===difficulty?"sel":""}" data-d="${k}"><div><b>${l}: ${s}</b><small>${(curMode==="PEAKS"?PEAK_DIFF:curMode==="LANDMARKS"?LM_DIFF:curMode==="RIVERS"?RIVER_DIFF:curMode==="LAKES"?LAKE_DIFF:DIFF_DESC)[k]}</small></div></button>`).join(""); }
   else if(sheetKind==="count"&&curMode==="LIVES"){ title="Lives";
@@ -2367,7 +2421,7 @@ function renderSheet(){
     html=SPRINT_OPTS.map(n=>`<button class="opt ${n===sprintS?"sel":""}" data-sprint="${n}"><div><b>${n} seconds</b><small>${n===30?"A quick burst.":n===60?"The standard sprint.":"A proper marathon."} Each miss costs 3 seconds.</small></div></button>`).join(""); }
   else if(sheetKind==="count"){ title="Questions per round";
     const pool=buildPool(effTheme(curMode)?"HARD":difficulty,effRegions(curMode),effTheme(curMode)).pool.length;
-    html=COUNTS.map(n=>`<button class="opt ${n===qCount?"sel":""}" data-n="${n}"><div><b>${n==="ALL"?"All":n+" questions"}</b><small>${n==="ALL"?`Every country in your selection once (${pool}).`:n>pool?`Your selection only has ${pool}, so rounds will be that long.`:"A quick round."}</small></div></button>`).join(""); }
+    html=COUNTS.map(n=>`<button class="opt ${n===qCount?"sel":""}" data-n="${n}"><div><b>${n==="ALL"?"All":n+" questions"}</b><small>${n==="ALL"?`Every ${UNIT()} in your selection once (${pool}).`:n>pool?`Your selection only has ${pool}, so rounds will be that long.`:"A quick round."}</small></div></button>`).join(""); }
   $("sheetTitle").textContent=title; $("sheetBody").innerHTML=html;
   [...$("sheetBody").querySelectorAll(".tile,.opt,.toggle,.grp")].forEach((e,i)=>e.style.setProperty("--i",Math.min(i,14)));
 }
@@ -2378,13 +2432,14 @@ function renderSheet(){
   for(const el of [pn.querySelector(".grab"),pn.querySelector(".sheethead")]){ el.style.touchAction="none"; el.addEventListener("pointerdown",start); el.addEventListener("pointermove",move); el.addEventListener("pointerup",end); el.addEventListener("pointercancel",end); } })();
 function sheetClick(e){
   if(e.target.closest("#sheetScrim,#sheetClose,#sheetDone")) return closeSheet();
-  const o=e.target.closest("[data-mode],[data-d],[data-n],[data-c],[data-elim],[data-smart],[data-terr],[data-nobord],[data-lives],[data-sprint],[data-tsel],[data-gostudy],[data-leave]"); if(!o) return; const d=o.dataset;
+  const o=e.target.closest("[data-pack],[data-mode],[data-d],[data-n],[data-c],[data-elim],[data-smart],[data-terr],[data-nobord],[data-lives],[data-sprint],[data-tsel],[data-gostudy],[data-leave]"); if(!o) return; const d=o.dataset;
   if(d.leave){ closeSheet(); quitRound(); return; }
   if(d.gostudy){ closeSheet(); showTab("study"); return; }
   if(d.lives){ livesN=+d.lives; store.setRaw("meridian_lives",String(livesN)); closeSheet(); refreshSetup(); return; }
   if(d.sprint){ sprintS=+d.sprint; store.setRaw("meridian_sprint",String(sprintS)); closeSheet(); refreshSetup(); return; }
   if(d.elim){ elim=!elim; store.setRaw("meridian_elim",elim?"1":"0"); renderSheet(); refreshSetup(); return; }          // these two stay open
   if(d.terr){ territories=!territories; store.setRaw("meridian_terr",territories?"1":"0"); world.setTerritories(territories); renderSheet(); refreshSetup(); renderHome(); renderSettings(); return; }
+  if(d.pack){ closeSheet(); switchPack(d.pack); return; }
   if(d.nobord){ borderless=!borderless; store.setRaw("meridian_nobord",borderless?"1":"0"); renderSheet(); refreshSetup(); return; }
   if(d.smart){ smart=!smart; store.setRaw("meridian_smart",smart?"1":"0"); renderSheet(); refreshSetup(); return; }
   if(d.tsel){ theme=theme===d.tsel?"":d.tsel; regions.clear(); store.setRaw("meridian_themesel",theme); store.setRaw("meridian_regions",""); closeSheet(); refreshSetup(); return; }
@@ -2410,7 +2465,7 @@ function renderPlay(){
   $("score").textContent=g.score; $("streak").textContent=g.streak>=2?`${g.streak} in a row`:"";
   let p;
   if(q.kind==="FLAG") p=`${flagImg(q.target,40)}<span>${esc(q.prompt)}</span>`;
-  else if(q.kind==="FIND"&&q.capOnly) p=`<div><small>Tap the country whose capital is</small><div class="big inl">${esc(q.target.capital)}</div></div>`;
+  else if(q.kind==="FIND"&&q.capOnly) p=`<div><small>Tap the ${UNIT()} whose capital is</small><div class="big inl">${esc(q.target.capital)}</div></div>`;
   else if(q.kind==="FIND"&&q.flagOnly) p=`${flagImg(q.target,40)}<span>Tap the country with this flag</span>`;
   else if(q.kind==="CONT") p=`${flagImg(q.target,32)}<span>${esc(q.prompt)}</span>`;
   else if(q.kind==="FIND"&&q.lm) p=`<div><small>Find the landmark</small><div class="big inl">${esc(q.target.name)}</div></div>`;
@@ -2598,8 +2653,42 @@ async function shareResult(){
   }catch(e){ if(e&&e.name==="AbortError") return; try{ await navigator.clipboard.writeText(text); toast("Result copied"); }catch(_){ toast("Couldn't share on this device"); } }
 }
 
+const US_SOURCES=[
+  "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_110m_admin_1_states_provinces.geojson",
+  "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_1_states_provinces.geojson",
+  "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_50m_admin_1_states_provinces.geojson",
+  "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_1_states_provinces.geojson"];
+async function ensureUS(){
+  if(worlds.USA) return worlds.USA;
+  const cached=await MapCache.get("usstates");
+  if(cached&&cached.text){ try{ return worlds.USA=parseWorld(JSON.parse(cached.text),true); }catch(e){ await MapCache.del("usstates"); } }
+  for(const url of US_SOURCES){
+    try{ const r=await fetch(url); if(!r.ok) continue; const text=await r.text(); const w=parseWorld(JSON.parse(text),true);
+      MapCache.set({text,res:/50m/.test(url)?"50m":"110m",t:Date.now(),bytes:text.length},"usstates"); return worlds.USA=w; }catch(e){}
+  }
+  throw new Error("fetch failed");
+}
+let packBusy=false;
+async function switchPack(name,quiet){
+  if(name===pack||packBusy||!PACKS[name]) return; packBusy=true;
+  try{ let w=worlds[name]; if(!w){ if(!quiet) toast("Loading the map…"); w=await ensureUS(); } activatePack(name,w); }
+  catch(e){ store.setRaw("meridian_pack","WORLD"); toast("Couldn't load that map. Check your connection and try again."); }
+  finally{ packBusy=false; }
+}
+function activatePack(name,w){
+  pack=name; store.setRaw("meridian_pack",name);
+  if(w._pid!==PROJ.id){ w.setProjection(); w._pid=PROJ.id; }
+  world=w; w.setTerritories(name==="WORLD"?territories:false);
+  for(const k of Object.keys(CONTINENTS)) delete CONTINENTS[k];
+  Object.assign(CONTINENTS,name==="WORLD"?CONTINENTS_WORLD:PACKS[name].regions);
+  regions.clear(); theme=""; store.setRaw("meridian_regions",""); store.setRaw("meridian_themesel","");
+  if(!inPack(curMode)){ curMode="FIND"; store.setRaw("meridian_mode",curMode); }
+  const hv=regionView([]), hg=regionGeo([]);
+  MAPS.forEach(m=>{ m.setWorld(w); m.setMarks({}); m.done={}; m.selected=null; m.solo=null; m.homeView=hv; m.homeGeo=hg; if(m.inited) m.run(null,true); });
+  renderHome(); renderStudy(); if(!$("stats").classList.contains("hidden")) renderStats();
+}
 function init(w){
-  world=w; w.setTerritories(territories);
+  world=w; worlds.WORLD=w; w.setTerritories(territories);
   homeMap=new MapView($("homeMap")); homeMap.setWorld(w);
   gameMap=new MapView($("gameMap"),{interactive:true,onTap:tapMap}); gameMap.setWorld(w); gameMap.onBlank=tapAdvance;
   ymap=new MapView($("ymCanvas"),{interactive:true,onTap:c=>{ ymSel=c.iso; ymap.selected=c.iso; ymap.draw(); renderYmInfo(); }}); ymap.setWorld(w);
@@ -2609,6 +2698,7 @@ function init(w){
   const prev=new MapView($("prevMap")); prev.setWorld(w);
   const eu={}; w.quizSov.filter(c=>c.facts.continent==="Europe").forEach(c=>eu[c.iso]=PAL.amber); prev.setMarks(eu);
   renderHome(); show("home");
+  if(store.getRaw("meridian_pack")==="USA") switchPack("USA",true);
 }
 
 $("terrBtn").addEventListener("click",()=>{ territories=!territories; store.setRaw("meridian_terr",territories?"1":"0"); world.setTerritories(territories); renderHome(); renderSettings(); });
@@ -2654,7 +2744,7 @@ $("studySize").addEventListener("click",e=>{ const b=e.target.closest("[data-ss]
 $("studyGo").addEventListener("click",startStudy);
 $("studyPanel").addEventListener("click",studyClick);
 $("studyQuit").addEventListener("click",()=>{ sess=null; if(studyMap){ studyMap.setPulses([]); } showTab("study"); });
-$("offClear").addEventListener("click",async()=>{ await MapCache.del(); await MapCache.del("rivers"); await MapCache.del("lakes"); if(riverInfo) riverInfo.saved=false; if(lakeInfo) lakeInfo.saved=false; if(world&&world.source) world.source.saved=false; renderOffline(); toast("Saved map removed"); });
+$("offClear").addEventListener("click",async()=>{ await MapCache.del(); await MapCache.del("rivers"); await MapCache.del("lakes"); await MapCache.del("usstates"); if(riverInfo) riverInfo.saved=false; if(lakeInfo) lakeInfo.saved=false; if(world&&world.source) world.source.saved=false; renderOffline(); toast("Saved map removed"); });
 $("projChips").addEventListener("click",e=>{ const b=e.target.closest("button[data-p]"); if(b) setProjection(b.dataset.p); });
 $("gridBtn").addEventListener("click",()=>{ settings.grid=!settings.grid; store.setRaw("meridian_grid",settings.grid?"1":"0"); MAPS.forEach(m=>m.draw()); renderSettings(); });
 $("vibBtn").addEventListener("click",()=>{ settings.vib=!settings.vib; store.setRaw("meridian_vib",settings.vib?"1":"0"); if(settings.vib) buzz(20); renderSettings(); });
