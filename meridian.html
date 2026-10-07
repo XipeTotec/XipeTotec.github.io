@@ -1492,7 +1492,7 @@ class MapView {
     const up=e=>{ const wasOne=ptrs.size===1; ptrs.delete(e.pointerId);
       if(wasOne && down && !moved && performance.now()-down.t<500 && this.onTap && this.world){
         let c; if(this.pickLakes&&this.lakes) c=this.hitLake(down.p[0],down.p[1]); else if(this.pickPeaks&&this.peaks) c=this.hitPeak(down.p[0],down.p[1]); else if(this.globe) c=this.hitGlobe(down.p[0],down.p[1]); else { let [wx,wy]=this.toWorld(down.p[0],down.p[1]); if(PROJ.wrap) wx=((wx%360)+360)%360; c=this.world.hit(wx,wy,(settings.tiny?24:14)/this.s); }
-        if(c) this.onTap(c); }
+        if(c) this.onTap(c); else if(this.onBlank) this.onBlank(); }
       if(ptrs.size===0) down=null; lastDist=0; };
     cv.addEventListener("pointerup",up); cv.addEventListener("pointercancel",e=>{ptrs.delete(e.pointerId);down=null;});
     cv.addEventListener("wheel",e=>{ e.preventDefault(); const [x,y]=pos(e); this.zoomAt(x,y,Math.exp(-e.deltaY*.0015)); },{passive:false});
@@ -2027,7 +2027,7 @@ document.addEventListener("visibilitychange",()=>{
   else if(game.pausedAt){ const d=performance.now()-game.pausedAt; game.deadline+=d; game.qStart+=d; if(game.sprint) game.sprintEnd=game.deadline; game.pausedAt=0; startTimer(); }
 });
 
-function lock(ok,pts,q,wrongHit,speed=0,timedOut=false){
+function lock(ok,pts,q,wrongHit,speed=0,timedOut=false){ if(game) game.lockedAt=performance.now();
   const g=game; if(!g.sprint){ renderTimer(); stopTimer(); }     // freeze the bar where it stopped (the sprint clock keeps running)
   g.answerMs+=Math.min(performance.now()-g.qStart,g.limit*1000);
   g.results[g.i]=ok;
@@ -2052,8 +2052,10 @@ function answerChoice(label){
   if(!game||game.locked) return; const q=game.qs[game.i], ok=label===q.answer, sp=ok?speedBonus():0;
   game.picked=label; lock(ok,ok?100+bonus(game)+sp:0,q,null,sp);
 }
+function tapAdvance(){ if(game&&game.locked&&!game.sprint&&performance.now()-(game.lockedAt||0)>350) nextQuestion(); }   // tap anywhere to continue
 function tapMap(c){
-  if(!game||game.locked) return; const q=game.qs[game.i]; if(q.kind!=="FIND") return;
+  if(game&&game.locked) return tapAdvance();
+  if(!game) return; const q=game.qs[game.i]; if(q.kind!=="FIND") return;
   if(game.elim&&game.done[c.iso]){ toast("Already done. Pick one that's still coloured."); return; }
   if(c.iso===q.target.iso){ const sp=speedBonus(); lock(true,(game.attempts===0?100+bonus(game):50)+sp,q,null,sp); return; }
   game.attempts++; buzz([40,40,40]);
@@ -2488,7 +2490,7 @@ async function shareResult(){
 function init(w){
   world=w; w.setTerritories(territories);
   homeMap=new MapView($("homeMap")); homeMap.setWorld(w);
-  gameMap=new MapView($("gameMap"),{interactive:true,onTap:tapMap}); gameMap.setWorld(w);
+  gameMap=new MapView($("gameMap"),{interactive:true,onTap:tapMap}); gameMap.setWorld(w); gameMap.onBlank=tapAdvance;
   ymap=new MapView($("ymCanvas"),{interactive:true,onTap:c=>{ ymSel=c.iso; ymap.selected=c.iso; ymap.draw(); renderYmInfo(); }}); ymap.setWorld(w);
   statsPrev=new MapView($("prevStats")); statsPrev.setWorld(w);
   studyMap=new MapView($("studyCanvas")); studyMap.setWorld(w);
@@ -2501,6 +2503,7 @@ function init(w){
 $("terrBtn").addEventListener("click",()=>{ territories=!territories; store.setRaw("meridian_terr",territories?"1":"0"); world.setTerritories(territories); renderHome(); renderSettings(); });
 $("choices").addEventListener("click",e=>{ const b=e.target.closest("button[data-i]"); if(b&&game) answerChoice(game.qs[game.i].choices[+b.dataset.i]); });
 $("status").addEventListener("click",e=>{ if(e.target.id==="nextBtn") nextQuestion(); });
+$("play").addEventListener("click",e=>{ if(e.target.closest("button,a,input,.toggle,#gameMap,.tbarwrap")) return; tapAdvance(); });   // the answer card and empty space also continue
 function quitRound(){ stopTimer(); gameId++; game=null; gameMap.setPulses([]); show("home"); }
 $("quit").addEventListener("click",()=>{ const g=game; if(g&&g.results.length&&$("result").classList.contains("hidden")) openSheet("leave"); else quitRound(); });
 $("timedBtn").addEventListener("click",()=>{ timed=!timed; store.setRaw("meridian_timed",timed?"1":"0"); renderHome(); renderSettings(); });
