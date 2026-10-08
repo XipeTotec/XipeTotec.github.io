@@ -283,6 +283,11 @@ button:focus:not(:focus-visible){outline:none}
 .sk:disabled{opacity:.4}
 .sk{background:var(--panel-hi);color:var(--dim);font-weight:600;padding:6px 14px;border-radius:999px;font-size:13px;margin-left:8px}
 #status .sk{padding:6px 14px}
+.mtabs{display:flex;gap:6px;overflow-x:auto;position:sticky;top:0;z-index:3;margin:0 -2px 12px;padding:2px 2px 8px;background:var(--panel);scrollbar-width:none}
+.mtabs::-webkit-scrollbar{display:none}
+.mtabs button{flex:none;padding:8px 14px;border-radius:999px;background:var(--panel-hi);color:var(--dim);font-size:13.5px;font-weight:600;border:1px solid transparent}
+.mtabs button.has:not(.sel){border-color:var(--amber);color:var(--text)}
+.mtabs button.sel{background:var(--amber);color:var(--on-accent)}
 .panel.slim{height:calc(112px + env(safe-area-inset-bottom))}
 .panel.slim #choices{display:none}
 #hint:empty{display:none}
@@ -2643,11 +2648,11 @@ const catOf=k=>{ const g=MODE_GROUPS.find(([,ks])=>ks.includes(k)); return g?CAT
 const refreshSetup=()=>{ renderHome(); renderStudy(); };
 
 /* ---- option sheets ---- */
-let sheetKind=null;
+let sheetKind=null, modeTab="";
 const DIFF_DESC={EASY:"Roughly the biggest 40% of countries (the 50 largest when playing the whole world).",
   MEDIUM:"About 70% of countries (the 110 largest worldwide). Skips most of the tiny ones.",
   HARD:"Every country, including microstates and small islands."};
-function openSheet(kind){ if(kind==="mode") warmPhysical(); sheetKind=kind; renderSheet(); const s=$("sheet"); s.classList.add("open","fresh"); s.setAttribute("aria-hidden","false"); clearTimeout(openSheet.t); openSheet.t=setTimeout(()=>s.classList.remove("fresh"),900); }
+function openSheet(kind){ if(kind==="mode"){ warmPhysical(); const gp=MODE_GROUPS.find(([,ks])=>ks.includes(curMode)); modeTab=gp?gp[0]:"Locate"; } sheetKind=kind; renderSheet(); const s=$("sheet"); s.classList.add("open","fresh"); s.setAttribute("aria-hidden","false"); clearTimeout(openSheet.t); openSheet.t=setTimeout(()=>s.classList.remove("fresh"),900); }
 function closeSheet(){ sheetKind=null; const s=$("sheet"); s.classList.remove("open"); s.setAttribute("aria-hidden","true"); }
 function renderSheet(){
   let title="",html="";
@@ -2657,10 +2662,12 @@ function renderSheet(){
     const tile=k=>{ const [t0,b0]=MODES[k], best=bestNow(k);
       return `<button class="tile ${k===curMode?"sel":""}" data-mode="${k}"><span class="ti chipic cat-${catOf(k)}">${ico(MODE_ICON[k],19)}</span><div class="tt"><b>${t0}</b><small>${b0}</small></div>${best?`<em>${best}</em>`:""}</button>`; };
     const tog=(attr,on,name,desc)=>`<button class="toggle" ${attr}="1" role="switch" aria-checked="${on}" style="margin-top:8px;background:var(--panel-hi)"><div><b>${name}</b><small>${desc}</small></div><span class="sw"></span></button>`;
-    html=MODE_GROUPS.map(([g0,ks0])=>[g0,ks0.filter(inPack)]).filter(([,ks])=>ks.length).map(([g0,ks])=>`<p class="grp cat-${CAT_OF[g0]}">${g0}</p><div class="tiles">${ks.map(tile).join("")}</div>`).join("")+
+    const GR=MODE_GROUPS.map(([g0,ks0])=>[g0,ks0.filter(inPack)]).filter(([,ks])=>ks.length); if(modeTab!=="More"&&!GR.some(([g0])=>g0===modeTab)) modeTab=GR[0][0];
+    const tabBar=`<div class="mtabs" role="tablist">${[...GR.map(([g0])=>g0),"More"].map(t=>`<button role="tab" aria-selected="${t===modeTab}" data-mtab="${t}" class="${t===modeTab?"sel":""}${t!=="More"&&GR.find(([g0])=>g0===t)[1].includes(curMode)?" has":""}">${t}</button>`).join("")}</div>`;
+    html=tabBar+(modeTab==="More"?(
       `<p class="grp cat-learn">Learn</p><div class="tiles"><button class="tile wide" data-gostudy="1"><span class="ti chipic cat-learn">${ico("book",19)}</span><div><b>Study mode</b><small>Flashcards with the map, then quiz yourself</small></div></button></div>`+
-      `<p class="grp">Round options</p>`+tog("data-smart",smart,"Smart review","Countries you struggle with come up more often.")+tog("data-elim",elim,"Eliminate","Answered countries turn grey on the map, so you can see what's left.")+tog("data-nobord",borderless,"No borders","Hides every outline and paints the whole map one colour, so nothing gives the borders away. Best with Eliminate.")+(pack!=="WORLD"?"":tog("data-terr",territories,"Territories",`Adds Greenland, Puerto Rico, Hong Kong and other places that aren't sovereign states${world?" ("+(world.quizAll.length-world.quizSov.length)+" more)":""}.`)); }
-  else if(sheetKind==="region"){ title=curMode==="CONT"?"Region":"Countries";
+      `<p class="grp">Round options</p>`+tog("data-smart",smart,"Smart review","Countries you struggle with come up more often.")+tog("data-elim",elim,"Eliminate","Answered countries turn grey on the map, so you can see what's left.")+tog("data-nobord",borderless,"No borders","Hides every outline and paints the whole map one colour, so nothing gives the borders away. Best with Eliminate.")+(pack!=="WORLD"?"":tog("data-terr",territories,"Territories",`Adds Greenland, Puerto Rico, Hong Kong and other places that aren't sovereign states${world?" ("+(world.quizAll.length-world.quizSov.length)+" more)":""}.`))
+    ):`<div class="tiles">${GR.find(([g0])=>g0===modeTab)[1].map(tile).join("")}</div>`); }  else if(sheetKind==="region"){ title=curMode==="CONT"?"Region":"Countries";
     const tl=themeList(), pick1=g=>tl.filter(x=>x.group===g);
     const tiles=pick1("fixed").map(x=>`<button class="tile ${theme===x.id?"sel":""}" data-tsel="${x.id}"><span class="ti chipic cat-quiz">${ico(x.icon,19)}</span><div class="tt"><b>${x.label}</b><small>${x.members.length} ${UNITS()}</small></div></button>`).join("");
     const chips=g=>pick1(g).map(x=>`<button data-tsel="${x.id}" class="${theme===x.id?"sel":""}">${esc(x.short)}</button>`).join("");
@@ -2701,7 +2708,8 @@ function renderSheet(){
   for(const el of [pn.querySelector(".grab"),pn.querySelector(".sheethead")]){ el.style.touchAction="none"; el.addEventListener("pointerdown",start); el.addEventListener("pointermove",move); el.addEventListener("pointerup",end); el.addEventListener("pointercancel",end); } })();
 function sheetClick(e){
   if(e.target.closest("#sheetScrim,#sheetClose,#sheetDone")) return closeSheet();
-  const o=e.target.closest("[data-pack],[data-mode],[data-d],[data-n],[data-c],[data-elim],[data-smart],[data-terr],[data-nobord],[data-lives],[data-sprint],[data-inc],[data-rule],[data-sprinton],[data-tsel],[data-gostudy],[data-leave]"); if(!o) return; const d=o.dataset;
+  const o=e.target.closest("[data-mtab],[data-pack],[data-mode],[data-d],[data-n],[data-c],[data-elim],[data-smart],[data-terr],[data-nobord],[data-lives],[data-sprint],[data-inc],[data-rule],[data-sprinton],[data-tsel],[data-gostudy],[data-leave]"); if(!o) return; const d=o.dataset;
+  if(d.mtab){ modeTab=d.mtab; renderSheet(); return; }
   if(d.leave){ closeSheet(); quitRound(); return; }
   if(d.gostudy){ closeSheet(); showTab("study"); return; }
   if(d.rule){ runRule=d.rule; store.setRaw("meridian_run",runRule); renderSheet(); refreshSetup(); return; }
