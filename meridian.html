@@ -806,8 +806,10 @@ function borderlessColour(k){
     w._nbCol=col; w._nbColN=w.countries.length; }
   return nbColours()[w._nbCol.get(k.iso)||0];
 }
-function toneOf(k,sel,nb){
+const dullCol=()=>nbDark()?"#2E3B46":"#C8D0D6";                                        // one muted grey so the highlighted place is the only thing with colour
+function toneOf(k,sel,nb,dull){
   const p=settings.palette;
+  if(dull&&!nb) return dullCol();
   if(nb) return borderlessColour(k);                                  // every place the same colour, even outside the chosen region, so the region outline gives nothing away
   if(p==="CALM") return PAL.tones[k.hv%PAL.tones.length];
   const ai=activeIsos(); if(ai&&!ai.has(k.iso)) return DIM_COL;
@@ -1634,7 +1636,7 @@ class MapView {
     const c=this.ctx,d=this.dpr,s=this.s, wrap=PROJ.wrap;
     c.setTransform(d,0,0,d,0,0); c.fillStyle=PAL.deep; c.fillRect(0,0,this.w,this.h);
     if(!this.world) return;
-    const sel=activeSel(), solo=this.solo, nb=!!this.noBorders, xmin=-this.ox/s, xmax=(this.w-this.ox)/s;
+    const sel=activeSel(), solo=this.solo, nb=!!this.noBorders, xmin=-this.ox/s, xmax=(this.w-this.ox)/s, dl=!!this.dull;
     const k0=wrap?Math.floor(xmin/360):0, k1=wrap?Math.floor(xmax/360):0;
     for(let ci=k0;ci<=k1;ci++){                                             // copies of the world side by side, so the date line isn't an edge
       const off=ci*360, vis=k=>!wrap||(k.bounds.r+off>=xmin-2&&k.bounds.l+off<=xmax+2);
@@ -1644,7 +1646,7 @@ class MapView {
       if(settings.grid){ c.strokeStyle=PAL.grid; c.lineWidth=.8/s; c.stroke(PROJ.grid); }
       c.strokeStyle=PAL.border; c.lineWidth=1.1/s; c.lineJoin="round";
       for(const k of this.world.countries){ if(this.marks[k.iso]||(solo&&k.iso!==solo)||!vis(k)) continue;
-        c.fillStyle=this.done[k.iso]?(nb?nbDone():PAL.done):toneOf(k,sel,nb); c.fill(k.path,"evenodd"); if(nb){ c.strokeStyle=c.fillStyle; c.stroke(k.path); c.strokeStyle=PAL.border; } else c.stroke(k.edge); }
+        c.fillStyle=this.done[k.iso]?(nb?nbDone():PAL.done):toneOf(k,sel,nb,dl); c.fill(k.path,"evenodd"); if(nb){ c.strokeStyle=c.fillStyle; c.stroke(k.path); c.strokeStyle=PAL.border; } else c.stroke(k.edge); }
       for(const k of this.world.countries){ if(solo||this.done[k.iso]!=="bad"||this.marks[k.iso]||!vis(k)) continue;   // eliminated but missed: grey with a red edge
         c.strokeStyle=PAL.bad; c.lineWidth=1.8/s; c.stroke(k.edge); }
       c.strokeStyle=PAL.border; c.lineWidth=1.1/s;
@@ -1654,7 +1656,7 @@ class MapView {
         for(const k of this.world.countries){ if(!k.valid||!this.world.quizSet.has(k)||!vis(k)) continue;
           const b=k.main; if(Math.max(b.r-b.l,b.b-b.t)*s>=8) continue;
           const mk=this.marks[k.iso]; if(!mk&&sel&&!inSel(sel,k)&&settings.palette!=="CALM") continue;
-          c.beginPath(); c.arc((b.l+b.r)/2,(b.t+b.b)/2,(this.dotR(s)+(mk?2:0))/s,0,6.2832); c.fillStyle=mk||(this.done[k.iso]?(nb?nbDone():PAL.done):toneOf(k,sel,nb)); c.fill();
+          c.beginPath(); c.arc((b.l+b.r)/2,(b.t+b.b)/2,(this.dotR(s)+(mk?2:0))/s,0,6.2832); c.fillStyle=mk||(this.done[k.iso]?(nb?nbDone():PAL.done):toneOf(k,sel,nb,dl)); c.fill();
           c.lineWidth=1.2/s; c.strokeStyle="rgba(255,255,255,.75)"; c.stroke(); } }
       if(this.lakes){ c.strokeStyle=PAL.border; c.lineWidth=1/s;
         for(const lk of this.lakes){ if(this.marks[lk.iso]) continue; c.fillStyle=PAL.lake; c.fill(lk.path(),"evenodd"); c.stroke(lk.path()); }
@@ -1694,7 +1696,7 @@ class MapView {
       for(let la=-60;la<=60;la+=30){ let pen=false; for(let lo=-180;lo<=180;lo+=5) pen=seg(lo,la,!pen); }
       c.stroke(); }
     c.strokeStyle=PAL.border; c.lineWidth=1; c.lineJoin="round";
-    const sel=activeSel(), solo=this.solo, nb=!!this.noBorders, paths=new Map(), info=[];
+    const sel=activeSel(), solo=this.solo, nb=!!this.noBorders, paths=new Map(), info=[], dl=!!this.dull;
     for(const k of this.world.countries){ if(k.iso==="AQ") continue;
       const v=k.gc.v, rho=k.gc.rho, cz=B.cb*B.ca*v[0]+B.cb*B.sa*v[1]+B.sb*v[2];
       if(rho<1.5&&cz<-Math.sin(rho)) continue;                                  // wholly behind the globe
@@ -1703,7 +1705,7 @@ class MapView {
       const P=new Path2D(); let any=false; for(const poly of k.polys) for(const ring of poly.g3) any=this.ringPath(P,ring,B,R,cx,cy)||any;
       if(any){ paths.set(k,P); info.push([k,sx,sy,cz]); } }
     for(const [k,P] of paths){ if(this.marks[k.iso]||(solo&&k.iso!==solo)) continue;
-      c.fillStyle=this.done[k.iso]?(nb?nbDone():PAL.done):toneOf(k,sel,nb); c.fill(P,"evenodd"); if(nb){ c.strokeStyle=c.fillStyle; c.stroke(P); c.strokeStyle=PAL.border; } else c.stroke(P); }
+      c.fillStyle=this.done[k.iso]?(nb?nbDone():PAL.done):toneOf(k,sel,nb,dl); c.fill(P,"evenodd"); if(nb){ c.strokeStyle=c.fillStyle; c.stroke(P); c.strokeStyle=PAL.border; } else c.stroke(P); }
     if(!solo){ c.lineWidth=1.8; c.strokeStyle=PAL.bad; for(const [k,P] of paths) if(this.done[k.iso]==="bad"&&!this.marks[k.iso]) c.stroke(P); c.lineWidth=1; c.strokeStyle=PAL.border; }
     for(const [k,P] of paths){ const col=this.marks[k.iso]; if(!col||(solo&&k.iso!==solo)) continue; c.fillStyle=col; c.fill(P,"evenodd"); if(nb){ c.strokeStyle=c.fillStyle; c.stroke(P); c.strokeStyle=PAL.border; } else c.stroke(P); }
     const shade=c.createRadialGradient(cx-R*.3,cy-R*.35,R*.2,cx,cy,R*1.01);          // a little shading so it reads as a ball
@@ -1713,7 +1715,7 @@ class MapView {
       for(const [k,sx,sy,cz] of info){ if(!k.valid||!this.world.quizSet.has(k)||cz<.05) continue;
         if(2*R*Math.sin(Math.min(k.gc.rho,1.5))>=7) continue;
         const mk=this.marks[k.iso]; if(!mk&&sel&&!inSel(sel,k)&&settings.palette!=="CALM") continue;
-        c.beginPath(); c.arc(sx,sy,mk?7:5,0,6.2832); c.fillStyle=mk||(this.done[k.iso]?(nb?nbDone():PAL.done):toneOf(k,sel,nb)); c.fill();
+        c.beginPath(); c.arc(sx,sy,mk?7:5,0,6.2832); c.fillStyle=mk||(this.done[k.iso]?(nb?nbDone():PAL.done):toneOf(k,sel,nb,dl)); c.fill();
         c.lineWidth=1.2; c.strokeStyle="rgba(255,255,255,.75)"; c.stroke(); } }
     if(this.lakes){ c.strokeStyle=PAL.border; c.lineWidth=1;
       const draw=(lk,col)=>{ const P=new Path2D(); let any=false; for(const pl of lk.rings3) for(const ring of pl) any=this.ringPath(P,ring,B,R,cx,cy)||any; if(any){ c.fillStyle=col; c.fill(P,"evenodd"); c.stroke(P); } };
@@ -2339,6 +2341,7 @@ function beginQuestion(){
   Object.assign(game,{attempts:0,locked:false,picked:null,ok:false,pts:0,speed:0,timedOut:false,
     marks:showT?{[q.target.iso]:PAL.amber}:pairQ(q)?{[q.target.iso]:PAL.amber,[q.other.iso]:PAL.amber}:{},limit:game.sprint?game.sprintS:limit,qStart:now,deadline:game.sprint?game.sprintEnd:now+limit*1000,pausedAt:0});
   gameMap.solo=q.kind==="SHAPE"?q.target.iso:null;
+  gameMap.dull=["NAME","CAPITAL","CONT","NEIGH","POPBAND"].includes(q.kind);   // a highlighted country on a flat grey map is easy to spot
   gameMap.pickPeaks=!!(q.peak||q.lm)&&q.kind==="FIND"; gameMap.pickLakes=!!q.lake&&q.kind==="FIND";
   gameMap.setMarks(game.marks);
   if(game.i===0||((pairQ(q)||showT)&&!stay(q,pairQ(q)?[q.target,q.other]:[q.target],false))) gameMap.run(pairQ(q)?[q.target,q.other]:showT?q.target:null,false,focusPad(q,false));   // locate questions keep the view you set; the button resets it
@@ -2492,7 +2495,7 @@ function finish(){
   const fresh=checkAchievements();
   $("rAch").innerHTML=earned.map(b=>`<span class="ach badge${b.tierUp?" up":""}">${badgeTag(b)}</span>`).join("")+fresh.map(a=>`<span class="ach">${ico(a.icon,15)} ${esc(a.title)}</span>`).join("");
   if(earned.length&&!fresh.length) toast(badgeText(earned[0])+(earned.length>1?` and ${earned.length-1} more`:""),earned[0].icon);
-  gameMap.setPulses([]); show("result"); renderHome();
+  gameMap.dull=false; gameMap.setPulses([]); show("result"); renderHome();
 }
 
 /* ---- stats screen ---- */
@@ -2960,7 +2963,7 @@ $("terrBtn").addEventListener("click",()=>{ territories=!territories; store.setR
 $("choices").addEventListener("click",e=>{ const b=e.target.closest("button[data-i]"); if(b&&game) answerChoice(game.qs[game.i].choices[+b.dataset.i]); });
 $("status").addEventListener("click",e=>{ if(e.target.id==="nextBtn") nextQuestion(); else if(e.target.id==="giveUp"&&game&&!game.locked){ const q=game.qs[game.i]; q.steps=q.chain.length-1; lock(false,0,q,null,0); } });
 $("play").addEventListener("click",e=>{ if(e.target.closest("button,a,input,.toggle,#gameMap,.tbarwrap")) return; tapAdvance(); });   // the answer card and empty space also continue
-function quitRound(){ stopTimer(); gameId++; game=null; gameMap.setPulses([]); show("home"); }
+function quitRound(){ stopTimer(); gameId++; game=null; gameMap.dull=false; gameMap.setPulses([]); show("home"); }
 $("quit").addEventListener("click",()=>{ const g=game; if(g&&g.results.length&&$("result").classList.contains("hidden")) openSheet("leave"); else quitRound(); });
 $("timedBtn").addEventListener("click",()=>{ timed=!timed; store.setRaw("meridian_timed",timed?"1":"0"); renderHome(); renderSettings(); });
 $("statsMapBtn").addEventListener("click",()=>openYourMap("stats"));
