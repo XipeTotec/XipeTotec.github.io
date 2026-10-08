@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Year by Year: a history quiz. Guess the year an event happened, or which event happened in a given year.">
+<meta name="description" content="Year by Year: a history quiz with over 10,000 events. Guess the year an event happened, or which event happened in a given year.">
 <meta name="theme-color" content="#e9eef2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0f161d" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Year by Year">
 <meta property="og:title" content="Year by Year">
-<meta property="og:description" content="A history quiz with 585 events from 776 BC to 2023. Guess the year, or guess the event.">
+<meta property="og:description" content="A history quiz with over 10,000 events from ancient times to today, from a hand-picked list and Wikipedia. Guess the year, or guess the event.">
 <title>Year by Year History Quiz</title>
 <link rel="icon" href="/icon-192.png">
 <link rel="apple-touch-icon" href="/icon-192.png">
@@ -49,8 +49,11 @@ h1 span{color:var(--brass)}
 .controls{display:flex;flex-direction:column;gap:10px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;min-width:52px}
+.credit{font-size:.8rem;color:var(--muted);max-width:62ch}
+.credit a{color:inherit}
 .count{margin:0;font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
 .chip{font:inherit;font-size:.9rem;border:1px solid var(--line);background:transparent;color:var(--ink);padding:6px 12px;border-radius:999px;cursor:pointer}
+.chip:disabled{opacity:.45;cursor:not-allowed}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .chip:focus-visible,.ans:focus-visible,.btn:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
 /* timeline progress */
@@ -104,6 +107,12 @@ h1 span{color:var(--brass)}
       <button class="chip" id="m-what" data-mode="what">Guess the event</button>
       <button class="chip" id="m-mix" data-mode="mix">Mixed</button>
     </div>
+    <div class="row" role="group" aria-label="Difficulty">
+      <span class="label">Level</span>
+      <button class="chip" id="l-1" data-level="1">Easy</button>
+      <button class="chip" id="l-2" data-level="2">Medium</button>
+      <button class="chip" id="l-3" data-level="3">Hard</button>
+    </div>
     <div class="row" role="group" aria-label="Period">
       <span class="label">Period</span>
       <button class="chip" id="e-all" data-era="all">All</button>
@@ -128,6 +137,7 @@ h1 span{color:var(--brass)}
 
   <div class="rail" id="rail" aria-hidden="true"></div>
   <main class="card" id="card" aria-live="polite"></main>
+  <footer class="credit">Easy uses 585 hand-picked events. Medium and Hard add events from Wikipedia's <a href="https://en.wikipedia.org/wiki/Wikipedia:Selected_anniversaries" target="_blank" rel="noopener">On this day</a> archive and year pages, used under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>.</footer>
 </div>
 
 <script>
@@ -717,7 +727,9 @@ const EVENTS = [
 [2022, "p", "Queen Elizabeth II dies", "Charles III became king."],
 [2022, "s", "ChatGPT is released", "It brought AI chatbots into wide use."],
 [2023, "a", "Australians vote no in the Indigenous Voice referendum", "It failed in every state."]
-].map(([y,t,e,n])=>({y,t,e,n}));
+].map(([y,t,e,n])=>({y,t,e,n,d:"",lv:1}));
+let ALL = EVENTS;
+const LEVEL_NAME = {1:"Easy",2:"Medium",3:"Hard"};
 const TOPIC = {all:"All topics", w:"Wars", p:"Politics", s:"Science & invention", x:"Exploration", c:"Culture & religion", d:"Disasters", a:"Australia"};
 
 const ERA = {
@@ -731,13 +743,19 @@ const ROUND = 10;
 const fmt = y => y<0 ? `${-y} BC` : (y<1000 ? `AD ${y}` : `${y}`);
 const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
 
-let S = {mode:"mix", era:"all", topic:"all", len:10, qs:[], i:0, score:0, streak:0, results:[], answered:false};
+let S = {mode:"mix", era:"all", topic:"all", level:2, loaded:false, len:10, qs:[], i:0, score:0, streak:0, results:[], answered:false};
 const $ = id => document.getElementById(id);
 const store = { get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}} };
 
-function bestKey(){return `yby-best-${S.mode}-${S.era}-${S.topic}`}
+function bestKey(){return `yby-best-${S.mode}-${S.era}-${S.topic}-${S.level}`}
 function showBest(){const b=store.get(bestKey()); $("best").textContent = b===null ? "–" : (b.includes("/")?b:`${b}/10`);}
 
+const THIS_YEAR = new Date().getFullYear();
+function levelPool(){return ALL.filter(e=>e.lv<=S.level);}
+function fact(ev){
+  if(ev.n) return ev.n;
+  return (ev.d ? `This happened on ${ev.d} ${fmt(ev.y)}.` : `This happened in ${fmt(ev.y)}.`) + " Source: Wikipedia.";
+}
 function yearOptions(y){
   const spread = y<0?120 : y<1000?60 : y<1800?30 : y<1900?12 : 8;
   const set = new Set([y]);
@@ -745,25 +763,31 @@ function yearOptions(y){
   while(set.size<4 && guard++<200){
     let d = Math.ceil(Math.random()*spread) * (Math.random()<.5?-1:1);
     const c = y+d;
-    if(c===0 || c>2026) continue;
+    if(c===0 || c>THIS_YEAR) continue;
     if((y<0)!==(c<0) && Math.abs(y)<spread) { /* allow crossing BC/AD only rarely */ if(Math.random()<.7) continue; }
     set.add(c);
   }
   return shuffle([...set]);
 }
 function eventOptions(ev, pool){
-  const others = shuffle(EVENTS.filter(x=>x.y!==ev.y));
+  const others = shuffle(levelPool().filter(x=>x.y!==ev.y));
   // prefer distractors from the same period so the choice isn't obvious
-  const near = others.filter(x=>Math.abs(x.y-ev.y) < (ev.y<1000?800:ev.y<1800?300:80));
+  const win = ev.y<0?300 : ev.y<1000?250 : ev.y<1800?100 : ev.y<1900?30 : 20;
+  const near = others.filter(x=>Math.abs(x.y-ev.y) < win);
   const picks = [];
   for(const x of [...near, ...others]){ if(!picks.includes(x) && !picks.some(p=>p.y===x.y)) picks.push(x); if(picks.length===3) break; }
   return shuffle([ev, ...picks]);
 }
 
-function filtered(){return EVENTS.filter(e=>ERA[S.era](e.y) && (S.topic==="all" || e.t===S.topic));}
+function filtered(){return ALL.filter(e=>e.lv<=S.level && ERA[S.era](e.y) && (S.topic==="all" || e.t===S.topic));}
 function newRound(){
+  if(S.level>1 && !S.loaded){
+    $("rail").innerHTML=""; $("count").textContent="";
+    $("card").innerHTML=`<p class="kicker">Loading</p><p class="era">Loading thousands of events…</p>`;
+    return;
+  }
   const all = filtered();
-  $("count").textContent = `${all.length} event${all.length===1?"":"s"} in this selection · ${EVENTS.length} in total`;
+  $("count").textContent = `${all.length.toLocaleString()} event${all.length===1?"":"s"} in this selection · ${levelPool().length.toLocaleString()} at ${LEVEL_NAME[S.level]}`;
   S.i=0; S.score=0; S.streak=0; S.results=[]; S.answered=false;
   $("score").textContent=0; $("streak").textContent=0; showBest();
   if(all.length<4){
@@ -771,7 +795,9 @@ function newRound(){
     $("card").innerHTML=`<p class="kicker">Not enough events</p><p class="era">Only ${all.length} event${all.length===1?"":"s"} match this period and topic. Pick a wider period or another topic.</p>`;
     return;
   }
-  const pool = shuffle(all.slice()).slice(0,ROUND);
+  // one event per year in a round, so two versions of the same event never meet
+  const pool = [], years = new Set();
+  for(const e of shuffle(all.slice())){ if(years.has(e.y)) continue; years.add(e.y); pool.push(e); if(pool.length===ROUND) break; }
   S.len = pool.length;
   S.qs = pool.map(ev=>{
     const type = S.mode==="mix" ? (Math.random()<.5?"when":"what") : S.mode;
@@ -831,7 +857,7 @@ function answer(o,btn,grid){
   else if(q.type==="when") s.textContent = `It was ${fmt(q.ev.y)}, ${Math.abs(o-q.ev.y)} years ${o<q.ev.y?"later":"earlier"} than your guess`;
   else s.textContent = `In ${fmt(q.ev.y)}: ${q.ev.e}`;
   const p=document.createElement("p");
-  p.textContent = (q.type==="what" && ok) ? q.ev.n : (q.type==="when" ? q.ev.n : `${q.ev.n} (Your pick happened in ${fmt(o.y)}.)`);
+  p.textContent = (q.type==="what" && !ok) ? `${fact(q.ev)} Your pick happened in ${fmt(o.y)}.` : fact(q.ev);
   const nx=document.createElement("button"); nx.className="btn"; nx.id="next";
   nx.textContent = S.i+1<S.len ? "Next question" : "See results";
   nx.addEventListener("click",next);
@@ -881,13 +907,25 @@ document.querySelectorAll("[data-mode]").forEach(b=>b.addEventListener("click",(
 document.querySelectorAll("[data-era]").forEach(b=>b.addEventListener("click",()=>{S.era=b.dataset.era;setPressed("era",S.era);store.set("yby-era",S.era);newRound();}));
 
 document.querySelectorAll("[data-topic]").forEach(b=>b.addEventListener("click",()=>{S.topic=b.dataset.topic;setPressed("topic",S.topic);store.set("yby-topic",S.topic);newRound();}));
+document.querySelectorAll("[data-level]").forEach(b=>b.addEventListener("click",()=>{S.level=Number(b.dataset.level);setPressed("level",String(S.level));store.set("yby-level",S.level);newRound();}));
+S.level = Number(store.get("yby-level") || 2);
+if(!LEVEL_NAME[S.level]) S.level=2;
 S.mode = store.get("yby-mode") || "mix";
 S.topic = store.get("yby-topic") || "all";
 if(!TOPIC[S.topic]) S.topic="all";
 S.era = store.get("yby-era") || "all";
 if(!ERA[S.era]) S.era="all";
-setPressed("mode",S.mode); setPressed("era",S.era); setPressed("topic",S.topic);
+setPressed("mode",S.mode); setPressed("era",S.era); setPressed("topic",S.topic); setPressed("level",String(S.level));
 newRound();
+fetch("history-events.json").then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); }).then(rows=>{
+  ALL = EVENTS.concat(rows.map(([y,t,e,d,lv])=>({y,t,e,n:"",d,lv})));
+  S.loaded = true;
+  if(S.level>1) newRound();
+}).catch(()=>{
+  S.loaded = true;
+  document.querySelectorAll("[data-level]").forEach(b=>{ if(b.dataset.level!=="1") b.disabled=true; });
+  if(S.level>1){ S.level=1; setPressed("level","1"); newRound(); $("count").textContent += " · Medium and Hard need a connection to load"; }
+});
 </script>
 </body>
 </html>
