@@ -710,6 +710,7 @@ function nbColours(){                                                           
   _nbKey=key; _nbSet=p==="ONE"?ALT.map(i=>scaleHex(ONE_COL,STEPS[i])):p==="CALM"?ALT.map(i=>scaleHex(PAL.tones[1],STEPS[i])):settings.cb?NB_COLS_CB:NB_COLS;
   return _nbSet; }
 function borderlessColour(k){
+  return nbColours()[0];                                                                // one flat colour: no outlines and no colour hints, so you have to know the map
   const w=k.world||world; if(!w) return nbColours()[k.hv%6];
   if(!w._nbCol||w._nbColN!==w.countries.length){ const nb=w.neighbors(), col=new Map();
     const order=[...w.countries].sort((a,b)=>((nb.get(b.iso)||{size:0}).size)-((nb.get(a.iso)||{size:0}).size));
@@ -1546,12 +1547,12 @@ class MapView {
       if(settings.grid){ c.strokeStyle=PAL.grid; c.lineWidth=.8/s; c.stroke(PROJ.grid); }
       c.strokeStyle=PAL.border; c.lineWidth=1.1/s; c.lineJoin="round";
       for(const k of this.world.countries){ if(this.marks[k.iso]||(solo&&k.iso!==solo)||!vis(k)) continue;
-        c.fillStyle=this.done[k.iso]?PAL.done:toneOf(k,sel,nb); c.fill(k.path,"evenodd"); if(!nb) c.stroke(k.edge); }
+        c.fillStyle=this.done[k.iso]?PAL.done:toneOf(k,sel,nb); c.fill(k.path,"evenodd"); if(nb){ c.strokeStyle=c.fillStyle; c.stroke(k.path); c.strokeStyle=PAL.border; } else c.stroke(k.edge); }
       for(const k of this.world.countries){ if(solo||this.done[k.iso]!=="bad"||this.marks[k.iso]||!vis(k)) continue;   // eliminated but missed: grey with a red edge
         c.strokeStyle=PAL.bad; c.lineWidth=1.8/s; c.stroke(k.edge); }
       c.strokeStyle=PAL.border; c.lineWidth=1.1/s;
       for(const k of this.world.countries){ const col=this.marks[k.iso]; if(!col||(solo&&k.iso!==solo)||!vis(k)) continue;
-        c.fillStyle=col; c.fill(k.path,"evenodd"); if(!nb) c.stroke(k.edge); }
+        c.fillStyle=col; c.fill(k.path,"evenodd"); if(nb){ c.strokeStyle=c.fillStyle; c.stroke(k.path); c.strokeStyle=PAL.border; } else c.stroke(k.edge); }
       if(settings.tiny&&!solo){                                               // dots for countries too small to see
         for(const k of this.world.countries){ if(!k.valid||!this.world.quizSet.has(k)||!vis(k)) continue;
           const b=k.main; if(Math.max(b.r-b.l,b.b-b.t)*s>=8) continue;
@@ -1605,9 +1606,9 @@ class MapView {
       const P=new Path2D(); let any=false; for(const poly of k.polys) for(const ring of poly.g3) any=this.ringPath(P,ring,B,R,cx,cy)||any;
       if(any){ paths.set(k,P); info.push([k,sx,sy,cz]); } }
     for(const [k,P] of paths){ if(this.marks[k.iso]||(solo&&k.iso!==solo)) continue;
-      c.fillStyle=this.done[k.iso]?PAL.done:toneOf(k,sel,nb); c.fill(P,"evenodd"); if(!nb) c.stroke(P); }
+      c.fillStyle=this.done[k.iso]?PAL.done:toneOf(k,sel,nb); c.fill(P,"evenodd"); if(nb){ c.strokeStyle=c.fillStyle; c.stroke(P); c.strokeStyle=PAL.border; } else c.stroke(P); }
     if(!solo){ c.lineWidth=1.8; c.strokeStyle=PAL.bad; for(const [k,P] of paths) if(this.done[k.iso]==="bad"&&!this.marks[k.iso]) c.stroke(P); c.lineWidth=1; c.strokeStyle=PAL.border; }
-    for(const [k,P] of paths){ const col=this.marks[k.iso]; if(!col||(solo&&k.iso!==solo)) continue; c.fillStyle=col; c.fill(P,"evenodd"); if(!nb) c.stroke(P); }
+    for(const [k,P] of paths){ const col=this.marks[k.iso]; if(!col||(solo&&k.iso!==solo)) continue; c.fillStyle=col; c.fill(P,"evenodd"); if(nb){ c.strokeStyle=c.fillStyle; c.stroke(P); c.strokeStyle=PAL.border; } else c.stroke(P); }
     const shade=c.createRadialGradient(cx-R*.3,cy-R*.35,R*.2,cx,cy,R*1.01);          // a little shading so it reads as a ball
     shade.addColorStop(0,"rgba(255,255,255,.08)"); shade.addColorStop(.6,"rgba(0,0,0,0)"); shade.addColorStop(1,"rgba(0,0,0,.32)");
     c.beginPath(); c.arc(cx,cy,R,0,6.2832); c.fillStyle=shade; c.fill();
@@ -2484,7 +2485,7 @@ function renderSheet(){
     const tog=(attr,on,name,desc)=>`<button class="toggle" ${attr}="1" role="switch" aria-checked="${on}" style="margin-top:8px;background:var(--panel-hi)"><div><b>${name}</b><small>${desc}</small></div><span class="sw"></span></button>`;
     html=MODE_GROUPS.map(([g0,ks0])=>[g0,ks0.filter(inPack)]).filter(([,ks])=>ks.length).map(([g0,ks])=>`<p class="grp cat-${CAT_OF[g0]}">${g0}</p><div class="tiles">${ks.map(tile).join("")}</div>`).join("")+
       `<p class="grp cat-learn">Learn</p><div class="tiles"><button class="tile wide" data-gostudy="1"><span class="ti chipic cat-learn">${ico("book",19)}</span><div><b>Study mode</b><small>Flashcards with the map, then quiz yourself</small></div></button></div>`+
-      `<p class="grp">Round options</p>`+tog("data-smart",smart,"Smart review","Countries you struggle with come up more often.")+tog("data-elim",elim,"Eliminate","Answered countries turn grey on the map, so you can see what's left.")+tog("data-nobord",borderless,"No borders","Hides every outline, so you tell neighbours apart by colour alone. Best with Eliminate.")+(pack!=="WORLD"?"":tog("data-terr",territories,"Territories",`Adds Greenland, Puerto Rico, Hong Kong and other places that aren't sovereign states${world?" ("+(world.quizAll.length-world.quizSov.length)+" more)":""}.`)); }
+      `<p class="grp">Round options</p>`+tog("data-smart",smart,"Smart review","Countries you struggle with come up more often.")+tog("data-elim",elim,"Eliminate","Answered countries turn grey on the map, so you can see what's left.")+tog("data-nobord",borderless,"No borders","Hides every outline and paints the whole map one colour, so nothing gives the borders away. Best with Eliminate.")+(pack!=="WORLD"?"":tog("data-terr",territories,"Territories",`Adds Greenland, Puerto Rico, Hong Kong and other places that aren't sovereign states${world?" ("+(world.quizAll.length-world.quizSov.length)+" more)":""}.`)); }
   else if(sheetKind==="region"){ title=curMode==="CONT"?"Region":"Countries";
     const tl=themeList(), pick1=g=>tl.filter(x=>x.group===g);
     const tiles=pick1("fixed").map(x=>`<button class="tile ${theme===x.id?"sel":""}" data-tsel="${x.id}"><span class="ti chipic cat-quiz">${ico(x.icon,19)}</span><div class="tt"><b>${x.label}</b><small>${x.members.length} ${UNITS()}</small></div></button>`).join("");
