@@ -255,7 +255,7 @@ button:focus:not(:focus-visible){outline:none}
 #ymZoom{position:absolute;top:8px;right:8px;width:40px;height:40px;border-radius:12px;background:var(--panel);font-size:20px}
 #zoomOut{position:absolute;top:8px;right:8px;width:40px;height:40px;border-radius:12px;
   background:var(--panel);font-size:20px}
-.panel{background:var(--panel);border-radius:20px 20px 0 0;padding:8px 16px;
+.panel{position:relative;background:var(--panel);border-radius:20px 20px 0 0;padding:8px 16px;
   display:flex;flex-direction:column;margin-bottom:0;padding-bottom:calc(10px + env(safe-area-inset-bottom));
   height:calc(206px + env(safe-area-inset-bottom));overflow:hidden}
 #prompt{height:50px;display:flex;align-items:center;font-family:var(--serif);font-weight:700;
@@ -280,6 +280,9 @@ button:focus:not(:focus-visible){outline:none}
 #pauseOv>div{text-align:center;display:grid;gap:12px;justify-items:center}
 #pauseOv h3{margin:0;font-family:var(--serif);font-size:30px}#pauseOv p{margin:0;color:var(--dim)}
 #pauseOv .nx{position:relative;background:var(--amber);color:var(--on-accent);font-weight:700;padding:12px 34px;border-radius:999px;font-size:16px}
+#skipBtn{position:absolute;top:8px;right:12px;width:30px;height:26px;border-radius:999px;background:var(--panel-hi);color:var(--dim);display:grid;place-items:center;font-size:0;z-index:2}
+#skipBtn.hidden{display:none}#skipBtn:disabled{opacity:.35}
+.panel #prompt{padding-right:38px}
 .sk:disabled{opacity:.4}
 .sk{background:var(--panel-hi);color:var(--dim);font-weight:600;padding:6px 14px;border-radius:999px;font-size:13px;margin-left:8px}
 #status .sk{padding:6px 14px}
@@ -609,7 +612,7 @@ h1{font-size:40px}
   </header>
   <div class="mapwrap"><div class="tbarwrap hidden" id="tbarwrap"><div id="tbar"></div></div><canvas id="gameMap"></canvas><button id="zoomOut" aria-label="Zoom out to world" data-ico="expand" data-size="19"></button></div>
   <div id="pauseOv" class="hidden"><div><h3>Paused</h3><p>The clock is stopped and the map is hidden.</p><button id="resumeBtn" class="nx">Resume</button><button id="pauseQuit" class="sk">Quit round</button></div></div>
-  <div class="panel"><div id="prompt"></div><div id="status"></div><div id="choices"></div><div id="hint"></div></div>
+  <div class="panel"><button id="skipBtn" class="hidden" aria-label="Skip this question" title="Skip (comes back later)" data-ico="skip" data-size="16"></button><div id="prompt"></div><div id="status"></div><div id="choices"></div><div id="hint"></div></div>
 </section>
 
 <section id="study" class="screen hidden">
@@ -1210,6 +1213,7 @@ const DIFFS = {EASY:["Easy","Well known",50,.4], MEDIUM:["Medium","Most places",
 const $ = id => document.getElementById(id);
 /* ---- icons: one small set of line icons instead of emoji ---- */
 const ICONS={
+  skip:'<path d="M5 6l8 6-8 6z" fill="currentColor"/><path d="M12 6l8 6-8 6z" fill="currentColor"/>',
   pause:'<rect x="7" y="5" width="3.6" height="14" rx="1" fill="currentColor"/><rect x="13.4" y="5" width="3.6" height="14" rx="1" fill="currentColor"/>',
   play:'<path d="M8 5v14l11-7z" fill="currentColor"/>',
   book:'<path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5z"/><path d="M12 6.5v13"/>',
@@ -2757,7 +2761,8 @@ function renderPlay(){
   else if(g.locked&&q.kind==="PATH"){ txt=`✕ ${q.steps&&q.steps>q.par+3?"Too far. ":""}Shortest: ${q.answer}`; col="var(--amber)"; }
   else if(g.locked){ txt="✕ "+(g.timedOut?"Time's up. ":"")+`It was ${q.answer}`+(g.maxLives?(g.lives>0?` · ${g.lives} li${g.lives===1?"fe":"ves"} left`:" · no lives left"):""); col="var(--amber)"; }
   else if(g.attempts===1){ txt="✕ Not quite. One more try."; col="var(--bad)"; }
-  $("status").innerHTML=`<span style="color:${col}">${esc(txt)}</span>`+(g.locked&&!g.sprint?`<button id="nextBtn" class="nx">${last?"See results":"Next"}</button>`:q.kind==="PATH"&&!g.locked?`<button id="giveUp" class="nx">Give up</button>`:"")+(!g.locked&&(g.endless||g.i+1<g.qs.length)?`<button id="skipBtn" class="sk"${(g.skipLeft??1)>0?"":" disabled"}>Skip</button>`:"");
+  $("status").innerHTML=`<span style="color:${col}">${esc(txt)}</span>`+(g.locked&&!g.sprint?`<button id="nextBtn" class="nx">${last?"See results":"Next"}</button>`:q.kind==="PATH"&&!g.locked?`<button id="giveUp" class="nx">Give up</button>`:"");
+  { const sb=$("skipBtn"); sb.classList.toggle("hidden",!(!g.locked&&(g.endless||g.i+1<g.qs.length))); sb.disabled=(g.skipLeft??1)<1; }
   document.querySelector(".panel").classList.toggle("slim",!q.choices.length&&q.kind==="FIND"&&!q.lm&&!q.lake&&!q.peak);
   $("choices").classList.toggle("c6",!g.locked&&q.choices.length===6);
   $("choices").innerHTML=g.locked ? (g.sprint?"":(q.kind==="BIGGER"?numCard(q):q.lm?landmarkCard(q):q.peak?peakCard(q):q.river?riverCard(q):q.lake?lakeCard(q):q.kind==="PATH"?pathCard(q):countryCard(q.target))+neighbourNote(q)) :
@@ -2988,7 +2993,7 @@ function init(w){
 
 $("terrBtn").addEventListener("click",()=>{ territories=!territories; store.setRaw("meridian_terr",territories?"1":"0"); world.setTerritories(territories); renderHome(); renderSettings(); });
 $("choices").addEventListener("click",e=>{ const b=e.target.closest("button[data-i]"); if(b&&game) answerChoice(game.qs[game.i].choices[+b.dataset.i]); });
-$("status").addEventListener("click",e=>{ if(e.target.id==="nextBtn") nextQuestion(); else if(e.target.id==="skipBtn") skipQuestion(); else if(e.target.id==="giveUp"&&game&&!game.locked){ const q=game.qs[game.i]; q.steps=q.chain.length-1; lock(false,0,q,null,0); } });
+$("status").addEventListener("click",e=>{ if(e.target.id==="nextBtn") nextQuestion(); else if(e.target.id==="giveUp"&&game&&!game.locked){ const q=game.qs[game.i]; q.steps=q.chain.length-1; lock(false,0,q,null,0); } });
 $("play").addEventListener("click",e=>{ if(e.target.closest("button,a,input,.toggle,#gameMap,.tbarwrap")) return; tapAdvance(); });   // the answer card and empty space also continue
 function quitRound(){ stopTimer(); gameId++; game=null; gameMap.dull=false; gameMap.setPulses([]); show("home"); }
 $("quit").addEventListener("click",()=>{ const g=game; if(g&&g.results.length&&$("result").classList.contains("hidden")) openSheet("leave"); else quitRound(); });
@@ -3021,7 +3026,7 @@ document.addEventListener("keydown",e=>{
   if(/^[1-6]$/.test(e.key)&&!game.locked){ const b=$("choices").querySelectorAll("button")[+e.key-1]; if(b){ e.preventDefault(); b.click(); } }
   else if(game.locked&&!game.sprint&&(e.key==="Enter"||e.key===" "||e.key==="ArrowRight")){ e.preventDefault(); if(performance.now()-(game.lockedAt||0)>80) nextQuestion(); }
 });
-$("pauseBtn").addEventListener("click",pauseGame); $("resumeBtn").addEventListener("click",resumeGame); $("pauseQuit").addEventListener("click",()=>{ resumeGame(); $("quit").click(); });
+$("skipBtn").addEventListener("click",skipQuestion); $("pauseBtn").addEventListener("click",pauseGame); $("resumeBtn").addEventListener("click",resumeGame); $("pauseQuit").addEventListener("click",()=>{ resumeGame(); $("quit").click(); });
 $("sumBtn").addEventListener("click",()=>showTab("settings"));
 $("tabs").addEventListener("click",e=>{ const b=e.target.closest("button[data-tab]"); if(b) showTab(b.dataset.tab); });
 $("weeklyBtn").addEventListener("click",()=>{ const W=weeklyTheme(); if(W) startTheme(W.id); });
