@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Rungs: a word ladder game. Change one letter at a time to climb from word to word.">
+<meta name="theme-color" content="#e9eef3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111921" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rungs">
+<meta property="og:title" content="Rungs">
+<meta property="og:description" content="Change one letter at a time to climb from word to word. New daily ladder every day.">
+<title>Rungs Word Ladder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one-screen app with stacked screens (home, levels, game). The game is a ladder: two rails, each word a rung. Keyboard pinned to the bottom. */
+:root{
+  --bg:#e9eef3; --panel:#f7f9fb; --panel-2:#dfe6ed; --ink:#17212b; --muted:#5d6b78; --rail:#b9c5d0;
+  --tile:#ffffff; --tile-edge:#c9d3dc; --accent:#e0a526; --accent-ink:#2a1d00;
+  --match:#2f8f6b; --match-ink:#ffffff; --bad:#c2453b; --key:#d7dfe6; --key-ink:#17212b; --scrim:rgba(233,238,243,.72);
+  --display:"Bricolage Grotesque", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --tile-size:clamp(46px, 13vw, 56px);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111921; --panel:#18232d; --panel-2:#22303c; --ink:#e8eef3; --muted:#93a3b1; --rail:#33424f;
+  --tile:#1f2c38; --tile-edge:#34465a; --accent:#f0b83a; --accent-ink:#2a1d00;
+  --match:#3fae86; --match-ink:#08140f; --bad:#ef6a5f; --key:#2a3946; --key-ink:#e8eef3; --scrim:rgba(17,25,33,.72); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111921; --panel:#18232d; --panel-2:#22303c; --ink:#e8eef3; --muted:#93a3b1; --rail:#33424f;
+  --tile:#1f2c38; --tile-edge:#34465a; --accent:#f0b83a; --accent-ink:#2a1d00;
+  --match:#3fae86; --match-ink:#08140f; --bad:#ef6a5f; --key:#2a3946; --key-ink:#e8eef3; --scrim:rgba(17,25,33,.72); color-scheme:dark}
+[hidden]{display:none!important}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+button{font:inherit;color:inherit}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.screen{height:100%;display:flex;flex-direction:column;max-width:480px;margin:0 auto;padding-inline:16px;box-sizing:border-box}
+
+/* ---------- shared bits ---------- */
+.topbar{display:flex;align-items:center;gap:10px;padding-block:12px 6px}
+.topbar .grow{flex:1;min-width:0}
+.ibtn{border:1px solid var(--tile-edge);background:var(--panel);color:var(--ink);border-radius:10px;height:38px;min-width:38px;padding:0 12px;font:700 .84rem var(--body);cursor:pointer}
+.ibtn:disabled{opacity:.4;cursor:default}
+.ibtn.back{padding:0;font-size:1.15rem}
+.eyebrow{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-variant-numeric:tabular-nums}
+.h2{font-family:var(--display);font-weight:800;font-size:1.25rem;margin:0;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stars{letter-spacing:.08em;color:var(--accent);font-size:.95rem}
+.stars .off{color:var(--rail)}
+
+/* ---------- home ---------- */
+#home{overflow-y:auto}
+.hero{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:22px 18px}
+.hero h1{font-family:var(--display);font-weight:800;font-size:clamp(2.6rem,12vw,3.4rem);letter-spacing:-.035em;margin:0;line-height:.9}
+.hero p{margin:10px 0 0;color:var(--muted);line-height:1.4;max-width:22ch}
+.mini{position:relative;display:flex;flex-direction:column;gap:5px;padding:0 12px;flex:none}
+.mini::before,.mini::after{content:"";position:absolute;top:-6px;bottom:-6px;width:4px;border-radius:2px;background:var(--rail)}
+.mini::before{left:0}.mini::after{right:0}
+.mini .r{display:flex;gap:3px}
+.mini span{width:20px;height:20px;display:grid;place-items:center;border-radius:5px;background:var(--tile);border:1px solid var(--tile-edge);font:800 .7rem var(--display);text-transform:uppercase}
+.mini span.c{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.mini .r:last-child span{background:var(--match);border-color:var(--match);color:var(--match-ink)}
+.modes{display:flex;flex-direction:column;gap:12px}
+.mode{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--panel);border:1px solid var(--tile-edge);border-radius:16px;padding:16px;cursor:pointer;transition:transform .12s}
+.mode:active{transform:scale(.985)}
+.mode .txt{flex:1;min-width:0}
+.mode b{display:block;font-family:var(--display);font-size:1.2rem;font-weight:800}
+.mode small{display:block;color:var(--muted);margin-top:3px;font-size:.88rem;line-height:1.35}
+.mode .go{flex:none;font:800 .85rem var(--display);padding:8px 14px;border-radius:999px;background:var(--panel-2)}
+.mode.daily{border:2px solid var(--accent)}
+.mode.daily .go{background:var(--accent);color:var(--accent-ink)}
+.mode .go.ok{background:var(--match);color:var(--match-ink)}
+.chips{display:flex;gap:6px;margin-top:10px}
+.chip{border:1px solid var(--tile-edge);background:var(--bg);border-radius:999px;padding:6px 12px;font:700 .8rem var(--body);cursor:pointer}
+.chip.sel{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.settings{margin-top:14px;display:flex;flex-direction:column;gap:2px}
+.toggle{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;padding:12px 4px;cursor:pointer;border-bottom:1px solid var(--tile-edge)}
+.toggle .txt{flex:1}.toggle b{display:block;font-size:.98rem}.toggle small{color:var(--muted);font-size:.82rem}
+.sw{flex:none;width:44px;height:26px;border-radius:13px;background:var(--rail);position:relative;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle[aria-checked="true"] .sw{background:var(--match)}
+.toggle[aria-checked="true"] .sw::after{transform:translateX(18px)}
+.links{display:flex;gap:10px;padding-block:16px calc(20px + env(safe-area-inset-bottom,0px))}
+.links .ibtn{flex:1;height:44px}
+
+/* ---------- levels ---------- */
+#levels{overflow:hidden}
+.lv-grid{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding-block:8px calc(20px + env(safe-area-inset-bottom,0px));align-content:start}
+.lv{aspect-ratio:1;max-width:100%;border:1px solid var(--tile-edge);background:var(--panel);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;padding:4px}
+.lv b{font:800 1.25rem var(--display);font-variant-numeric:tabular-nums}
+.lv .stars{font-size:.7rem}
+.lv.next{border:2px solid var(--accent)}
+.lv:disabled{opacity:.38;cursor:default}
+.lv-band{grid-column:1/-1;font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding-top:8px}
+
+/* ---------- game ---------- */
+.status{display:flex;justify-content:space-between;align-items:baseline;font-size:.9rem;color:var(--muted);padding-block:2px 6px;font-variant-numeric:tabular-nums}
+.status b{color:var(--ink)}
+.ladder-wrap{flex:1;min-height:0;overflow-y:auto;position:relative;scroll-behavior:smooth}
+.ladder{--n:4;position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;padding-block:8px 16px;min-height:100%;box-sizing:border-box}
+.ladder::before,.ladder::after{content:"";position:absolute;top:0;bottom:0;width:5px;border-radius:3px;background:var(--rail)}
+.ladder::before{left:calc(50% - (var(--tile-size)*var(--n)/2 + 3px*(var(--n) - 1) + 26px))}
+.ladder::after{right:calc(50% - (var(--tile-size)*var(--n)/2 + 3px*(var(--n) - 1) + 26px))}
+.row{position:relative;display:flex;gap:6px;z-index:1}
+.row::before{content:"";position:absolute;left:-28px;right:-28px;top:50%;height:3px;background:var(--rail);z-index:-1}
+.tile{width:var(--tile-size);height:var(--tile-size);display:grid;place-items:center;background:var(--tile);border:2px solid var(--tile-edge);border-radius:10px;font:800 1.55rem var(--display);text-transform:uppercase;color:var(--ink);box-sizing:border-box;transition:transform .15s, background .2s, border-color .2s;padding:0}
+.row.done .tile{border-color:transparent;box-shadow:0 1px 0 var(--tile-edge)}
+.tile.on{background:var(--match);border-color:var(--match);color:var(--match-ink)}
+.tile.changed{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.row.goal .tile{background:transparent;border-style:dashed;color:var(--muted)}
+.row.goal .tile.on{background:var(--match);border:2px solid var(--match);color:var(--match-ink)}
+.row.cur .tile{cursor:pointer;border-color:var(--ink)}
+.row.cur .tile.sel{transform:translateY(-4px);border-color:var(--accent);box-shadow:0 0 0 3px var(--accent)}
+.row.ghost .tile{background:transparent;border:2px dashed var(--accent);color:var(--accent)}
+.gap{color:var(--muted);font-size:.8rem;letter-spacing:.05em;z-index:1;background:var(--bg);padding:2px 8px}
+.shake{animation:shake .32s}
+@keyframes shake{20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+.pop{animation:pop .25s}
+@keyframes pop{50%{transform:scale(1.12)}}
+.hint-line{font-size:.84rem;color:var(--muted);text-align:center;min-height:1.25em;padding-block:2px}
+.kb{display:flex;flex-direction:column;gap:7px;padding-block:8px calc(12px + env(safe-area-inset-bottom,0px))}
+.kr{display:flex;gap:5px;justify-content:center}
+.key{flex:1;max-width:42px;height:50px;border:0;border-radius:8px;background:var(--key);color:var(--key-ink);font:700 1.05rem var(--display);text-transform:uppercase;cursor:pointer;touch-action:manipulation;transition:transform .08s;padding:0}
+.key:active{transform:scale(.92)}
+.key.wide{max-width:none;flex:1.5;font:700 .95rem var(--body)}
+
+/* ---------- overlays ---------- */
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 64px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-weight:700;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .2s;z-index:30;max-width:calc(100% - 32px);text-align:center}
+.toast.show{opacity:1}
+.modal{position:fixed;inset:0;display:grid;place-items:center;background:var(--scrim);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);z-index:20;padding:16px;overflow-y:auto}
+.card{background:var(--panel);border:1px solid var(--tile-edge);border-radius:18px;padding:22px 20px;max-width:360px;width:100%;box-sizing:border-box;box-shadow:0 20px 50px rgba(0,0,0,.18);animation:pop .3s}
+.card h2{font-family:var(--display);font-size:1.6rem;margin:0 0 4px;text-wrap:balance;text-align:center}
+.card .stars{display:block;text-align:center;font-size:1.6rem;margin-bottom:12px}
+.card p{color:var(--muted);margin:0 0 14px;line-height:1.45}
+.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;text-align:center}
+.nums div{background:var(--bg);border-radius:10px;padding:8px 4px}
+.nums b{display:block;font:800 1.3rem var(--display);font-variant-numeric:tabular-nums}
+.nums span{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.route{margin-bottom:12px}
+.route .eyebrow{margin-bottom:4px}
+.route div:last-child{font:700 .92rem var(--display);letter-spacing:.05em;text-transform:uppercase;line-height:1.55;overflow-wrap:anywhere}
+.big{display:block;width:100%;border:0;border-radius:12px;background:var(--accent);color:var(--accent-ink);font:800 1rem var(--display);padding:13px 22px;cursor:pointer}
+.row-btns{display:flex;gap:8px;margin-top:8px}
+.row-btns button{flex:1;border:1px solid var(--tile-edge);background:var(--bg);border-radius:12px;padding:11px 8px;font:700 .9rem var(--body);cursor:pointer}
+.share-fallback{width:100%;box-sizing:border-box;margin-top:8px;font:.85rem/1.4 ui-monospace,Menlo,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--tile-edge);border-radius:8px;padding:8px;resize:none}
+.how ol{margin:0 0 14px;padding-left:1.2em;line-height:1.5}
+.how li{margin-bottom:6px}
+.how .ex{display:flex;flex-direction:column;align-items:center;gap:4px;margin:4px 0 16px}
+.how .ex .r{display:flex;gap:3px}
+.how .ex span{width:26px;height:26px;display:grid;place-items:center;border-radius:6px;background:var(--tile);border:1px solid var(--tile-edge);font:800 .85rem var(--display);text-transform:uppercase}
+.how .ex span.c{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.how .ex .r:last-child span{background:var(--match);border-color:var(--match);color:var(--match-ink)}
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+.stat-grid div{background:var(--bg);border-radius:10px;padding:10px}
+.stat-grid b{display:block;font:800 1.5rem var(--display);font-variant-numeric:tabular-nums}
+.stat-grid span{font-size:.78rem;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@media (max-height:660px){:root{--tile-size:44px}.key{height:44px}.hero{padding-block:14px 12px}}
+</style>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;height:100%}</style>
+</head>
+<body>
+
+
+<!-- HOME -->
+<section class="screen" id="home">
+  <div class="hero">
+    <div>
+      <h1>Rungs</h1>
+      <p>Change one letter at a time to climb from word to word.</p>
+    </div>
+    <div class="mini" aria-hidden="true">
+      <div class="r"><span>c</span><span>o</span><span>l</span><span>d</span></div>
+      <div class="r"><span>c</span><span>o</span><span class="c">r</span><span>d</span></div>
+      <div class="r"><span class="c">w</span><span>o</span><span>r</span><span>d</span></div>
+      <div class="r"><span>w</span><span class="c">a</span><span>r</span><span>d</span></div>
+      <div class="r"><span>w</span><span>a</span><span>r</span><span>m</span></div>
+    </div>
+  </div>
+  <div class="modes">
+    <button class="mode daily" id="goDaily" type="button">
+      <div class="txt"><b>Daily Climb</b><small id="dailySub">A new four-letter ladder every day</small></div>
+      <span class="go" id="dailyGo">Play</span>
+    </button>
+    <button class="mode" id="goLevels" type="button">
+      <div class="txt"><b>Levels</b><small id="levelsSub">48 hand-picked ladders, from easy to tricky</small></div>
+      <span class="go">Open</span>
+    </button>
+    <div class="mode" id="endlessCard" role="group" aria-label="Endless">
+      <div class="txt"><b>Endless</b><small id="endlessSub">Random ladders, one after another</small>
+        <div class="chips" role="radiogroup" aria-label="Word length">
+          <button class="chip" type="button" data-len="3" role="radio">3 letters</button>
+          <button class="chip" type="button" data-len="4" role="radio">4 letters</button>
+        </div>
+      </div>
+      <button class="go" id="goEndless" type="button" style="border:0;cursor:pointer">Play</button>
+    </div>
+  </div>
+  <div class="settings">
+    <button class="toggle" id="hardToggle" type="button" role="switch" aria-checked="false">
+      <div class="txt"><b>Hard mode</b><small>No green tiles showing letters already in place</small></div>
+      <span class="sw"></span>
+    </button>
+  </div>
+  <div class="links">
+    <button class="ibtn" id="openHow" type="button">How to play</button>
+    <button class="ibtn" id="openStats" type="button">Stats</button>
+  </div>
+</section>
+
+<!-- LEVELS -->
+<section class="screen" id="levels" hidden>
+  <div class="topbar">
+    <button class="ibtn back" type="button" data-home aria-label="Back to home">←</button>
+    <div class="grow"><div class="eyebrow" id="lvStars">0 of 144 stars</div><div class="h2">Levels</div></div>
+  </div>
+  <div class="lv-grid" id="lvGrid"></div>
+</section>
+
+<!-- GAME -->
+<section class="screen" id="game" hidden>
+  <div class="topbar">
+    <button class="ibtn back" type="button" id="gameBack" aria-label="Back">←</button>
+    <div class="grow"><div class="eyebrow" id="gMode">Daily</div><div class="h2" id="gTitle">COLD → WARM</div></div>
+    <button class="ibtn" id="undo" type="button">Undo</button>
+    <button class="ibtn" id="hint" type="button">Hint</button>
+  </div>
+  <div class="status"><span>Steps <b id="steps">0</b> · Par <b id="par">0</b></span><span><b id="clock">0:00</b> · <button class="linkish" id="reveal" type="button" style="border:0;background:none;color:var(--muted);text-decoration:underline;cursor:pointer;padding:0;font-size:.9rem">Give up</button></span></div>
+  <div class="ladder-wrap" id="wrap"><div class="ladder" id="ladder"></div></div>
+  <div class="hint-line" id="hintline"></div>
+  <div class="kb" id="kb"></div>
+</section>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- RESULT -->
+<div class="modal" id="result" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="rTitle">
+    <h2 id="rTitle">Perfect climb</h2>
+    <span class="stars" id="rStars"></span>
+    <div class="nums">
+      <div><b id="rSteps">4</b><span>Steps</span></div>
+      <div><b id="rPar">4</b><span>Par</span></div>
+      <div><b id="rTime">0:42</b><span>Time</span></div>
+    </div>
+    <div class="route"><div class="eyebrow">Your climb</div><div id="rYours"></div></div>
+    <div class="route" id="rBestWrap"><div class="eyebrow">A shortest route</div><div id="rBest"></div></div>
+    <p id="rNote" hidden></p>
+    <button class="big" id="rMain" type="button">Next</button>
+    <div class="row-btns">
+      <button type="button" id="rShare">Share</button>
+      <button type="button" id="rAlt">Try again</button>
+      <button type="button" id="rHome">Home</button>
+    </div>
+    <textarea class="share-fallback" id="rShareText" rows="7" readonly hidden aria-label="Result to copy"></textarea>
+  </div>
+</div>
+
+<!-- HOW TO PLAY -->
+<div class="modal" id="how" hidden>
+  <div class="card how" role="dialog" aria-modal="true" aria-labelledby="howTitle">
+    <h2 id="howTitle">How to play</h2>
+    <div class="ex" aria-hidden="true">
+      <div class="r"><span>c</span><span>o</span><span>l</span><span>d</span></div>
+      <div class="r"><span>c</span><span>o</span><span class="c">r</span><span>d</span></div>
+      <div class="r"><span class="c">w</span><span>o</span><span>r</span><span>d</span></div>
+      <div class="r"><span>w</span><span class="c">a</span><span>r</span><span>d</span></div>
+      <div class="r"><span>w</span><span>a</span><span>r</span><span>m</span></div>
+    </div>
+    <ol>
+      <li>Get from the start word to the goal word.</li>
+      <li>Each step, change exactly one letter. Tap the letter, then tap its replacement. Every step must be a real word.</li>
+      <li>Par is the fewest steps possible. Hit par with no hints for three stars.</li>
+      <li>Green tiles already match the goal. Hard mode hides them.</li>
+    </ol>
+    <p>On a keyboard, type to replace the selected letter, use the arrow keys to move, and press Backspace to undo.</p>
+    <button class="big" type="button" data-close>Got it</button>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="modal" id="stats" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="statsTitle">
+    <h2 id="statsTitle">Your stats</h2>
+    <div class="stat-grid" id="statGrid"></div>
+    <button class="big" type="button" data-close>Close</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+const SITE="https://xipetotec.github.io/rungs.html";
+const LISTS={"3":{"words":["ace","act","add","ado","ads","aft","age","ago","aid","ail","aim","air","ale","all","amp","and","ant","any","ape","apt","arc","are","ark","arm","art","ash","ask","asp","ate","awe","awl","axe","aye","bad","bag","ban","bar","bat","bay","bed","bee","beg","bet","bib","bid","big","bin","bit","boa","bob","bog","boo","bop","bow","box","boy","bra","bud","bug","bum","bun","bus","but","buy","bye","cab","cad","cam","can","cap","car","cat","cob","cod","cog","con","coo","cop","cot","cow","coy","cry","cub","cud","cue","cup","cur","cut","dab","dad","dam","day","den","dew","did","die","dig","dim","din","dip","doe","dog","don","dot","dry","dub","dud","due","dug","dun","duo","dye","ear","eat","ebb","eel","egg","ego","elf","elk","elm","emu","end","era","eve","ewe","eye","fad","fan","far","fat","fax","fed","fee","fen","few","fib","fig","fin","fir","fit","fix","flu","fly","foe","fog","fox","fry","fun","fur","gab","gag","gal","gap","gas","gel","gem","get","gig","gin","gnu","gob","god","got","gum","gun","gut","guy","gym","had","hag","ham","has","hat","hay","hem","hen","her","hew","hid","him","hip","his","hit","hob","hoe","hog","hop","hot","how","hub","hue","hug","hum","hut","ice","icy","ill","imp","ink","inn","ion","ire","irk","its","ivy","jab","jag","jam","jar","jaw","jay","jet","jig","job","jog","jot","joy","jug","jut","keg","ken","key","kid","kin","kit","lab","lad","lag","lap","law","lay","lea","led","leg","let","lid","lie","lip","lit","lob","log","lot","low","lug","mad","man","map","mar","mat","maw","may","men","met","mew","mid","mix","mob","mod","mom","moo","mop","mow","mud","mug","mum","nab","nag","nap","nay","net","new","nib","nil","nip","nit","nod","nor","not","now","nub","nun","nut","oak","oar","oat","odd","ode","off","oft","ohm","oil","old","one","opt","orb","ore","our","out","owe","owl","own","pad","pal","pan","pap","par","pat","paw","pay","pea","peg","pen","pep","per","pet","pew","pie","pig","pin","pit","ply","pod","pop","pot","pow","pro","pry","pub","pug","pun","pup","pus","put","rag","ram","ran","rap","rat","raw","ray","red","ref","rib","rid","rig","rim","rip","rob","rod","roe","rot","row","rub","rue","rug","rum","run","rut","rye","sad","sag","sap","sat","saw","sax","say","sea","see","set","sew","sex","she","shy","sin","sip","sir","sis","sit","six","ski","sky","sly","sob","sod","son","sop","sot","sow","soy","spa","spy","sty","sub","sue","sum","sun","sup","tab","tad","tag","tan","tap","tar","tat","tax","tea","tee","ten","the","thy","tic","tie","tin","tip","toe","tog","ton","too","top","tot","tow","toy","try","tub","tug","tun","tut","two","ugh","urn","use","van","vat","vet","vex","via","vie","vow","wad","wag","war","was","wax","way","web","wed","wee","wet","who","why","wig","win","wit","woe","wok","won","woo","wow","yak","yam","yap","yaw","yea","yen","yes","yet","yew","yip","you","yum","zap","zed","zen","zip","zit","zoo"],"common":["ant","ape","arm","art","bag","bat","bay","bed","bee","box","boy","bud","bug","bun","bus","cab","can","cap","car","cat","cod","cot","cow","cub","cup","dam","day","den","dog","dot","ear","egg","elf","elk","elm","emu","eye","fan","fig","fin","fir","fox","gem","gum","hat","hay","hen","hog","hop","hug","hut","ice","ink","jam","jar","jet","jug","key","kid","kit","lid","log","map","mat","mop","mud","mug","net","nut","oak","oar","owl","pan","pea","pen","pet","pie","pig","pin","pit","pot","pup","ram","rat","rug","saw","sea","sky","sun","tap","tea","tin","toe","top","toy","tub","van","wax","web","wig","yak","zoo"]},"4":{"words":["able","ache","acid","acre","acts","aged","ages","aide","aids","aims","airs","airy","ajar","akin","alas","ales","ally","alms","aloe","also","alto","alum","amen","amid","amok","anew","ankh","ante","ants","apes","apex","arch","arcs","area","aria","arid","arms","army","arts","ashy","atom","atop","aunt","aura","auto","avid","avow","away","awed","awes","awry","axes","axis","axle","babe","baby","back","bade","bags","bail","bait","bake","bald","bale","balk","ball","balm","band","bane","bang","bank","bans","barb","bard","bare","barf","bark","barn","bars","base","bash","bask","bass","bast","bath","bats","bawl","bays","bead","beak","beam","bean","bear","beat","beau","beds","beef","been","beep","beer","bees","beet","begs","bell","belt","bend","bent","berg","best","bets","bevy","bias","bibs","bide","bids","bike","bile","bilk","bill","bind","bins","bird","bite","bits","blab","bled","blew","blip","blob","bloc","blog","blot","blow","blue","blur","boar","boas","boat","bobs","bode","body","bogs","bogy","boil","bold","bole","bolt","bomb","bond","bone","bong","bony","boob","book","boom","boon","boor","boos","boot","bore","born","boss","both","bout","bowl","bows","boys","brag","bran","bras","brat","bred","brew","brie","brim","brow","buck","buds","buff","bugs","bulb","bulk","bull","bump","bums","bunk","buns","bunt","buoy","burn","burp","burr","bury","bush","bust","busy","butt","buys","buzz","byte","cabs","cafe","cage","cake","calf","call","calm","came","camp","cane","cans","cape","caps","card","care","carp","cars","cart","case","cash","cask","cast","cats","cave","cede","cell","cent","chap","char","chat","chef","chew","chic","chin","chip","chop","chow","chug","chum","cite","city","clad","clam","clan","clap","claw","clay","clip","clod","clog","clot","club","clue","coal","coat","coax","cobs","coca","cock","coco","code","cods","coil","coin","cola","cold","cole","colt","coma","comb","come","cone","conk","cons","cook","cool","coop","coos","cope","cops","copy","cord","core","cork","corn","cost","cosy","cots","coup","cove","cowl","cows","cozy","crab","crag","cram","crew","crib","crop","crow","crud","crux","cube","cubs","cuds","cued","cues","cuff","cull","cult","cups","curb","curd","cure","curl","curt","cusp","cute","cuts","cyst","czar","dabs","dads","daft","dais","dale","dame","damn","damp","dams","dang","dank","dare","dark","darn","dart","dash","data","date","daub","dawn","days","daze","dead","deaf","deal","dean","dear","debt","deck","deed","deem","deep","deer","defy","deli","dell","demo","dens","dent","deny","desk","dews","dial","dice","died","dies","diet","digs","dill","dime","dims","dine","ding","dins","dint","dips","dire","dirt","disc","dish","disk","diva","dive","dock","docs","dodo","doer","does","doff","dogs","dole","doll","dome","done","dons","doom","door","dope","dork","dorm","dose","dote","dots","dour","dove","down","doze","dozy","drab","drag","dram","draw","dray","drew","drip","drop","drug","drum","dual","dubs","duck","duct","dude","duds","duel","dues","duet","duke","dull","duly","dumb","dump","dune","dung","dunk","dupe","dusk","dust","duty","dyed","dyes","each","earl","earn","ears","ease","east","easy","eats","ebbs","echo","edge","edgy","edit","eels","eggs","egos","else","emit","emus","ends","envy","epic","eras","ergo","even","ever","eves","evil","ewes","exam","exes","exit","eyed","eyes","face","fact","fade","fads","fail","fain","fair","fake","fall","fame","fang","fans","fare","farm","fast","fate","fawn","faze","fear","feat","feds","feed","feel","fees","feet","fell","felt","fend","fern","feud","fibs","fife","figs","file","fill","film","find","fine","fins","fire","firm","fish","fist","fits","five","fizz","flag","flak","flap","flat","flaw","flax","flay","flea","fled","flee","flew","flex","flip","flit","flog","flop","flow","flue","flux","foal","foam","foes","fogs","foil","fold","folk","fond","font","food","fool","foot","ford","fore","fork","form","fort","foul","four","fowl","foxy","fray","free","fret","frog","from","fuel","full","fume","fumy","fund","funk","furl","furs","fury","fuse","fuss","fuzz","gabs","gaff","gaga","gage","gags","gain","gait","gala","gale","gall","gals","game","gang","gaps","garb","gash","gasp","gate","gave","gawk","gaze","gear","geek","gels","gems","gene","gent","germ","gets","gift","gigs","gild","gill","gilt","gins","gird","girl","gist","give","glad","glee","glen","glib","glob","glow","glue","glum","glut","gnat","gnaw","goad","goal","goat","gobs","gods","goes","gold","golf","gone","gong","good","goof","goon","gore","gory","gosh","gown","grab","gram","gray","grew","grey","grid","grim","grin","grip","grit","grow","grub","guff","gulf","gull","gulp","gums","gunk","guns","guru","gush","gust","guts","guys","gyms","hack","hags","hail","hair","hale","half","hall","halo","halt","hams","hand","hang","hard","hare","hark","harm","harp","hash","hasp","hate","hats","haul","have","hawk","hays","haze","hazy","head","heal","heap","hear","heat","heck","heed","heel","heft","heir","held","hell","helm","help","hemp","hems","hens","herb","herd","here","hero","hers","hewn","hews","hide","high","hike","hill","hilt","hind","hint","hips","hire","hiss","hits","hive","hoax","hobs","hock","hogs","hold","hole","holy","home","hone","honk","hood","hoof","hook","hoop","hoot","hope","hops","horn","hose","host","hour","hove","howl","hubs","huge","hugs","hulk","hull","hump","hums","hung","hunk","hunt","hurl","hurt","hush","husk","huts","hymn","ibex","iced","ices","icon","idea","idle","idly","idol","iffy","inch","inks","inky","inns","into","ions","iota","iris","irks","iron","isle","itch","item","jabs","jack","jade","jags","jail","jamb","jams","jars","jaws","jays","jazz","jean","jeep","jeer","jell","jerk","jest","jets","jibe","jigs","jilt","jinx","jive","jobs","jock","jogs","join","joke","jolt","jots","jowl","joys","judo","jugs","jump","june","junk","jury","just","jute","juts","kale","keel","keen","keep","kegs","kelp","kept","keys","kick","kids","kill","kiln","kilt","kind","king","kink","kiss","kite","kits","kiwi","knee","knew","knit","knob","knot","know","labs","lace","lack","lacy","lads","lady","lags","laid","lair","lake","lamb","lame","lamp","land","lane","laps","lard","lark","lash","lass","last","late","lath","laud","lava","lawn","laws","lays","laze","lazy","lead","leaf","leak","lean","leap","leek","leer","left","legs","lend","lens","lent","less","lest","lets","levy","lewd","liar","lice","lick","lids","lied","lien","lies","lieu","life","lift","like","lilt","lily","limb","lime","limp","line","link","lint","lion","lips","lisp","list","lite","live","load","loaf","loam","loan","lobe","lobs","loch","lock","lode","loft","logo","logs","loin","loll","lone","long","look","loom","loon","loop","loot","lope","lops","lord","lore","lose","loss","lost","lots","loud","lout","love","lows","luck","lull","lump","lung","lure","lurk","lush","lust","lute","mace","made","mail","maim","main","make","male","mall","malt","mama","mane","many","maps","mare","mark","mars","mart","mash","mask","mass","mast","mate","math","mats","maul","maze","mead","meal","mean","meat","meek","meet","meld","melt","memo","mend","menu","meow","mere","mesh","mess","mews","mice","mild","mile","milk","mill","mime","mind","mine","mini","mink","mint","mire","miss","mist","mite","mitt","moan","moat","mobs","mock","mode","mold","mole","molt","monk","mood","moon","moor","moos","moot","mope","mops","more","morn","moss","most","moth","move","mown","mows","much","muck","muds","mule","mull","mums","murk","muse","mush","musk","must","mute","mutt","myth","nabs","nags","nail","name","nape","naps","navy","nays","near","neat","neck","need","neon","nerd","nest","nets","news","newt","next","nibs","nice","nick","nigh","nine","nips","node","nods","none","nook","noon","nope","norm","nose","nosy","note","noun","nova","nude","nuke","null","numb","nuns","nuts","oafs","oaks","oars","oath","oats","obey","oboe","odds","odes","odor","offs","ogle","ogre","oils","oily","oink","okay","okra","omen","omit","once","ones","only","onto","onus","ooze","opal","open","opts","opus","oral","orbs","orca","ores","ouch","ours","oust","outs","oval","oven","over","owed","owes","owls","owns","pace","pack","pact","pads","page","paid","pail","pain","pair","pale","pall","palm","pals","pane","pang","pans","pant","papa","pare","park","part","pass","past","pate","path","pats","pave","pawn","paws","pays","peak","peal","pear","peas","peat","peck","peek","peel","peep","peer","pegs","pelt","pens","pent","peon","perk","perm","pert","peso","pest","pets","pews","pick","pier","pies","pigs","pike","pile","pill","pine","ping","pink","pins","pint","pipe","pits","pity","plan","play","plea","pled","plod","plop","plot","plow","ploy","plug","plum","plus","pock","pods","poem","poet","poke","poky","pole","poll","polo","pomp","pond","pong","pony","pooh","pool","poop","poor","pope","pops","pore","pork","port","pose","posh","post","posy","pots","pour","pout","pram","pray","prep","prey","prim","prod","prom","prop","pros","prow","pubs","puck","puff","pugs","puke","pull","pulp","puma","pump","punk","puns","punt","puny","pupa","pups","pure","purr","push","puts","putt","quay","quid","quip","quit","quiz","race","rack","racy","raft","rage","rags","raid","rail","rain","rake","ramp","rams","rang","rank","rant","rape","raps","rapt","rare","rash","rasp","rate","rats","rave","rays","raze","read","real","ream","reap","rear","redo","reed","reef","reek","reel","rely","rend","rent","rest","ribs","rice","rich","ride","rids","rife","riff","rift","rigs","rile","rind","ring","rink","riot","ripe","rips","rise","risk","rite","road","roam","roar","robe","robs","rock","rode","rods","roes","role","roll","romp","roof","rook","room","root","rope","rose","rosy","rote","rots","rout","rove","rows","rubs","ruby","rude","rued","rues","ruff","rugs","ruin","rule","rump","rums","rune","rung","runs","runt","ruse","rush","rust","ruts","sack","safe","saga","sage","sags","said","sail","sake","sale","salt","same","sand","sane","sang","sank","saps","sash","sass","sate","save","saws","says","scab","scam","scan","scar","scat","seal","seam","sear","seas","seat","sect","seed","seek","seem","seen","seep","seer","sees","self","sell","semi","send","sent","sets","sewn","sews","sexy","shed","shim","shin","ship","shoe","shoo","shop","shot","show","shun","shut","sick","side","sift","sigh","sign","silk","sill","silo","silt","sine","sing","sink","sins","sips","sire","sirs","site","sits","size","skid","skim","skin","skip","skis","slab","slag","slam","slap","slat","slaw","slay","sled","slew","slid","slim","slip","slit","slob","slog","slop","slot","slow","slug","slum","slur","smog","smug","snag","snap","snip","snit","snob","snot","snow","snub","snug","soak","soap","soar","sobs","sock","soda","sods","sofa","soft","soil","sold","sole","solo","some","song","sons","soon","soot","sore","sort","sots","soul","soup","sour","sown","sows","soya","spam","span","spar","spas","spat","spay","spec","sped","spew","spin","spit","spot","spry","spud","spun","spur","stab","stag","star","stay","stem","step","stew","stir","stop","stow","stub","stud","stun","such","suck","suds","sued","sues","suet","suit","sulk","sumo","sump","sums","sung","sunk","suns","sure","surf","swab","swag","swam","swan","swap","swat","sway","swig","swim","swum","tabs","tack","taco","tact","tags","tail","take","tale","talk","tall","tame","tamp","tang","tank","tans","tape","taps","tare","tarn","tarp","tart","task","taut","taxi","teak","teal","team","tear","teas","teat","tech","teed","teem","teen","tees","tell","temp","tend","tens","tent","term","tern","test","text","than","that","thaw","thee","them","then","they","thin","this","thou","thud","thug","thus","tick","tide","tidy","tied","tier","ties","tiff","tile","till","tilt","time","tine","tins","tint","tiny","tips","tire","toad","toed","toes","tofu","toga","toil","told","toll","tomb","tome","tone","tong","tons","took","tool","toot","tops","tore","torn","tort","toss","tote","tots","tour","tout","town","tows","toys","tram","trap","tray","tree","trek","trim","trio","trip","trod","trot","true","tsar","tuba","tube","tubs","tuck","tuft","tugs","tuna","tune","turf","turn","tusk","tutu","twig","twin","twit","twos","type","typo","ugly","undo","unit","unto","upon","urge","urns","used","user","uses","vain","vale","vamp","vane","vans","vary","vase","vast","vats","veal","veer","veil","vein","vend","vent","verb","very","vest","veto","vets","vial","vibe","vice","vied","vies","view","vile","vine","visa","vise","void","vole","volt","vote","vows","wade","wads","waft","wage","wags","waif","wail","wait","wake","walk","wall","wand","wane","want","ward","ware","warm","warn","warp","wars","wart","wary","wash","wasp","watt","wave","wavy","waxy","ways","weak","weal","wean","wear","webs","weds","weed","week","weep","weld","well","welt","went","wept","were","west","wets","wham","what","when","whet","whey","whim","whip","whir","whit","whiz","whom","wick","wide","wife","wigs","wild","wile","will","wilt","wily","wimp","wind","wine","wing","wink","wins","wipe","wire","wiry","wise","wish","wisp","with","wits","woes","woke","woks","wolf","womb","wont","wood","woof","wool","word","wore","work","worm","worn","wove","wows","wrap","wren","writ","yack","yaks","yams","yank","yaps","yard","yarn","yawn","yeah","year","yeas","yell","yelp","yens","yeti","yoga","yoke","yolk","yore","your","yowl","yuck","yule","yurt","zany","zaps","zeal","zero","zest","zinc","zing","zips","zone","zoom","zoos"],"common":["back","bake","ball","band","bank","barn","bath","bead","beam","bean","bear","beat","beef","bell","belt","bird","boat","body","bold","bone","book","boot","bowl","bulb","bump","cake","calf","call","calm","camp","cane","card","care","cart","cash","cave","chef","chip","city","clay","coal","coat","code","coin","cold","cone","cook","cool","cord","corn","cost","crab","crow","cube","dark","dart","dawn","deer","desk","dice","dish","dive","dock","doll","door","dove","duck","dune","dusk","dust","easy","edge","face","farm","fast","fern","film","fire","fish","flag","flat","foam","fold","food","foot","fork","fort","frog","game","gate","gift","girl","goat","gold","golf","good","grin","hair","hall","hand","hard","harp","hate","hawk","head","heat","herb","hill","hole","home","hood","hook","hope","horn","hose","hunt","idea","iron","jade","jail","joke","jump","kick","kind","king","kite","knot","lake","lamb","lamp","land","lane","leaf","lime","line","lion","list","loaf","lock","loud","love","luck","mail","make","mask","meal","milk","mill","mind","mint","mist","moon","moss","moth","nest","nose","note","oven","page","pail","pair","park","path","peak","pear","pine","pink","pipe","plan","play","plum","poem","pole","pond","pool","port","rain","rice","ride","ring","road","robe","rock","roof","room","rope","rose","ruby","rust","safe","sail","salt","sand","seal","seed","shed","ship","shoe","sink","snow","soap","sock","soft","song","soup","star","stem","tail","tale","tank","tent","tide","tile","time","toad","town","tree","tune","vase","vine","wall","wand","warm","wave","west","wind","wing","wire","wolf","wood","wool","word","worm","yard","yarn"]}};
+const LEVELS=[["east","west",3],["lead","gold",3],["love","hate",3],["rose","vine",3],["cold","warm",4],["fire","wood",4],["kiss","hugs",4],["less","more",4],["lose","find",4],["mice","rats",4],["milk","cake",4],["mind","body",4],["sand","tide",4],["soup","bowl",4],["wild","tame",4],["boat","ship",5],["card","deck",5],["cash","coin",5],["cook","bake",5],["dusk","dawn",5],["easy","hard",5],["food","meal",5],["hand","foot",5],["head","tail",5],["king","pawn",5],["lake","pond",5],["lion","bear",5],["moon","star",5],["pear","plum",5],["ride","walk",5],["rock","roll",5],["sail","oars",5],["seed","tree",5],["wind","gust",5],["word","game",5],["bell","ring",6],["book","page",6],["dirt","soil",6],["fear","hope",6],["fish","bird",6],["fork","dish",6],["gull","hawk",6],["hide","seek",6],["lamp","bulb",6],["ruin","mend",6],["ship","dock",6],["slow","fast",6],["sock","shoe",6]];
+const DAILY_EPOCH=Date.UTC(2026,9,1); // Daily #1 = 1 Oct 2026
+const DICT={3:new Set(LISTS["3"].words),4:new Set(LISTS["4"].words)};
+const $=id=>document.getElementById(id);
+
+/* ---------- storage ---------- */
+const DEF={settings:{hard:false,len:4},daily:{},levels:{},sessions:{},stats:{solved:0,perfect:0,streak:0,maxStreak:0,lastDaily:null,bestRun:0,run:0}};
+let S=JSON.parse(JSON.stringify(DEF));
+function load(){try{const s=JSON.parse(localStorage.getItem("rungs-v2"));if(s)for(const k in DEF)S[k]=Object.assign(Array.isArray(DEF[k])?[]:{},DEF[k],s[k]||{})}catch(e){}}
+function save(){try{localStorage.setItem("rungs-v2",JSON.stringify(S))}catch(e){}}
+
+/* ---------- word graph ---------- */
+const AZ="abcdefghijklmnopqrstuvwxyz";
+function neighbors(w){const d=DICT[w.length],out=[];for(let i=0;i<w.length;i++)for(const c of AZ){if(c===w[i])continue;const x=w.slice(0,i)+c+w.slice(i+1);if(d.has(x))out.push(x)}return out}
+function bfs(a){const dist=new Map([[a,0]]),prev=new Map([[a,null]]),q=[a];for(let h=0;h<q.length;h++){const u=q[h];for(const v of neighbors(u))if(!dist.has(v)){dist.set(v,dist.get(u)+1);prev.set(v,u);q.push(v)}}return{dist,prev}}
+function shortest(a,b){const{prev}=bfs(a);if(!prev.has(b))return null;const p=[];for(let x=b;x!==null;x=prev.get(x))p.push(x);return p.reverse()}
+function rng(seed){let t=seed>>>0;return()=>{t+=0x6D2B79F5;let r=Math.imul(t^t>>>15,1|t);r^=r+Math.imul(r^r>>>7,61|r);return((r^r>>>14)>>>0)/4294967296}}
+function makePuzzle(len,rand,lo,hi){
+  const common=LISTS[len].common;
+  for(let tries=0;tries<200;tries++){
+    const a=common[Math.floor(rand()*common.length)];
+    const{dist}=bfs(a);
+    const opts=common.filter(w=>{const d=dist.get(w);return d>=lo&&d<=hi});
+    if(!opts.length)continue;
+    const b=opts[Math.floor(rand()*opts.length)];
+    return[a,b,dist.get(b)]
+  }
+  return len===4?["cold","warm",4]:["cat","dog",3]
+}
+
+/* ---------- dates ---------- */
+function todayKey(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function dayNum(key){const[y,m,d]=key.split("-").map(Number);return Math.round((Date.UTC(y,m-1,d)-DAILY_EPOCH)/864e5)+1}
+function prevKey(key){const[y,m,d]=key.split("-").map(Number);const t=new Date(Date.UTC(y,m-1,d)-864e5);return t.getUTCFullYear()+"-"+String(t.getUTCMonth()+1).padStart(2,"0")+"-"+String(t.getUTCDate()).padStart(2,"0")}
+function dailyPuzzle(key){let h=2166136261;for(const c of "rungs"+key){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return makePuzzle(4,rng(h),4,5)}
+
+/* ---------- screens ---------- */
+function show(id){for(const s of["home","levels","game"])$(s).hidden=s!==id;if(id!=="game")stopClock();if(id==="home")renderHome();if(id==="levels")renderLevels()}
+document.querySelectorAll("[data-home]").forEach(b=>b.onclick=()=>show("home"));
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>b.closest(".modal").hidden=true);
+document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m&&m.id!=="result")m.hidden=true}));
+
+function starStr(n){return"★".repeat(n)+`<span class="off">${"★".repeat(3-n)}</span>`}
+function fmt(ms){const s=Math.floor(ms/1000);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+
+function renderHome(){
+  const k=todayKey(),d=S.daily[k],n=dayNum(k);
+  if(d&&d.done){$("dailyGo").textContent=d.gaveUp?"Seen":"Done";$("dailyGo").classList.toggle("ok",!d.gaveUp);
+    $("dailySub").innerHTML=d.gaveUp?`#${n} · Revealed. A new ladder arrives tomorrow`:`#${n} · ${d.ladder.length-1} steps · <span class="stars">${starStr(d.stars)}</span>`}
+  else{$("dailyGo").textContent=d?"Resume":"Play";$("dailyGo").classList.remove("ok");$("dailySub").textContent=`#${n} · `+(S.stats.streak&&S.stats.lastDaily===prevKey(k)?`Streak ${S.stats.streak}. Keep it going`:"A new four-letter ladder every day")}
+  const got=Object.values(S.levels).reduce((a,l)=>a+(l.stars||0),0),cleared=Object.keys(S.levels).length;
+  $("levelsSub").textContent=cleared?`${cleared} of ${LEVELS.length} cleared · ${got} of ${LEVELS.length*3} stars`:`${LEVELS.length} hand-picked ladders, from easy to tricky`;
+  $("endlessSub").textContent=S.stats.run?`Current run ${S.stats.run} · best ${S.stats.bestRun}`:S.stats.bestRun?`Best run ${S.stats.bestRun} in a row`:"Random ladders, one after another";
+  document.querySelectorAll(".chip").forEach(c=>{const on=+c.dataset.len===S.settings.len;c.classList.toggle("sel",on);c.setAttribute("aria-checked",on)});
+  $("hardToggle").setAttribute("aria-checked",S.settings.hard)
+}
+$("goDaily").onclick=()=>{const k=todayKey(),d=S.daily[k];if(d&&d.done){startGame({mode:"daily",key:k},true);showResult(true)}else startGame({mode:"daily",key:k})};
+$("goLevels").onclick=()=>show("levels");
+$("goEndless").onclick=()=>startGame({mode:"endless",len:S.settings.len});
+document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{S.settings.len=+c.dataset.len;if(S.sessions.endless&&S.sessions.endless.len!==S.settings.len)delete S.sessions.endless;save();renderHome()});
+$("hardToggle").onclick=()=>{S.settings.hard=!S.settings.hard;save();renderHome()};
+$("openHow").onclick=()=>{$("how").hidden=false};
+$("openStats").onclick=()=>{
+  const got=Object.values(S.levels).reduce((a,l)=>a+(l.stars||0),0);
+  const items=[[S.stats.solved,"Ladders climbed"],[S.stats.perfect,"Perfect climbs"],[S.stats.lastDaily===todayKey()||S.stats.lastDaily===prevKey(todayKey())?S.stats.streak:0,"Daily streak"],[S.stats.maxStreak,"Best daily streak"],[got,"Level stars"],[S.stats.bestRun,"Best endless run"]];
+  $("statGrid").innerHTML=items.map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join("");
+  $("stats").hidden=false
+};
+
+function renderLevels(){
+  const g=$("lvGrid");g.innerHTML="";let got=0,nextIdx=-1;
+  const bands={3:"Par 3 · warm-up",4:"Par 4",5:"Par 5",6:"Par 6 · long climbs"};let band=0;
+  LEVELS.forEach(([a,b,par],i)=>{
+    if(par!==band){band=par;const h=document.createElement("div");h.className="lv-band";h.textContent=bands[par]||par+" steps";g.appendChild(h)}
+    const rec=S.levels[i],unlocked=i===0||S.levels[i-1]||rec;
+    if(rec)got+=rec.stars;if(!rec&&unlocked&&nextIdx<0)nextIdx=i;
+    const el=document.createElement("button");el.type="button";el.className="lv"+(i===nextIdx?" next":"");el.disabled=!unlocked;
+    el.innerHTML=`<b>${i+1}</b><span class="stars">${rec?starStr(rec.stars):""}</span>`;
+    el.setAttribute("aria-label",`Level ${i+1}${rec?`, ${rec.stars} stars`:unlocked?"":", locked"}`);
+    el.onclick=()=>startGame({mode:"level",idx:i});g.appendChild(el)
+  });
+  $("lvStars").textContent=`${got} of ${LEVELS.length*3} stars`;
+  const n=g.querySelector(".lv.next");if(n)requestAnimationFrame(()=>n.scrollIntoView({block:"center"}))
+}
+
+/* ---------- game ---------- */
+let G=null,clockT=null;
+function sessionKey(o){return o.mode==="daily"?"daily:"+o.key:o.mode==="level"?"level:"+o.idx:"endless"}
+function startGame(o,fresh){
+  let a,b,par,len;
+  if(o.mode==="daily"){[a,b,par]=dailyPuzzle(o.key);len=4}
+  else if(o.mode==="level"){[a,b,par]=LEVELS[o.idx];len=4}
+  else{
+    const ex=S.sessions.endless;
+    if(ex&&!fresh&&ex.len===o.len&&!ex.done){G=ex;show("game");render(true);startClock();return}
+    len=o.len;[a,b,par]=makePuzzle(len,Math.random,len===3?3:3,len===3?5:6)
+  }
+  const sk=sessionKey(o);
+  const saved=o.mode==="daily"?S.daily[o.key]:S.sessions[sk];
+  if(saved&&!fresh&&saved.a===a&&saved.b===b){G=saved}
+  else if(o.mode==="daily"&&saved&&saved.done){G=saved}
+  else{G={mode:o.mode,key:o.key,idx:o.idx,a,b,par,len,ladder:[a],hints:0,ms:0,sel:0,done:false}}
+  if(o.mode==="daily")S.daily[o.key]=G;else S.sessions[sk]=G;
+  if(!G.ladder.length)G.ladder=[a];
+  G.sel=firstDiff(cur());save();show("game");render(true);if(!G.done)startClock()
+}
+const cur=()=>G.ladder[G.ladder.length-1];
+function firstDiff(w){for(let i=0;i<w.length;i++)if(w[i]!==G.b[i])return i;return 0}
+function startClock(){stopClock();let last=Date.now();clockT=setInterval(()=>{const now=Date.now();if(!document.hidden&&G&&!G.done){G.ms+=now-last;$("clock").textContent=fmt(G.ms)}last=now},500)}
+function stopClock(){if(clockT)clearInterval(clockT);clockT=null;if(G)save()}
+
+function tileRow(word,cls,prev){
+  const r=document.createElement("div");r.className="row "+cls;const isCur=cls==="cur";
+  for(let i=0;i<word.length;i++){
+    const t=document.createElement(isCur?"button":"div");t.className="tile";t.textContent=word[i];
+    if(isCur){t.type="button";t.setAttribute("aria-label",`Letter ${i+1}: ${word[i].toUpperCase()}${i===G.sel?", selected":""}`);if(i===G.sel)t.classList.add("sel");t.onclick=()=>{G.sel=i;render()}}
+    if(!S.settings.hard&&cls!=="goal"&&cls!=="ghost"&&word[i]===G.b[i])t.classList.add("on");
+    if(prev&&word[i]!==prev[i])t.classList.add("changed");
+    r.appendChild(t)
+  }
+  return r
+}
+function render(scroll){
+  const L=$("ladder");L.innerHTML="";L.style.setProperty("--n",G.len);
+  $("gMode").textContent=G.mode==="daily"?`Daily #${dayNum(G.key)}`:G.mode==="level"?`Level ${G.idx+1} of ${LEVELS.length}`:`Endless · ${G.len} letters${S.stats.run?` · run ${S.stats.run}`:""}`;
+  $("gTitle").textContent=`${G.a.toUpperCase()} → ${G.b.toUpperCase()}`;
+  $("steps").textContent=G.ladder.length-1;$("par").textContent=G.par;$("clock").textContent=fmt(G.ms);
+  G.ladder.forEach((w,i)=>{
+    const last=i===G.ladder.length-1&&!G.done;
+    const row=tileRow(w,last?"cur":"done",i>0?G.ladder[i-1]:null);
+    if(last&&i>0)row.querySelectorAll(".tile.changed").forEach(t=>t.classList.add("pop"));
+    L.appendChild(row)
+  });
+  if(!G.done){
+    const g=document.createElement("div");g.className="gap";
+    const dist=bfs(cur()).dist.get(G.b);
+    g.textContent=dist===undefined?"no route from here, try Undo":`${dist} more ${dist===1?"step":"steps"} at best`;
+    if(S.settings.hard)g.textContent=`par ${G.par}`;
+    L.appendChild(g);
+    const goal=tileRow(G.b,"goal",null);
+    if(!S.settings.hard)goal.querySelectorAll(".tile").forEach((t,i)=>{if(cur()[i]===G.b[i])t.classList.add("on")});
+    L.appendChild(goal)
+  }
+  $("undo").disabled=G.done||G.ladder.length<2;$("hint").disabled=G.done;$("reveal").disabled=G.done;
+  if(scroll)requestAnimationFrame(()=>{const c=L.querySelector(".row.cur")||L.lastElementChild;if(c)c.scrollIntoView({block:"center"})})
+}
+let tt;function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("show"),1500)}
+function buzz(p){try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
+function shake(){const r=document.querySelector(".row.cur");if(!r)return;r.classList.remove("shake");void r.offsetWidth;r.classList.add("shake");buzz([20,40,20])}
+
+function play(ch){
+  if(!G||G.done||!$("result").hidden||$("game").hidden)return;
+  const w=cur();if(w[G.sel]===ch){shake();toast("Pick a different letter");return}
+  const nw=w.slice(0,G.sel)+ch+w.slice(G.sel+1);
+  if(!DICT[G.len].has(nw)){shake();toast(`${nw.toUpperCase()} isn't in the word list`);return}
+  if(G.ladder.includes(nw)){shake();toast("Already on your ladder");return}
+  G.ladder.push(nw);buzz(8);$("hintline").textContent="";
+  if(nw===G.b){finish(false);return}
+  save();render(true)
+}
+function starsFor(){const steps=G.ladder.length-1;if(G.gaveUp)return 0;if(steps<=G.par&&!G.hints)return 3;if(steps<=G.par+1&&G.hints<=1)return 2;return 1}
+function finish(gaveUp){
+  G.done=true;G.gaveUp=gaveUp;stopClock();G.stars=starsFor();
+  const st=S.stats;
+  if(!gaveUp){st.solved++;if(G.stars===3)st.perfect++}
+  if(G.mode==="daily"){
+    if(!gaveUp){st.streak=st.lastDaily===prevKey(G.key)?st.streak+1:1;st.maxStreak=Math.max(st.maxStreak,st.streak)}else st.streak=0;
+    st.lastDaily=G.key
+  }else if(G.mode==="level"){
+    if(!gaveUp){const r=S.levels[G.idx];if(!r||G.stars>r.stars||(G.stars===r.stars&&G.ladder.length-1<r.best))S.levels[G.idx]={stars:G.stars,best:G.ladder.length-1}}
+    delete S.sessions["level:"+G.idx]
+  }else{
+    if(!gaveUp){st.run++;st.bestRun=Math.max(st.bestRun,st.run)}else st.run=0
+  }
+  save();render(true);setTimeout(()=>showResult(false),gaveUp?0:420)
+}
+function showResult(again){
+  const steps=G.ladder.length-1,best=shortest(G.a,G.b);
+  $("rTitle").textContent=G.gaveUp?"Here's a way up":G.stars===3?"Perfect climb":steps<=G.par?"Solved":"You made it";
+  $("rStars").innerHTML=G.gaveUp?"":starStr(G.stars);$("rStars").hidden=G.gaveUp;
+  $("rSteps").textContent=G.gaveUp?"–":steps;$("rPar").textContent=G.par;$("rTime").textContent=fmt(G.ms);
+  $("rYours").textContent=G.ladder.map(w=>w.toUpperCase()).join(" → ");
+  const sameAsBest=!G.gaveUp&&steps<=G.par;
+  $("rBestWrap").hidden=sameAsBest;$("rBest").textContent=best?best.map(w=>w.toUpperCase()).join(" → "):"";
+  const note=[];if(G.hints)note.push(`${G.hints} ${G.hints===1?"hint":"hints"} used.`);
+  if(G.mode==="daily")note.push(G.gaveUp?"Your streak resets. A new ladder arrives tomorrow.":`Daily streak: ${S.stats.streak}. Come back tomorrow for #${dayNum(G.key)+1}.`);
+  if(G.mode==="endless")note.push(G.gaveUp?"Run reset to 0.":`Run: ${S.stats.run} in a row.`);
+  $("rNote").textContent=note.join(" ");$("rNote").hidden=!note.length;
+  $("rShareText").hidden=true;
+  const main=$("rMain"),alt=$("rAlt");
+  if(G.mode==="daily"){main.textContent="Back to home";main.onclick=()=>{$("result").hidden=true;show("home")};alt.hidden=true}
+  else if(G.mode==="level"){const nx=G.idx+1;main.textContent=nx<LEVELS.length?(G.gaveUp?"Try again":`Level ${nx+1}`):"All levels";
+    main.onclick=()=>{$("result").hidden=true;if(G.gaveUp)startGame({mode:"level",idx:G.idx},true);else if(nx<LEVELS.length)startGame({mode:"level",idx:nx},true);else show("levels")};
+    alt.hidden=false;alt.textContent=G.gaveUp?"Levels":"Try again";alt.onclick=()=>{$("result").hidden=true;if(G.gaveUp)show("levels");else startGame({mode:"level",idx:G.idx},true)}}
+  else{main.textContent="Next ladder";main.onclick=()=>{$("result").hidden=true;startGame({mode:"endless",len:G.len},true)};alt.hidden=true}
+  $("rShare").hidden=G.gaveUp;
+  $("result").hidden=false;setTimeout(()=>main.focus(),50)
+}
+$("rHome").onclick=()=>{$("result").hidden=true;show("home")};
+function shareText(){
+  const steps=G.ladder.length-1;
+  const label=G.mode==="daily"?`Rungs Daily #${dayNum(G.key)}`:G.mode==="level"?`Rungs Level ${G.idx+1}`:`Rungs Endless`;
+  const grid=G.ladder.slice(1).map((w,i)=>{const p=G.ladder[i];return[...w].map((c,j)=>c!==p[j]?(w===G.b?"🟩":"🟨"):"⬜").join("")}).join("\n");
+  return`${label} · ${G.a.toUpperCase()} → ${G.b.toUpperCase()}\n${"⭐".repeat(G.stars)} ${steps} steps (par ${G.par}) · ${fmt(G.ms)}${S.settings.hard?" · hard":""}\n${grid}\n${SITE}`
+}
+$("rShare").onclick=async()=>{
+  const text=shareText();
+  if(navigator.share&&matchMedia("(pointer:coarse)").matches){try{await navigator.share({text});return}catch(e){if(e&&e.name==="AbortError")return}}
+  try{await navigator.clipboard.writeText(text);toast("Result copied")}
+  catch(e){const ta=$("rShareText");ta.value=text;ta.hidden=false;ta.focus();ta.select();toast("Copy the text below")}
+};
+function hint(){
+  if(!G||G.done)return;
+  const path=shortest(cur(),G.b);
+  if(!path){toast("No route from here. Try Undo");return}
+  const nx=path[1];let i=0;while(cur()[i]===nx[i])i++;
+  G.sel=i;G.hints++;save();render();
+  $("hintline").textContent=`Hint: change letter ${i+1} to ${nx[i].toUpperCase()}`
+}
+let revealArmed=0;
+$("reveal").onclick=()=>{
+  if(!G||G.done)return;
+  if(Date.now()-revealArmed>3000){revealArmed=Date.now();toast("Tap Give up again to see the answer");return}
+  revealArmed=0;finish(true)
+};
+$("undo").onclick=()=>{if(G&&!G.done&&G.ladder.length>1){G.ladder.pop();$("hintline").textContent="";save();render(true)}};
+$("hint").onclick=hint;
+$("gameBack").onclick=()=>{show(G&&G.mode==="level"?"levels":"home")};
+
+/* keyboard */
+["qwertyuiop","asdfghjkl","zxcvbnm"].forEach((r,ri)=>{const d=document.createElement("div");d.className="kr";
+  const mk=(label,aria,fn,wide)=>{const b=document.createElement("button");b.className="key"+(wide?" wide":"");b.type="button";b.textContent=label;if(aria)b.setAttribute("aria-label",aria);b.onclick=fn;d.appendChild(b)};
+  if(ri===2)mk("◀","Select previous letter",()=>move(-1),true);
+  for(const ch of r)mk(ch,null,()=>play(ch));
+  if(ri===2)mk("▶","Select next letter",()=>move(1),true);
+  $("kb").appendChild(d)});
+function move(dx){if(!G||G.done)return;G.sel=(G.sel+dx+G.len)%G.len;render()}
+document.addEventListener("keydown",e=>{
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  const open=[...document.querySelectorAll(".modal")].find(m=>!m.hidden);
+  if(open){if(e.key==="Escape"&&open.id!=="result")open.hidden=true;return}
+  if($("game").hidden)return;
+  if(/^[a-z]$/i.test(e.key)){play(e.key.toLowerCase());e.preventDefault()}
+  else if(e.key==="ArrowLeft"){move(-1);e.preventDefault()}
+  else if(e.key==="ArrowRight"){move(1);e.preventDefault()}
+  else if(e.key==="Backspace"){$("undo").click();e.preventDefault()}
+  else if(/^[1-5]$/.test(e.key)&&+e.key<=G.len){G.sel=+e.key-1;render()}
+  else if(e.key==="Escape")$("gameBack").click();
+});
+document.addEventListener("visibilitychange",()=>{if(document.hidden)save()});
+
+/* boot */
+load();
+try{if(!localStorage.getItem("rungs-seen")){localStorage.setItem("rungs-seen","1");$("how").hidden=false}}catch(e){}
+show("home");
+</script>
+
+</body>
+</html>
