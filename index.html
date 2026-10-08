@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>XipeTotec Games</title>
+<meta name="description" content="Browser games and apps: Meridian world quiz, Rungs word ladder, and Nightcliff Tides.">
+<meta name="theme-color" content="#eef1f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10161c" media="(prefers-color-scheme: dark)">
+<meta property="og:title" content="XipeTotec Games">
+<meta property="og:description" content="Meridian world quiz, Rungs word ladder, and Nightcliff Tides.">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a single column of large tappable cards, each with a small drawn emblem for its game. */
+:root{
+  --bg:#eef1f4; --card:#ffffff; --edge:#d3dbe2; --ink:#16202a; --muted:#5b6977;
+  --amber:#e0a526; --sea:#1f8fb3; --green:#2f8f6b; --tile:#ffffff;
+  --display:"Bricolage Grotesque","Arial Rounded MT Bold",system-ui,sans-serif;
+  --body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#10161c; --card:#18212a; --edge:#2b3743; --ink:#e7edf2; --muted:#93a2b0;
+  --amber:#f0b83a; --sea:#3fb4d8; --green:#3fae86; --tile:#22303c; color-scheme:dark}}
+[hidden]{display:none!important}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.45;
+  padding:calc(env(safe-area-inset-top,0px) + 28px) 16px calc(env(safe-area-inset-bottom,0px) + 32px)}
+main{max-width:560px;margin:0 auto}
+header{margin-bottom:22px}
+.eyebrow{font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(2.2rem,9vw,3rem);letter-spacing:-.03em;line-height:.95;margin:6px 0 10px;text-wrap:balance}
+header p{margin:0;color:var(--muted);max-width:40ch}
+.list{display:flex;flex-direction:column;gap:12px}
+.section{font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:14px 4px 0}
+a.card{display:flex;align-items:center;gap:16px;padding:16px;border-radius:18px;background:var(--card);border:1px solid var(--edge);color:inherit;text-decoration:none;transition:transform .15s,border-color .15s}
+a.card:hover{border-color:var(--muted)}
+a.card:active{transform:scale(.985)}
+a.card:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+.emblem{flex:none;width:76px;height:76px;border-radius:14px;display:grid;place-items:center;background:var(--bg)}
+.emblem svg{width:60px;height:60px;display:block}
+.txt{flex:1;min-width:0}
+.txt b{display:block;font-family:var(--display);font-weight:800;font-size:1.3rem;letter-spacing:-.01em}
+.txt span{display:block;color:var(--muted);font-size:.92rem;margin-top:2px}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.tags i{font-style:normal;font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--bg);color:var(--muted)}
+.arrow{flex:none;font:800 1.2rem var(--display);color:var(--muted)}
+footer{margin-top:28px;color:var(--muted);font-size:.8rem;text-align:center}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">xipetotec.github.io</div>
+    <h1>Games &amp; Apps</h1>
+    <p>Pick something to play. Everything runs in your browser and saves progress on this device.</p>
+  </header>
+
+  <div class="list">
+    <div class="section">Games</div>
+
+    <a class="card" href="/meridian.html">
+      <div class="emblem" aria-hidden="true">
+        <svg viewBox="0 0 60 60" fill="none">
+          <circle cx="30" cy="30" r="24" fill="var(--sea)" opacity=".18"/>
+          <circle cx="30" cy="30" r="24" stroke="var(--sea)" stroke-width="2.5"/>
+          <ellipse cx="30" cy="30" rx="11" ry="24" stroke="var(--sea)" stroke-width="2"/>
+          <line x1="30" y1="6" x2="30" y2="54" stroke="var(--amber)" stroke-width="3"/>
+          <path d="M8 22h44M6 30h48M8 38h44" stroke="var(--sea)" stroke-width="1.5" opacity=".7"/>
+          <circle cx="38" cy="24" r="3.5" fill="var(--amber)"/>
+        </svg>
+      </div>
+      <div class="txt">
+        <b>Meridian</b>
+        <span>World map quiz. Find countries on the map and learn their flags and capitals.</span>
+        <div class="tags"><i>Countries</i><i>Flags</i><i>Capitals</i><i>Cities</i></div>
+      </div>
+      <span class="arrow" aria-hidden="true">→</span>
+    </a>
+
+    <a class="card" href="/rungs.html">
+      <div class="emblem" aria-hidden="true">
+        <svg viewBox="0 0 60 60" fill="none">
+          <rect x="6" y="2" width="4" height="56" rx="2" fill="var(--edge)"/>
+          <rect x="50" y="2" width="4" height="56" rx="2" fill="var(--edge)"/>
+          <g font-family="Bricolage Grotesque, system-ui, sans-serif" font-weight="800" font-size="8.5" text-anchor="middle">
+            <rect x="13" y="7" width="8" height="10" rx="2" fill="var(--tile)" stroke="var(--edge)"/><rect x="22" y="7" width="8" height="10" rx="2" fill="var(--tile)" stroke="var(--edge)"/><rect x="31" y="7" width="8" height="10" rx="2" fill="var(--tile)" stroke="var(--edge)"/><rect x="40" y="7" width="8" height="10" rx="2" fill="var(--tile)" stroke="var(--edge)"/>
+            <text x="17" y="15" fill="var(--ink)">C</text><text x="26" y="15" fill="var(--ink)">O</text><text x="35" y="15" fill="var(--ink)">L</text><text x="44" y="15" fill="var(--ink)">D</text>
+            <rect x="13" y="25" width="8" height="10" rx="2" fill="var(--tile)" stroke="var(--edge)"/><rect x="22" y="25" width="8" height="10" rx="2" fill="var(--tile)" stroke="var(--edge)"/><rect x="31" y="25" width="8" height="10" rx="2" fill="var(--amber)"/><rect x="40" y="25" width="8" height="10" rx="2" fill="var(--tile)" stroke="var(--edge)"/>
+            <text x="17" y="33" fill="var(--ink)">C</text><text x="26" y="33" fill="var(--ink)">O</text><text x="35" y="33" fill="#2a1d00">R</text><text x="44" y="33" fill="var(--ink)">D</text>
+            <rect x="13" y="43" width="8" height="10" rx="2" fill="var(--green)"/><rect x="22" y="43" width="8" height="10" rx="2" fill="var(--green)"/><rect x="31" y="43" width="8" height="10" rx="2" fill="var(--green)"/><rect x="40" y="43" width="8" height="10" rx="2" fill="var(--green)"/>
+            <text x="17" y="51" fill="#fff">W</text><text x="26" y="51" fill="#fff">A</text><text x="35" y="51" fill="#fff">R</text><text x="44" y="51" fill="#fff">M</text>
+          </g>
+        </svg>
+      </div>
+      <div class="txt">
+        <b>Rungs</b>
+        <span>Word ladder. Change one letter at a time to climb from word to word.</span>
+        <div class="tags"><i>Daily</i><i>48 levels</i><i>Endless</i></div>
+      </div>
+      <span class="arrow" aria-hidden="true">→</span>
+    </a>
+
+    <div class="section">Apps</div>
+
+    <a class="card" href="/tides.html">
+      <div class="emblem" aria-hidden="true">
+        <svg viewBox="0 0 60 60" fill="none">
+          <path d="M4 34c7-14 14-14 21 0s14 14 21 0 7-7 10-5" stroke="var(--sea)" stroke-width="3" stroke-linecap="round"/>
+          <path d="M4 34c7-14 14-14 21 0s14 14 21 0 7-7 10-5V56H4Z" fill="var(--sea)" opacity=".16"/>
+          <circle cx="14.5" cy="23.5" r="3.5" fill="var(--amber)"/>
+          <line x1="14.5" y1="12" x2="14.5" y2="18" stroke="var(--amber)" stroke-width="2" stroke-linecap="round"/>
+          <path d="M42 12v12a4 4 0 0 1-8 0" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="txt">
+        <b>Nightcliff Tides</b>
+        <span>Tides, fishing conditions and weather for Nightcliff, Darwin.</span>
+        <div class="tags"><i>Tides</i><i>Fishing</i><i>Weather</i><i>Catch log</i></div>
+      </div>
+      <span class="arrow" aria-hidden="true">→</span>
+    </a>
+  </div>
+
+  <footer>Made with Claude</footer>
+</main>
+</body>
+</html>

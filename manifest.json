@@ -2,14 +2,31 @@
   "name": "Nightcliff Tides & Fishing",
   "short_name": "Tides",
   "description": "Tide, fishing and weather dashboard for Nightcliff Darwin NT",
-  "start_url": "/",
+  "start_url": "/tides.html",
   "display": "standalone",
   "background_color": "#f5f0e8",
   "theme_color": "#3d3530",
   "orientation": "portrait-primary",
   "icons": [
-    {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
-    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
-  ]
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "scope": "/",
+  "id": "/"
 }
