@@ -763,6 +763,7 @@ const MODES = {
   LIVES:["Lives","Endless questions, a few lives"],
   STREAK:["Streak run","One wrong answer ends the run"],
   SPRINT:["Sprint","As many as you can before time runs out"],
+  EVERY:["Everything","Every kind of question, shuffled"],
   ODD:["Odd one out","Three belong together, one doesn't"],
   PEAKS:["Mountains","Name and find the world's famous peaks"],
   RIVERS:["Rivers","Name rivers and learn where they flow"],
@@ -772,9 +773,10 @@ const MODES = {
   TF:["True or false","Quickfire facts about countries"],
   LANDMARKS:["Landmarks","Famous sites: name the country, then find them"]
 };
-const MODE_GROUPS=[["Flags",["FLAG","FLAGMAP"]],["Locate",["FIND","NAME","SHAPE","CAPMAP"]],["Quiz",["CAPITAL","CAPREV","CONT","NEIGH","PATH","ODD","NUMBERS","TF","MIX"]],["Places",["PEAKS","RIVERS","LAKES","LANDMARKS"]],["Challenges",["LIVES","STREAK","SPRINT"]]];
+const MODE_GROUPS=[["Locate",["FIND","FLAGMAP","CAPMAP"]],["Identify",["NAME","SHAPE","FLAG","CONT"]],["Knowledge",["CAPITAL","CAPREV","NUMBERS","TF"]],["Puzzles",["NEIGH","PATH","ODD"]],["Places",["PEAKS","RIVERS","LAKES","LANDMARKS"]],["Mixed",["MIX","EVERY"]]];
+const RUN_FREE=new Set(["PEAKS","RIVERS","LAKES","LANDMARKS"]);   // these use their own question lists, so lives and the clock don't apply
 const CHALLENGES=new Set(["LIVES","STREAK","SPRINT"]);
-const KIND_SETS={MIX:["FIND","NAME","CAPITAL","FLAG"],LIVES:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],STREAK:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],SPRINT:["NAME","FLAG","CAPITAL","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],NUMBERS:["BIGGER","BIGGER","POPBAND"],TF:["TF"]};
+const KIND_SETS={MIX:["FIND","NAME","CAPITAL","FLAG"],EVERY:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],LIVES:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],STREAK:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],SPRINT:["NAME","FLAG","CAPITAL","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],NUMBERS:["BIGGER","BIGGER","POPBAND"],TF:["TF"]};
 const CONT_LABELS=["Africa","Asia","Europe","North America","South America","Oceania"];
 const LIVES_OPTS=[3,5,10], SPRINT_OPTS=[30,60,120], HL_KINDS=["NAME","CAPITAL","CONT","NEIGH","SHAPE","PEAKNAME","RIVERNAME","RIVERFLOW","RIVERTHRU","LAKENAME","POPBAND","LMNAME","LMCOUNTRY"];
 const NO_REC=new Set(["ODD","TF","BIGGER","POPBAND","PATH"]);       // these don't prove you know where a country is, so they stay off Your map
@@ -1093,7 +1095,7 @@ const GBR_REGIONS={
   WALES:{label:"Wales",key:"Wales",box:[-5.4,51.3,-2.6,53.5]},
   NIRELAND:{label:"Northern Ireland",key:"Northern Ireland",box:[-8.3,54,-5.4,55.4]}
 };
-const NB_MODES=["FIND","NAME","SHAPE","CAPMAP","CAPITAL","CAPREV","NEIGH","PATH","ODD","MIX","LIVES","STREAK","SPRINT"];
+const NB_MODES=["FIND","NAME","SHAPE","CAPMAP","CAPITAL","CAPREV","NEIGH","PATH","ODD","MIX","EVERY"];
 const PACKS={
   WORLD:{label:"World",blurb:"Every country",unit:"country",units:"countries",where:"World",box:null,modes:null},
   USA:{label:"United States",blurb:"The 50 states and DC",unit:"state",units:"states",where:"United States",box:[-168,19,-65,71],
@@ -1192,6 +1194,7 @@ const store = {
   setRaw(k,v){ try{ localStorage.setItem(k,v) }catch(e){ mem[k]=v } }
 };
 let livesN=+store.getRaw("meridian_lives")||3, sprintS=+store.getRaw("meridian_sprint")||60;
+let runRule=(r=>["ROUND","LIVES","SUDDEN"].includes(r)?r:"ROUND")(store.getRaw("meridian_run")), sprintOn=store.getRaw("meridian_sprinton")==="1";
 
 /* ============================== projections ============================== */
 const D2R=Math.PI/180, LAT_TOP=85, LAT_BOT=-60;
@@ -1708,6 +1711,9 @@ class MapView {
 let world=null, game=null, gameId=0;
 let difficulty=(d=>DIFFS[d]?d:"MEDIUM")(store.getRaw("meridian_diff"));
 let curMode=(m=>MODES[m]?m:"MIX")(store.getRaw("meridian_mode"));
+if(curMode==="LIVES"||curMode==="STREAK"||curMode==="SPRINT"){            // the old challenge modes are now settings you can put on any mode
+  if(curMode==="LIVES") runRule="LIVES"; else if(curMode==="STREAK") runRule="SUDDEN"; else sprintOn=true;
+  curMode="EVERY"; store.setRaw("meridian_mode","EVERY"); store.setRaw("meridian_run",runRule); store.setRaw("meridian_sprinton",sprintOn?"1":"0"); }
 const regions=new Set((store.getRaw("meridian_regions")||"").split(",").filter(k=>k&&k!=="ALL"&&CONTINENTS[k]));   // empty = all regions
 let qCount=(r=>r==="ALL"?"ALL":(+r||10))(store.getRaw("meridian_count"));
 let territories=store.getRaw("meridian_terr")==="1";
@@ -2131,8 +2137,8 @@ const BADGES=[
   ["sharp","crosshair","Sharpshooter","90% or better in a round of 20 or more",(g,t)=>!g.endless&&t>=20&&g.correct/t>=.9],
   ["speed","bolt","Quick on the draw","A timed round at 80% or better, under 4 seconds a question",(g,t,ms)=>g.timed&&t>=5&&g.correct/t>=.8&&ms<4000],
   ["streak10","flame","On fire","10 in a row in one round",g=>g.bestStreak>=10],
-  ["survivor","heart","Survivor","25 correct in one Lives run",g=>g.mode==="LIVES"&&g.correct>=25],
-  ["hot","trend","Hot streak","15 in a row in a Streak run",g=>g.mode==="STREAK"&&g.correct>=15],
+  ["survivor","heart","Survivor","25 correct in one Lives run",g=>!!g.maxLives&&g.correct>=25],
+  ["hot","trend","Hot streak","15 in a row in a Streak run",g=>(g.sudden||g.mode==="STREAK")&&g.correct>=15],
   ["sprinter","chevrons","Sprinter","20 correct in one Sprint",g=>!!g.sprint&&g.correct>=20],
   ["themeperfect","island","Theme master","A perfect themed round",(g,t)=>!!g.theme&&!g.endless&&t>=5&&g.correct===t],
   ["sweep","checks","Clean sweep","A perfect round with Eliminate on",(g,t)=>!!g.elim&&!g.endless&&t>=5&&g.correct===t],
@@ -2167,11 +2173,12 @@ function startGame(mode){
   if(mode==="RIVERS") return startRivers(ks);
   if(mode==="LAKES") return startLakes(ks);
   const base={theme:th,smart,diff};
-  if(CHALLENGES.has(mode)){
-    const extra={...base,endless:true,count:10,variant:variantOf(mode)};
-    if(mode==="LIVES") Object.assign(extra,{lives:livesN,maxLives:livesN});
-    if(mode==="SPRINT") Object.assign(extra,{sprint:true,sprintS,timed:false,limit:sprintS,sprintEnd:performance.now()+sprintS*1000});
-    return launch(mode,buildQuestions(mode,diff,ks,10,null,opts),ks,false,extra);
+  const ri=runInfo(mode);
+  if(ri.endless){
+    const extra={...base,endless:true,count:10,variant:ri.variant,sudden:runRule==="SUDDEN"};
+    if(runRule==="LIVES") Object.assign(extra,{lives:livesN,maxLives:livesN});
+    if(sprintOn) Object.assign(extra,{sprint:true,sprintS,timed:false,limit:sprintS,sprintEnd:performance.now()+sprintS*1000});
+    return launch(ri.key,buildQuestions(mode,diff,ks,10,null,opts),ks,false,extra);
   }
   launch(mode,buildQuestions(mode,diff,ks,qCount,null,opts),ks,false,base);
 }
@@ -2278,8 +2285,8 @@ function lock(ok,pts,q,wrongHit,speed=0,timedOut=false){ if(game) game.lockedAt=
     streak:ok?g.streak+1:0,bestStreak:ok?Math.max(g.bestStreak,g.streak+1):g.bestStreak,correct:g.correct+(ok?1:0),
     marks:{...(pairQ(q)?{[q.other.iso]:PAL.nb}:{}),...(q.kind==="LMCOUNTRY"?{[q.target.country.iso]:PAL.nb}:{}),...(q.kind==="RIVERTHRU"?{[q.riverObj.iso]:PAL.nb}:{}),...(q.kind==="NEIGH"?Object.fromEntries(q.neighbors.map(i=>[i,PAL.nb])):q.kind==="ODD"?Object.fromEntries(q.group.map(i=>[i,PAL.nb])):{}),...(wrongHit?{[wrongHit]:PAL.bad}:{}),[q.target.iso]:ok?PAL.ok:PAL.amber}});
   if(g.endless&&!ok){
-    if(g.mode==="LIVES"){ g.lives--; if(g.lives<=0) g.over=true; }
-    if(g.mode==="STREAK") g.over=true;
+    if(g.maxLives){ g.lives--; if(g.lives<=0) g.over=true; }
+    if(g.sudden||g.mode==="STREAK") g.over=true;
     if(g.sprint){ g.sprintEnd-=3000; g.deadline=g.sprintEnd; }                  // a miss costs 3 seconds
   }
   if(q.kind==="PATH") g.marks=pathMarks(q,true,ok);
@@ -2331,8 +2338,8 @@ function nextQuestion(){
 }
 function segsHtml(g,live){
   if(g.endless&&live){
-    if(g.mode==="LIVES") return `<span class="hearts" aria-label="${g.lives} lives left">${ico("heart",16,true).repeat(Math.max(0,g.lives))}${ico("heart",16).repeat(g.maxLives-Math.max(0,g.lives))}</span>`;
-    if(g.mode==="STREAK") return `<span class="hud">Streak ${g.streak}</span>`;
+    if(g.maxLives) return `<span class="hearts" aria-label="${g.lives} lives left">${ico("heart",16,true).repeat(Math.max(0,g.lives))}${ico("heart",16).repeat(g.maxLives-Math.max(0,g.lives))}</span>`;
+    if(g.sudden||g.mode==="STREAK") return `<span class="hud">Streak ${g.streak}</span>`;
     return `<span class="hud">${g.correct} correct</span>`;
   }
   if(g.endless||g.qs.length>30){
@@ -2351,11 +2358,11 @@ function finish(){
   const h=loadHistory(), avg=h.length?Math.round(h.reduce((s,x)=>s+x.score,0)/h.length):0;
   $("rKick").textContent=g.daily?(g.replay?"Daily replay":"Daily challenge"):g.practice?"Practice round":nb?"New best":g.sprint?"Time's up":g.endless?"Run over":"Round complete"; $("rKick").className="kick"+(nb?" best":"");
   $("rScore").textContent=g.score; $("rSegs").innerHTML=segsHtml(g,false);
-  $("rCorrect").textContent=g.mode==="STREAK"?`Streak of ${g.correct}`:g.endless?`${g.correct} correct, ${total-g.correct} missed`:`${g.correct} of ${g.qs.length} correct`;
+  $("rCorrect").textContent=(g.sudden||g.mode==="STREAK")&&!g.sprint?`Streak of ${g.correct}`:g.endless?`${g.correct} correct, ${total-g.correct} missed`:`${g.correct} of ${g.qs.length} correct`;
   $("rStreak").textContent=`Longest streak: ${g.bestStreak}`; $("rTileStreak").textContent=g.bestStreak;
   $("rTime").textContent=`Average answer time: ${(avgMs/1000).toFixed(1)} s`; $("rTileTime").textContent=`${(avgMs/1000).toFixed(1)} s`;
   $("rAvg").textContent=g.daily?(g.replay?"Replays don't change your streak":`Daily streak: ${dailyStreak()} day${dailyStreak()===1?"":"s"}`):`Your average over ${h.length} round${h.length===1?"":"s"}: ${avg}`;
-  $("rMode").textContent=g.daily?`Daily challenge, ${g.daily}`:g.practice?`Practice, ${g.qs.length} ${g.label||"weak spots"}`:`${MODES[g.mode][0]}`+(g.theme?`, ${themeLabelOf(g.theme)}`:`, ${DIFFS[g.diff][0]}`+(g.regions.length?`, ${regionLabel(g.regions)}`:""))+(g.mode==="LIVES"?`, ${g.maxLives} lives`:g.sprint?`, ${g.sprintS} seconds`:g.endless?"":g.qs.length!==10?`, ${g.qs.length} questions`:"")+(g.timed?", timed":"")+(g.smart?", smart review":"")+(g.elim?", eliminate":"");
+  $("rMode").textContent=g.daily?`Daily challenge, ${g.daily}`:g.practice?`Practice, ${g.qs.length} ${g.label||"weak spots"}`:`${MODES[g.mode][0]}`+(g.theme?`, ${themeLabelOf(g.theme)}`:`, ${DIFFS[g.diff][0]}`+(g.regions.length?`, ${regionLabel(g.regions)}`:""))+(g.endless?(g.maxLives?`, ${g.maxLives} lives`:"")+(g.sudden&&g.mode!=="STREAK"?", sudden death":"")+(g.sprint?`, ${g.sprintS} seconds`:""):g.qs.length!==10?`, ${g.qs.length} questions`:"")+(g.timed?", timed":"")+(g.smart?", smart review":"")+(g.elim?", eliminate":"");
   let earned=[];
   if(!g.replay){                                                 // lifetime counters, then see what that unlocked
     counters.rounds++; counters.byMode[g.mode]=1; if(g.theme) counters.themes[g.theme]=1; if(g.practice) counters.practice++; if(g.globe) counters.globe++;
@@ -2434,10 +2441,18 @@ function setProjection(id){
 function openSettings(){ renderSettings(); show("settings"); }
 const dispRegion=()=>(curMode==="CONT"||theme)?PACKS[pack].where:regions.size===0?PACKS[pack].where:regions.size<=2?regionLabel(regionKeys()):`${regions.size} regions`;
 function regionCount(){ if(theme){ const T=themeById(theme); if(T) return T.members.length; } const ks=regionKeys(); return ks.length?world.quiz.filter(c=>inRegions(c,ks)).length:world.quiz.length; }
-const variantOf=m=>m==="LIVES"?"L"+livesN:m==="SPRINT"?"S"+sprintS:"";
+/* what a run looks like for this mode: ordinary round, or endless with lives / sudden death / a clock. "Everything" keeps the old Lives, Streak and Sprint score keys. */
+function runInfo(m){
+  const endless=!RUN_FREE.has(m)&&(runRule!=="ROUND"||sprintOn);
+  if(!endless) return {endless:false,key:m,variant:""};
+  const legacy=m==="EVERY"&&!(runRule!=="ROUND"&&sprintOn)?(sprintOn?"SPRINT":runRule==="LIVES"?"LIVES":"STREAK"):m;
+  const parts=[runRule==="LIVES"?"L"+livesN:runRule==="SUDDEN"&&legacy!=="STREAK"?"SD":"",sprintOn?"S"+sprintS:""].filter(Boolean);
+  return {endless:true,key:legacy,variant:parts.join("+")};
+}
+const runLabel=m=>{ const ri=runInfo(m); if(!ri.endless) return ""; return [runRule==="LIVES"?`${livesN} lives`:runRule==="SUDDEN"?"Sudden death":"",sprintOn?`${sprintS} s sprint`:""].filter(Boolean).join(" · "); };
 const effTheme=m=>m==="CONT"?"":theme;
 const effRegions=m=>m==="CONT"||theme?[]:regionKeys();
-const bestNow=m=>{ const th=effTheme(m); return store.get(bestKey(m,th?"HARD":difficulty,th?"T_"+th:effRegions(m).join('+'),CHALLENGES.has(m)?(m==="SPRINT"?false:timed):timed,CHALLENGES.has(m)?10:qCount,territories,elim,variantOf(m),smart)); };
+const bestNow=m=>{ const th=effTheme(m), ri=runInfo(m); return store.get(bestKey(ri.key,th?"HARD":difficulty,th?"T_"+th:effRegions(m).join('+'),ri.endless&&sprintOn?false:timed,ri.endless?10:qCount,territories,elim,ri.variant,smart)); };
 function renderHome(){
   $("sumBtn").innerHTML=`${esc(settingsSummary())} · <b>Change</b>`;
   $("timedBtn").setAttribute("aria-checked",timed);
@@ -2450,7 +2465,7 @@ function renderHome(){
   const W=weeklyTheme(); $("weeklyBtn").style.display=W?"":"none";
   if(W){ $("weeklyIcon").innerHTML=ico(W.icon,19); const wb=store.get(bestKey("MIX","HARD","T_"+W.id,timed,10,territories,false,"",false)); $("weeklySub").textContent=W.label+(wb?` · Best ${wb}`:/^\d/.test(W.label)?"":` · ${W.members.length} countries`); }
   const T=themeById(effTheme(curMode)), best=bestNow(curMode);
-  $("playSub").textContent=[MODES[curMode][0],...(T?[T.label]:[DIFFS[difficulty][0],dispRegion()]),...(smart?["Smart"]:[]),...(elim?["Eliminate"]:[])].join(" · ");
+  $("playSub").textContent=[MODES[curMode][0],...(T?[T.label]:[DIFFS[difficulty][0],dispRegion()]),...(smart?["Smart"]:[]),...(elim?["Eliminate"]:[]),...(runLabel(curMode)?[runLabel(curMode)]:[])].join(" · ");
   $("playBest").textContent=best?`Best ${best}`:"";
   $("cards").innerHTML=cardsHtml([["pack","Map",PACKS[pack].label,PACKS[pack].blurb,pack==="WORLD"?"globe":"map"],...setupCards(curMode,false)]);
   $("home").classList.toggle("packed",pack!=="WORLD");
@@ -2466,16 +2481,19 @@ function setupCards(mode,forStudy){                              // shared by th
     :["region","Region",dispRegion(),`${regionCount()} ${UNITS()}`];
   const diff=T?["none","Difficulty","All","Themes use every country in the set"]:["diff","Difficulty",DIFFS[difficulty][0],DIFFS[difficulty][1]];
   if(forStudy) return [where,diff];
-  const last=mode==="LIVES"?["count","Lives",String(livesN),"before the run ends"]:mode==="SPRINT"?["count","Time",sprintS+" s","a miss costs 3 seconds"]:mode==="STREAK"?["none","Rules","Sudden death","one miss ends the run"]
+  const ri=runInfo(mode);
+  const last=ri.endless?["run","Run",runLabel(mode),(runRule==="SUDDEN"?"one miss ends it":runRule==="LIVES"?"misses cost a life":"")+(sprintOn?(runRule==="ROUND"?"":", ")+"a miss costs 3 seconds":"")]
+    :RUN_FREE.has(mode)?["count","Questions",qCount==="ALL"?"All":String(qCount),"per round"]
+    :runRule==="ROUND"&&!sprintOn?["run","Run",qCount==="ALL"?"All questions":qCount+" questions","Standard round. Tap for lives or a clock"]
     :["count","Questions",qCount==="ALL"?"All":String(qCount),qCount==="ALL"?`${mode==="PEAKS"?peakPool(difficulty,regionKeys()).length:mode==="LANDMARKS"?lmPool(difficulty,regionKeys()).length:mode==="RIVERS"?(RIVEROBJS?riverPool(difficulty,regionKeys()).length:"up to 70"):mode==="LAKES"?(LAKEOBJS?lakePool(difficulty,regionKeys()).length:"up to 60"):buildPool(T?"HARD":difficulty,effRegions(mode),effTheme(mode)).pool.length} in this pool`:"per round"];
   return [["mode","Game mode",MODES[mode][0],MODES[mode][1],MODE_ICON[mode]],where,diff,last];
 }
-const CARD_ICON={pack:["map","locate"],where:["globe","locate"],diff:["target","chal"],count:["hash","quiz"],none:["lock","chal"],region:["globe","locate"]};
+const CARD_ICON={run:["flame","chal"],pack:["map","locate"],where:["globe","locate"],diff:["target","chal"],count:["hash","quiz"],none:["lock","chal"],region:["globe","locate"]};
 const cardsHtml=cards=>cards.map(([k,l,v,s,ic])=>{ const [i0,cat]=ic?[ic,"quiz"]:(CARD_ICON[k]||["sliders","quiz"]);
   const c=k==="mode"?"cat-"+catOf(curMode):"cat-"+cat;
   return `<button class="ocard" data-card="${k}" data-msg="${esc(s)}"><span class="oi chipic ${c}">${ico(i0,19)}</span><span class="ot"><span class="v">${esc(v)}</span><span class="s"><b class="k">${l}</b> · ${esc(s)}</span></span></button>`; }).join("");
-const MODE_ICON={FLAG:"flag",FLAGMAP:"pin",CAPMAP:"landmark",FIND:"search",NAME:"tag",SHAPE:"shape",CAPITAL:"landmark",CONT:"globe",NEIGH:"link",PATH:"route",ODD:"target",MIX:"shuffle",LIVES:"heart",STREAK:"flame",SPRINT:"timer",PEAKS:"mountain",RIVERS:"river",LAKES:"droplet",CAPREV:"swap",NUMBERS:"scale",TF:"question",LANDMARKS:"monument"};
-const CAT_OF={Flags:"flags",Locate:"locate",Quiz:"quiz",Places:"physical",Challenges:"chal"};
+const MODE_ICON={EVERY:"chevrons",FLAG:"flag",FLAGMAP:"pin",CAPMAP:"landmark",FIND:"search",NAME:"tag",SHAPE:"shape",CAPITAL:"landmark",CONT:"globe",NEIGH:"link",PATH:"route",ODD:"target",MIX:"shuffle",LIVES:"heart",STREAK:"flame",SPRINT:"timer",PEAKS:"mountain",RIVERS:"river",LAKES:"droplet",CAPREV:"swap",NUMBERS:"scale",TF:"question",LANDMARKS:"monument"};
+const CAT_OF={Locate:"locate",Identify:"flags",Knowledge:"quiz",Puzzles:"chal",Places:"physical",Mixed:"learn"};
 const catOf=k=>{ const g=MODE_GROUPS.find(([,ks])=>ks.includes(k)); return g?CAT_OF[g[0]]:"quiz"; };
 const refreshSetup=()=>{ renderHome(); renderStudy(); };
 
@@ -2514,10 +2532,17 @@ function renderSheet(){
     html=Object.entries(PACKS).map(([k,P])=>`<button class="opt ${k===pack?"sel":""}" data-pack="${k}"><div><b>${P.label}</b><small>${P.blurb}${k!=="WORLD"&&!worlds[k]?" (downloads on first use)":""}</small></div></button>`).join("")+`<p class="note">Each map keeps its own scores. Progress on your map is tracked separately too.</p>`; }
   else if(sheetKind==="diff"){ title="Difficulty";
     html=Object.entries(DIFFS).map(([k,[l,s]])=>`<button class="opt ${k===difficulty?"sel":""}" data-d="${k}"><div><b>${l}: ${s}</b><small>${(curMode==="PEAKS"?PEAK_DIFF:curMode==="LANDMARKS"?LM_DIFF:curMode==="RIVERS"?RIVER_DIFF:curMode==="LAKES"?LAKE_DIFF:DIFF_DESC)[k]}</small></div></button>`).join(""); }
-  else if(sheetKind==="count"&&curMode==="LIVES"){ title="Lives";
-    html=LIVES_OPTS.map(n=>`<button class="opt ${n===livesN?"sel":""}" data-lives="${n}"><div><b>${n} lives</b><small>${n===3?"The classic.":n===5?"A bit more forgiving.":"Settle in for a long run."}</small></div></button>`).join(""); }
-  else if(sheetKind==="count"&&curMode==="SPRINT"){ title="Time";
-    html=SPRINT_OPTS.map(n=>`<button class="opt ${n===sprintS?"sel":""}" data-sprint="${n}"><div><b>${n} seconds</b><small>${n===30?"A quick burst.":n===60?"The standard sprint.":"A proper marathon."} Each miss costs 3 seconds.</small></div></button>`).join(""); }
+  else if(sheetKind==="run"){ title="How you play";
+    const pool=buildPool(effTheme(curMode)?"HARD":difficulty,effRegions(curMode),effTheme(curMode)).pool.length;
+    const free=RUN_FREE.has(curMode);
+    const rule=(k,n,d)=>`<button class="opt ${runRule===k?"sel":""}" data-rule="${k}"><div><b>${n}</b><small>${d}</small></div></button>`;
+    html=(free?`<p class="note">${MODES[curMode][0]} uses its own question list, so lives and the clock aren't available here.</p>`:
+        `<p class="grp">Rule</p>`+rule("ROUND","Standard round","A set number of questions, then your score.")+rule("LIVES","Lives","Keep going until you run out of lives.")+rule("SUDDEN","Sudden death","One wrong answer ends the run.")+
+        (runRule==="LIVES"?`<p class="grp">Lives</p><div class="chips">${LIVES_OPTS.map(n=>`<button data-lives="${n}" class="${n===livesN?"sel":""}">${n} lives</button>`).join("")}</div>`:"")+
+        `<p class="grp">Clock</p><button class="toggle" data-sprinton="1" role="switch" aria-checked="${sprintOn}" style="background:var(--panel-hi)"><div><b>Sprint clock</b><small>Answer as many as you can before time runs out. Each miss costs 3 seconds.</small></div><span class="sw"></span></button>`+
+        (sprintOn?`<div class="chips" style="margin-top:8px">${SPRINT_OPTS.map(n=>`<button data-sprint="${n}" class="${n===sprintS?"sel":""}">${n} seconds</button>`).join("")}</div>`:""))+
+      ((free||(runRule==="ROUND"&&!sprintOn))?`<p class="grp">Questions<span>${pool} in your selection</span></p><div class="chips">${COUNTS.map(n=>`<button data-n="${n}" class="${n===qCount?"sel":""}">${n==="ALL"?"All":n}</button>`).join("")}</div>`:"")+
+      `<button class="done" id="sheetDone">Done</button>`; }
   else if(sheetKind==="count"){ title="Questions per round";
     const pool=buildPool(effTheme(curMode)?"HARD":difficulty,effRegions(curMode),effTheme(curMode)).pool.length;
     html=COUNTS.map(n=>`<button class="opt ${n===qCount?"sel":""}" data-n="${n}"><div><b>${n==="ALL"?"All":n+" questions"}</b><small>${n==="ALL"?`Every ${UNIT()} in your selection once (${pool}).`:n>pool?`Your selection only has ${pool}, so rounds will be that long.`:"A quick round."}</small></div></button>`).join(""); }
@@ -2531,11 +2556,13 @@ function renderSheet(){
   for(const el of [pn.querySelector(".grab"),pn.querySelector(".sheethead")]){ el.style.touchAction="none"; el.addEventListener("pointerdown",start); el.addEventListener("pointermove",move); el.addEventListener("pointerup",end); el.addEventListener("pointercancel",end); } })();
 function sheetClick(e){
   if(e.target.closest("#sheetScrim,#sheetClose,#sheetDone")) return closeSheet();
-  const o=e.target.closest("[data-pack],[data-mode],[data-d],[data-n],[data-c],[data-elim],[data-smart],[data-terr],[data-nobord],[data-lives],[data-sprint],[data-tsel],[data-gostudy],[data-leave]"); if(!o) return; const d=o.dataset;
+  const o=e.target.closest("[data-pack],[data-mode],[data-d],[data-n],[data-c],[data-elim],[data-smart],[data-terr],[data-nobord],[data-lives],[data-sprint],[data-rule],[data-sprinton],[data-tsel],[data-gostudy],[data-leave]"); if(!o) return; const d=o.dataset;
   if(d.leave){ closeSheet(); quitRound(); return; }
   if(d.gostudy){ closeSheet(); showTab("study"); return; }
-  if(d.lives){ livesN=+d.lives; store.setRaw("meridian_lives",String(livesN)); closeSheet(); refreshSetup(); return; }
-  if(d.sprint){ sprintS=+d.sprint; store.setRaw("meridian_sprint",String(sprintS)); closeSheet(); refreshSetup(); return; }
+  if(d.rule){ runRule=d.rule; store.setRaw("meridian_run",runRule); renderSheet(); refreshSetup(); return; }
+  if(d.sprinton){ sprintOn=!sprintOn; store.setRaw("meridian_sprinton",sprintOn?"1":"0"); renderSheet(); refreshSetup(); return; }
+  if(d.lives){ livesN=+d.lives; store.setRaw("meridian_lives",String(livesN)); renderSheet(); refreshSetup(); return; }
+  if(d.sprint){ sprintS=+d.sprint; store.setRaw("meridian_sprint",String(sprintS)); renderSheet(); refreshSetup(); return; }
   if(d.elim){ elim=!elim; store.setRaw("meridian_elim",elim?"1":"0"); renderSheet(); refreshSetup(); return; }          // these two stay open
   if(d.terr){ territories=!territories; store.setRaw("meridian_terr",territories?"1":"0"); world.setTerritories(territories); renderSheet(); refreshSetup(); renderHome(); renderSettings(); return; }
   if(d.pack){ closeSheet(); switchPack(d.pack); return; }
@@ -2544,7 +2571,7 @@ function sheetClick(e){
   if(d.tsel){ theme=theme===d.tsel?"":d.tsel; regions.clear(); store.setRaw("meridian_themesel",theme); store.setRaw("meridian_regions",""); closeSheet(); refreshSetup(); return; }
   if(d.mode){ curMode=d.mode; store.setRaw("meridian_mode",curMode); closeSheet(); }
   else if(d.d){ difficulty=d.d; store.setRaw("meridian_diff",difficulty); closeSheet(); }
-  else if(d.n){ qCount=d.n==="ALL"?"ALL":+d.n; store.setRaw("meridian_count",String(qCount)); closeSheet(); }
+  else if(d.n){ qCount=d.n==="ALL"?"ALL":+d.n; store.setRaw("meridian_count",String(qCount)); if(sheetKind==="run") renderSheet(); else closeSheet(); }
   else if(d.c){ const k=d.c; theme=""; store.setRaw("meridian_themesel","");
     if(k==="ALL") regions.clear(); else { regions.has(k)?regions.delete(k):regions.add(k); if(BIGREGIONS().every(x=>regions.has(x))) regions.clear(); }
     store.setRaw("meridian_regions",regionKeys().join(",")); renderSheet(); }   // multi-select: stays open
@@ -2582,7 +2609,7 @@ function renderPlay(){
   if(g.locked&&g.ok){ txt=`✓ +${g.pts}`+(g.speed?` (speed +${g.speed})`:"")+(q.kind==="PATH"?` · ${q.steps} step${q.steps===1?"":"s"}${q.steps>q.par?`, shortest was ${q.par}`:", the shortest"}`:""); col="var(--ok)"; }
   else if(q.kind==="PATH"&&!g.locked){ const n=q.chain.length-1; txt=n?`${n} step${n===1?"":"s"} · ${q.chain.slice(1).map(i=>world.countries.find(c=>c.iso===i).name).join(" › ")}`:"Tap a neighbour to start"; col="var(--ink)"; }
   else if(g.locked&&q.kind==="PATH"){ txt=`✕ ${q.steps&&q.steps>q.par+3?"Too far. ":""}Shortest: ${q.answer}`; col="var(--amber)"; }
-  else if(g.locked){ txt="✕ "+(g.timedOut?"Time's up. ":"")+`It was ${q.answer}`+(g.mode==="LIVES"?(g.lives>0?` · ${g.lives} li${g.lives===1?"fe":"ves"} left`:" · no lives left"):""); col="var(--amber)"; }
+  else if(g.locked){ txt="✕ "+(g.timedOut?"Time's up. ":"")+`It was ${q.answer}`+(g.maxLives?(g.lives>0?` · ${g.lives} li${g.lives===1?"fe":"ves"} left`:" · no lives left"):""); col="var(--amber)"; }
   else if(g.attempts===1){ txt="✕ Not quite. One more try."; col="var(--bad)"; }
   $("status").innerHTML=`<span style="color:${col}">${esc(txt)}</span>`+(g.locked&&!g.sprint?`<button id="nextBtn" class="nx">${last?"See results":"Next"}</button>`:q.kind==="PATH"&&!g.locked?`<button id="giveUp" class="nx">Give up</button>`:"");
   $("choices").classList.toggle("c6",!g.locked&&q.choices.length===6);
@@ -2738,7 +2765,7 @@ function shareImage(g){
   c.fillStyle="#8FA9B8"; c.font="500 36px system-ui,sans-serif";
   c.fillText(g.daily?`Daily challenge · ${g.daily}`:$("rMode").textContent,W/2,235);
   c.fillStyle="#F4B942"; c.font=`700 260px ${serif}`; c.fillText(String(g.score),W/2,560);
-  c.fillStyle="#EAF2F5"; c.font="600 52px system-ui,sans-serif"; c.fillText(g.mode==="STREAK"?`Streak of ${g.correct}`:g.endless?`${g.correct} correct`:`${g.correct} of ${g.qs.length} correct`,W/2,650);
+  c.fillStyle="#EAF2F5"; c.font="600 52px system-ui,sans-serif"; c.fillText((g.sudden||g.mode==="STREAK")&&!g.sprint?`Streak of ${g.correct}`:g.endless?`${g.correct} correct`:`${g.correct} of ${g.qs.length} correct`,W/2,650);
   const shown=g.results.slice(-30), n=shown.length, per=Math.min(n,10), rowsN=Math.ceil(n/per), size=Math.min(84,(W-200)/per-12), gap=12, gw=per*(size+gap)-gap, x0=(W-gw)/2;
   shown.forEach((r,i)=>{ const x=x0+(i%per)*(size+gap), y=730+Math.floor(i/per)*(size+gap); c.fillStyle=r?ok:bad;
     c.beginPath(); c.roundRect(x,y,size,size,14); c.fill();
