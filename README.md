@@ -7,9 +7,10 @@ Browser games and apps, served with GitHub Pages at https://xipetotec.github.io/
 | [`index.html`](https://xipetotec.github.io/) | Home page that links to everything below |
 | [`meridian.html`](https://xipetotec.github.io/meridian.html) | Meridian, a world map quiz |
 | [`rungs.html`](https://xipetotec.github.io/rungs.html) | Rungs, a word ladder game |
+| [`wordl/`](https://xipetotec.github.io/wordl/) | Wordl, a five-letter word guessing game using the Rungs word list |
 | [`history.html`](https://xipetotec.github.io/history.html) | Year by Year, a history dates quiz (events load from `history-events.json`) |
 | [`tides.html`](https://xipetotec.github.io/tides.html) | Nightcliff Tides, a tides, fishing and weather dashboard |
 
-Each page is a single self-contained HTML file. Pushing to `main` deploys the site through `.github/workflows/pages.yml`.
+Each page is a single self-contained HTML file (Wordl lives in its own folder as `wordl/index.html`). Pushing to `main` deploys the site through `.github/workflows/pages.yml`.
 
 To add a new game, put its HTML file in the root and add a card for it in `index.html`.
