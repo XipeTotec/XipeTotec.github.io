@@ -501,6 +501,7 @@ h1{font-size:40px}
   #home.packed .menu>.cap:nth-of-type(3),#home.packed .menu>#cards{grid-column:1}
 }
 
+.pacebar{display:flex;align-items:center;gap:8px;margin:6px 6px 0;font-size:18px;line-height:1}.pacebar i{flex:1;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--ok),var(--amber))}
 /* ---- badges and achievements, flashier ---- */
 .hero{position:relative;display:flex;align-items:center;gap:16px;padding:18px 16px;margin:2px 0 14px;border-radius:22px;overflow:hidden;border:1px solid rgba(244,185,66,.35);
   background:radial-gradient(120% 140% at 0% 0%,rgba(244,185,66,.28),transparent 55%),radial-gradient(90% 120% at 100% 100%,rgba(143,114,242,.22),transparent 60%),var(--panel);
@@ -1254,8 +1255,6 @@ const store = {
   setRaw(k,v){ try{ localStorage.setItem(k,v) }catch(e){ mem[k]=v } }
 };
 let livesN=+store.getRaw("meridian_lives")||3, sprintS=+store.getRaw("meridian_sprint")||60, sprintInc=+store.getRaw("meridian_sprintinc")||0;
-const GAITS={30:"Gallop",60:"Canter",90:"Trot",120:"Walk"};                  // the clock is a pace: less time means a faster gait
-const gaitOf=sec=>GAITS[sec]||sec+" s", pace=(a,b)=>`${gaitOf(a)}${b?` +${b}`:""}`;
 const clockStr=(a,b)=>b?`${a}+${b}`:String(a);       // chess style: 60+3 is 60 seconds, plus 3 for every correct answer
 let runRule=(r=>["ROUND","LIVES","SUDDEN"].includes(r)?r:"ROUND")(store.getRaw("meridian_run")), sprintOn=store.getRaw("meridian_sprinton")==="1";
 
@@ -2458,7 +2457,7 @@ function finish(){
   $("rStreak").textContent=`Longest streak: ${g.bestStreak}`; $("rTileStreak").textContent=g.bestStreak;
   $("rTime").textContent=`Average answer time: ${(avgMs/1000).toFixed(1)} s`; $("rTileTime").textContent=`${(avgMs/1000).toFixed(1)} s`;
   $("rAvg").textContent=g.daily?(g.replay?"Replays don't change your streak":`Daily streak: ${dailyStreak()} day${dailyStreak()===1?"":"s"}`):`Your average over ${h.length} round${h.length===1?"":"s"}: ${avg}`;
-  $("rMode").textContent=g.daily?`Daily challenge, ${g.daily}`:g.practice?`Practice, ${g.qs.length} ${g.label||"weak spots"}`:`${MODES[g.mode][0]}`+(g.theme?`, ${themeLabelOf(g.theme)}`:`, ${DIFFS[g.diff][0]}`+(g.regions.length?`, ${regionLabel(g.regions)}`:""))+(g.endless?(g.maxLives?`, ${g.maxLives} lives`:"")+(g.sudden&&g.mode!=="STREAK"?", sudden death":"")+(g.sprint?`, ${pace(g.sprintS,g.sprintInc)}`:""):g.qs.length!==10?`, ${g.qs.length} questions`:"")+(g.timed?", timed":"")+(g.smart?", smart review":"")+(g.elim?", eliminate":"");
+  $("rMode").textContent=g.daily?`Daily challenge, ${g.daily}`:g.practice?`Practice, ${g.qs.length} ${g.label||"weak spots"}`:`${MODES[g.mode][0]}`+(g.theme?`, ${themeLabelOf(g.theme)}`:`, ${DIFFS[g.diff][0]}`+(g.regions.length?`, ${regionLabel(g.regions)}`:""))+(g.endless?(g.maxLives?`, ${g.maxLives} lives`:"")+(g.sudden&&g.mode!=="STREAK"?", sudden death":"")+(g.sprint?`, ${clockStr(g.sprintS,g.sprintInc)} ${g.sprintInc?"clock":"seconds"}`:""):g.qs.length!==10?`, ${g.qs.length} questions`:"")+(g.timed?", timed":"")+(g.smart?", smart review":"")+(g.elim?", eliminate":"");
   let earned=[];
   if(!g.replay){                                                 // lifetime counters, then see what that unlocked
     counters.rounds++; counters.byMode[g.mode]=1; if(g.theme) counters.themes[g.theme]=1; if(g.practice) counters.practice++; if(g.globe) counters.globe++;
@@ -2545,7 +2544,7 @@ function runInfo(m){
   const parts=[runRule==="LIVES"?"L"+livesN:runRule==="SUDDEN"&&legacy!=="STREAK"?"SD":"",sprintOn?"S"+clockStr(sprintS,sprintInc):""].filter(Boolean);
   return {endless:true,key:legacy,variant:parts.join("+")};
 }
-const runLabel=m=>{ const ri=runInfo(m); if(!ri.endless) return ""; return [runRule==="LIVES"?`${livesN} lives`:runRule==="SUDDEN"?"Sudden death":"",sprintOn?pace(sprintS,sprintInc):""].filter(Boolean).join(" · "); };
+const runLabel=m=>{ const ri=runInfo(m); if(!ri.endless) return ""; return [runRule==="LIVES"?`${livesN} lives`:runRule==="SUDDEN"?"Sudden death":"",sprintOn?(sprintInc?`${clockStr(sprintS,sprintInc)} clock`:`${sprintS} s sprint`):""].filter(Boolean).join(" · "); };
 const effTheme=m=>m==="CONT"?"":theme;
 const effRegions=m=>m==="CONT"||theme?[]:regionKeys();
 const bestNow=m=>{ const th=effTheme(m), ri=runInfo(m); return store.get(bestKey(ri.key,th?"HARD":difficulty,th?"T_"+th:effRegions(m).join('+'),ri.endless&&sprintOn?false:timed,ri.endless?10:qCount,territories,elim,ri.variant,smart)); };
@@ -2636,7 +2635,7 @@ function renderSheet(){
         `<p class="grp">Rule</p>`+rule("ROUND","Standard round","A set number of questions, then your score.")+rule("LIVES","Lives","Keep going until you run out of lives.")+rule("SUDDEN","Sudden death","One wrong answer ends the run.")+
         (runRule==="LIVES"?`<p class="grp">Lives</p><div class="chips">${LIVES_OPTS.map(n=>`<button data-lives="${n}" class="${n===livesN?"sel":""}">${n} lives</button>`).join("")}</div>`:"")+
         `<p class="grp">Clock</p><button class="toggle" data-sprinton="1" role="switch" aria-checked="${sprintOn}" style="background:var(--panel-hi)"><div><b>Clock</b><small>Answer as many as you can before time runs out.</small></div><span class="sw"></span></button>`+
-        (sprintOn?`<p class="grp" style="margin-top:12px">Pace<span>less time, faster gait</span></p><div class="chips">${SPRINT_OPTS.map(n=>`<button data-sprint="${n}" class="${n===sprintS?"sel":""}">${GAITS[n]} <small style="opacity:.7">${n}s</small></button>`).join("")}</div><p class="grp" style="margin-top:12px">Increment<span>seconds added per correct answer</span></p><div class="chips">${INC_OPTS.map(n=>`<button data-inc="${n}" class="${n===sprintInc?"sel":""}">${n?"+"+n:"None"}</button>`).join("")}</div><p class="note">Like chess: Canter (60) with +3 is written 60+3. Each miss still costs 3 seconds.</p>`:""))+
+        (sprintOn?`<p class="grp" style="margin-top:12px">Time<span>seconds on the clock, quickest to slowest</span></p><div class="chips">${SPRINT_OPTS.map(n=>`<button data-sprint="${n}" class="${n===sprintS?"sel":""}">${n}</button>`).join("")}</div><div class="pacebar" aria-hidden="true"><span>🐇</span><i></i><span>🐢</span></div><p class="grp" style="margin-top:12px">Increment<span>seconds added per correct answer</span></p><div class="chips">${INC_OPTS.map(n=>`<button data-inc="${n}" class="${n===sprintInc?"sel":""}">${n?"+"+n:"None"}</button>`).join("")}</div><p class="note">Like chess: 60 with +3 is written 60+3. Each miss still costs 3 seconds.</p>`:""))+
       ((free||(runRule==="ROUND"&&!sprintOn))?`<p class="grp">Questions<span>${pool} in your selection</span></p><div class="chips">${COUNTS.map(n=>`<button data-n="${n}" class="${n===qCount?"sel":""}">${n==="ALL"?"All":n}</button>`).join("")}</div>`:"")+
       `<button class="done" id="sheetDone">Done</button>`; }
   else if(sheetKind==="count"){ title="Questions per round";
