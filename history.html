@@ -81,6 +81,25 @@ h1 span{color:var(--brass)}
 .feedback.miss{border-color:var(--bad)}
 .feedback strong{font-size:1.05rem}
 .feedback p{margin:0;color:var(--muted);max-width:62ch}
+.guess{display:flex;flex-direction:column;gap:12px}
+.stepper{display:flex;gap:6px;align-items:stretch}
+.step{font:inherit;font-family:var(--mono);font-weight:600;font-size:.9rem;min-width:44px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;cursor:pointer;padding:0 6px}
+.step:hover{border-color:var(--accent)}
+#guess{flex:1;min-width:0;font-family:var(--mono);font-weight:600;font-size:1.8rem;text-align:center;padding:8px 4px;border:1.5px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+#guess::-webkit-outer-spin-button,#guess::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+#guess:focus-visible,.step:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+.ce{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.track{position:relative;height:56px;margin:4px 10px 0}
+.track::before{content:"";position:absolute;left:0;right:0;top:24px;height:2px;background:var(--line)}
+.track .gap{position:absolute;top:23px;height:4px;background:var(--brass);opacity:.35;border-radius:2px}
+.mk{position:absolute;top:18px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;font-family:var(--mono);font-size:.78rem;font-weight:600;white-space:nowrap}
+.mk i{width:14px;height:14px;border-radius:50%;display:block}
+.mk.you i{background:var(--surface);border:3px solid var(--accent)}
+.mk.real i{background:var(--good)}
+.mk.you{color:var(--accent)}
+.mk.real{color:var(--good)}
+.mk.you.above{top:-6px;flex-direction:column-reverse}
+.pts{font-family:var(--mono);font-weight:600;font-size:1.5rem;color:var(--brass)}
 .btn{font:inherit;font-weight:700;background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:12px 20px;cursor:pointer;align-self:flex-start}
 .final{font-family:var(--mono);font-size:3.4rem;font-weight:600;margin:0;line-height:1}
 .final small{font-size:1.2rem;color:var(--muted)}
@@ -106,6 +125,7 @@ h1 span{color:var(--brass)}
       <button class="chip" id="m-when" data-mode="when">Guess the year</button>
       <button class="chip" id="m-what" data-mode="what">Guess the event</button>
       <button class="chip" id="m-mix" data-mode="mix">Mixed</button>
+      <button class="chip" id="m-close" data-mode="close">Closest year</button>
     </div>
     <div class="row" role="group" aria-label="Difficulty">
       <span class="label">Level</span>
@@ -756,6 +776,11 @@ function fact(ev){
   if(ev.n) return ev.n;
   return (ev.d ? `This happened on ${ev.d} ${fmt(ev.y)}.` : `This happened in ${fmt(ev.y)}.`) + " Source: Wikipedia.";
 }
+// Closest-year scoring: 100 for exact, falling off faster for recent events
+function yearsApart(a,b){ return Math.abs(a-b) - ((a<0)!==(b<0) ? 1 : 0); }
+function closeScale(y){ return y>=1900?6 : y>=1800?10 : y>=1500?20 : y>=1000?30 : y>=0?60 : 100; }
+function closePoints(guess,y){ return Math.round(100*Math.exp(-yearsApart(guess,y)/closeScale(y))); }
+function closeWord(p){ return p===100?"Exact!" : p>=80?"Very close" : p>=50?"Close" : p>=20?"In the ballpark" : "Way off"; }
 function yearOptions(y){
   const spread = y<0?120 : y<1000?60 : y<1800?30 : y<1900?12 : 8;
   const set = new Set([y]);
@@ -801,6 +826,7 @@ function newRound(){
   S.len = pool.length;
   S.qs = pool.map(ev=>{
     const type = S.mode==="mix" ? (Math.random()<.5?"when":"what") : S.mode;
+    if(type==="close") return {type, ev};
     return type==="when" ? {type, ev, opts:yearOptions(ev.y)} : {type, ev, opts:eventOptions(ev)};
   });
   drawRail(); drawQuestion();
@@ -820,8 +846,9 @@ function drawQuestion(){
   const q=S.qs[S.i], c=$("card");
   c.innerHTML="";
   const k=document.createElement("p"); k.className="kicker";
-  k.textContent=`Question ${S.i+1} of ${S.len} · ${q.type==="when"?"When did this happen?":"What happened this year?"}`;
+  k.textContent=`Question ${S.i+1} of ${S.len} · ${q.type==="what"?"What happened this year?":q.type==="close"?"What year? Get as close as you can":"When did this happen?"}`;
   const h=document.createElement("h2");
+  if(q.type==="close"){ h.className="q"; h.textContent=q.ev.e; c.append(k,h,guessForm()); return; }
   if(q.type==="when"){ h.className="q"; h.textContent=q.ev.e; }
   else { h.className="q year"; h.textContent=fmt(q.ev.y); }
   const grid=document.createElement("div"); grid.className="answers"+(q.type==="what"?" events":"");
@@ -833,6 +860,77 @@ function drawQuestion(){
   });
   const fb=document.createElement("div"); fb.id="fb";
   c.append(k,h,grid,fb);
+}
+
+function guessForm(){
+  const wrap=document.createElement("div"); wrap.className="guess";
+  wrap.innerHTML=`<div class="stepper">
+      <button class="step" data-d="-10" aria-label="10 years earlier">−10</button>
+      <button class="step" data-d="-1" aria-label="1 year earlier">−1</button>
+      <input id="guess" type="number" inputmode="numeric" min="1" max="${THIS_YEAR}" placeholder="Year" aria-label="Your guess">
+      <button class="step" data-d="1" aria-label="1 year later">+1</button>
+      <button class="step" data-d="10" aria-label="10 years later">+10</button>
+    </div>
+    <div class="ce" role="group" aria-label="Era">
+      <button class="chip" id="ce-ad" data-ce="AD">AD</button>
+      <button class="chip" id="ce-bc" data-ce="BC">BC</button>
+      <button class="btn" id="lock" style="margin-left:auto">Lock in</button>
+    </div>
+    <p class="era" id="hint" hidden></p>`;
+  let ce="AD";
+  const inp=wrap.querySelector("#guess");
+  const setCE=v=>{ce=v; wrap.querySelectorAll("[data-ce]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.ce===v)));};
+  setCE("AD");
+  wrap.querySelectorAll("[data-ce]").forEach(b=>b.addEventListener("click",()=>setCE(b.dataset.ce)));
+  // steppers move along the real timeline, crossing from 1 AD to 1 BC
+  wrap.querySelectorAll("[data-d]").forEach(b=>b.addEventListener("click",()=>{
+    let v=Number(inp.value)||0; if(!inp.value){ inp.value = ce==="AD"?1900:500; return; }
+    let y = ce==="BC" ? -v : v; const d=Number(b.dataset.d);
+    let n = y + d; if((y>0&&n<=0)||(y<0&&n>=0)) n += d>0?1:-1;
+    n=Math.min(n,THIS_YEAR); setCE(n<0?"BC":"AD"); inp.value=Math.abs(n);
+  }));
+  const lock=()=>{
+    const v=parseInt(inp.value,10), hint=wrap.querySelector("#hint");
+    if(!v || v<1 || (ce==="AD" && v>THIS_YEAR) || (ce==="BC" && v>5000)){
+      hint.hidden=false; hint.textContent = `Enter a year from 1 to ${ce==="AD"?THIS_YEAR:5000}, then choose AD or BC.`; inp.focus(); return;
+    }
+    submitGuess(ce==="BC"?-v:v, wrap);
+  };
+  wrap.querySelector("#lock").addEventListener("click",lock);
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); lock(); } });
+  setTimeout(()=>inp.focus({preventScroll:true}),0);
+  return wrap;
+}
+
+function submitGuess(g, wrap){
+  if(S.answered) return; S.answered=true;
+  const q=S.qs[S.i], y=q.ev.y, pts=closePoints(g,y), off=yearsApart(g,y);
+  wrap.querySelectorAll("button,input").forEach(el=>el.disabled=true);
+  const ok = pts>=50;
+  S.score+=pts; if(ok) S.streak++; else S.streak=0;
+  S.results.push({ok, q, picked:g, pts});
+  $("score").textContent=S.score; $("streak").textContent=S.streak;
+  // two markers on a mini timeline
+  const lo=Math.min(g,y), hi=Math.max(g,y), pad=Math.max(2,(hi-lo)*.15), span=(hi-lo)+2*pad;
+  const pos=v=>((v-lo+pad)/span*100).toFixed(2);
+  const fb=document.createElement("div"); fb.className="feedback"+(ok?"":" miss"); fb.id="fb";
+  const track=document.createElement("div"); track.className="track";
+  track.innerHTML=`<span class="gap" style="left:${pos(lo)}%;width:${(pos(hi)-pos(lo)).toFixed(2)}%"></span>
+    <span class="mk real" style="left:${pos(y)}%"><i></i>${fmt(y)}</span>
+    ${g===y?"":`<span class="mk you above" style="left:${pos(g)}%"><i></i>You: ${fmt(g)}</span>`}`;
+  const head=document.createElement("strong");
+  head.innerHTML=`<span class="pts">+${pts}</span> ${closeWord(pts)}`;
+  const p1=document.createElement("p");
+  p1.textContent = off===0 ? `You got the exact year: ${fmt(y)}.` : `It was ${fmt(y)}. You were ${off} year${off===1?"":"s"} ${g<y?"too early":"too late"}.`;
+  const p2=document.createElement("p"); p2.textContent=fact(q.ev);
+  fb.append(head,p1,p2);
+  const nx=document.createElement("button"); nx.className="btn"; nx.id="next";
+  nx.textContent = S.i+1<S.len ? "Next question" : "See results";
+  nx.addEventListener("click",next);
+  wrap.replaceWith(track); $("card").append(fb,nx);
+  // focus Next after this key press finishes, so the same Enter doesn't skip ahead
+  setTimeout(()=>nx.focus({preventScroll:true}),150);
+  drawRail();
 }
 
 function answer(o,btn,grid){
@@ -877,23 +975,26 @@ function finish(){
   const raw = store.get(bestKey());
   const prev = raw===null ? -1 : Number(String(raw).split("/")[0]);
   const isBest = S.score>prev;
-  if(isBest) store.set(bestKey(), `${S.score}/${S.len}`);
+  if(isBest) store.set(bestKey(), `${S.score}/${S.qs[0]&&S.qs[0].type==="close"?S.len*100:S.len}`);
   showBest();
   const c=$("card"); c.innerHTML="";
-  const pct=S.score/S.len;
+  const isClose = S.qs[0] && S.qs[0].type==="close";
+  const max = isClose ? S.len*100 : S.len;
+  const pct=S.score/max;
   const verdict = pct===1?"Perfect round.":pct>=.8?"Excellent knowledge of the timeline.":pct>=.5?"A solid round.":"History is long. Try another round.";
   c.innerHTML = `<p class="kicker">Round complete${isBest&&prev>=0?" · New best":""}</p>
-    <p class="final">${S.score}<small> / ${S.len}</small></p>
+    <p class="final">${S.score}<small> / ${max}${isClose?" points":""}</small></p>
     <p class="era">${verdict}</p>`;
-  const misses=S.results.filter(r=>!r.ok);
+  const misses = isClose ? S.results : S.results.filter(r=>!r.ok);
   if(misses.length){
-    const h=document.createElement("p"); h.className="kicker"; h.textContent="Worth remembering";
+    const h=document.createElement("p"); h.className="kicker"; h.textContent= isClose ? "Your guesses" : "Worth remembering";
     const ul=document.createElement("ul"); ul.className="review";
     misses.forEach(r=>{
       const li=document.createElement("li");
-      const yourPick = r.q.type==="when" ? `You said ${fmt(r.picked)}` : `You picked: ${r.picked.e} (${fmt(r.picked.y)})`;
+      const yourPick = r.q.type==="close" ? `You said ${fmt(r.picked)} · ${r.pts} points` : r.q.type==="when" ? `You said ${fmt(r.picked)}` : `You picked: ${r.picked.e} (${fmt(r.picked.y)})`;
       li.innerHTML=`<span class="y">${fmt(r.q.ev.y)}</span><span><span class="t"></span><br><span class="m"></span></span>`;
       li.querySelector(".t").textContent=r.q.ev.e; li.querySelector(".m").textContent=yourPick;
+      if(r.q.type==="close" && r.ok) li.querySelector(".m").style.color="var(--good)";
       ul.appendChild(li);
     });
     c.append(h,ul);
