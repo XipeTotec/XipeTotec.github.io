@@ -871,10 +871,11 @@ const MODES = {
   CAPREV:["Capital to country","Which country has this capital?"],
   NUMBERS:["Numbers","Bigger or smaller, and how many people"],
   TF:["True or false","Quickfire facts about countries"],
-  LANDMARKS:["Landmarks","Famous sites: name the country, then find them"]
+  LANDMARKS:["Landmarks","Famous sites: name the country, then find them"],
+  CITIES:["Cities","Big cities and capitals: find them, and name their country"]
 };
-const MODE_GROUPS=[["Locate",["FIND","FLAGMAP","CAPMAP"]],["Identify",["NAME","SHAPE","FLAG","CONT"]],["Knowledge",["CAPITAL","CAPREV","NUMBERS","TF"]],["Puzzles",["NEIGH","PATH","ODD"]],["Places",["PEAKS","RIVERS","LAKES","LANDMARKS"]],["Mixed",["MIX","EVERY"]]];
-const RUN_FREE=new Set(["PEAKS","RIVERS","LAKES","LANDMARKS"]);   // these use their own question lists, so lives and the clock don't apply
+const MODE_GROUPS=[["Locate",["FIND","FLAGMAP","CAPMAP"]],["Identify",["NAME","SHAPE","FLAG","CONT"]],["Knowledge",["CAPITAL","CAPREV","NUMBERS","TF"]],["Puzzles",["NEIGH","PATH","ODD"]],["Places",["CITIES","PEAKS","RIVERS","LAKES","LANDMARKS"]],["Mixed",["MIX","EVERY"]]];
+const RUN_FREE=new Set(["PEAKS","RIVERS","LAKES","LANDMARKS","CITIES"]);   // these use their own question lists, so lives and the clock don't apply
 const CHALLENGES=new Set(["LIVES","STREAK","SPRINT"]);
 const KIND_SETS={MIX:["FIND","NAME","CAPITAL","FLAG"],EVERY:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],LIVES:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],STREAK:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],SPRINT:["NAME","FLAG","CAPITAL","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],NUMBERS:["BIGGER","BIGGER","POPBAND"],TF:["TF"]};
 const CONT_LABELS=["Africa","Asia","Europe","North America","South America","Oceania"];
@@ -1219,6 +1220,7 @@ const $ = id => document.getElementById(id);
 /* ---- icons: one small set of line icons instead of emoji ---- */
 const ICONS={
   skip:'<path d="M5 6l8 6-8 6z" fill="currentColor"/><path d="M12 6l8 6-8 6z" fill="currentColor"/>',
+  city:'<path d="M4 21V10l5-3v14"/><path d="M9 21V4l7 3v14"/><path d="M16 21V11l4 2v8"/><path d="M3 21h18"/>',
   pause:'<rect x="7" y="5" width="3.6" height="14" rx="1" fill="currentColor"/><rect x="13.4" y="5" width="3.6" height="14" rx="1" fill="currentColor"/>',
   play:'<path d="M8 5v14l11-7z" fill="currentColor"/>',
   book:'<path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5z"/><path d="M12 6.5v13"/>',
@@ -1535,7 +1537,8 @@ class MapView {
     return best;
   }
   setPeaks(list){ this.peaks=list; this.peakMap=list?new Map(list.map(p=>[p.iso,p])):null; this.pickPeaks=false; this.draw(); }
-  peakTri(c,x,y,r,col,glyph){ if(glyph==="diamond"){ c.beginPath(); c.moveTo(x,y-r); c.lineTo(x+r*.85,y); c.lineTo(x,y+r); c.lineTo(x-r*.85,y); c.closePath(); c.fillStyle=col; c.fill(); c.stroke(); return; }
+  peakTri(c,x,y,r,col,glyph){ if(glyph==="dot"){ c.beginPath(); c.arc(x,y,r*.9,0,6.2832); c.fillStyle=col; c.fill(); c.stroke(); return; }
+    if(glyph==="diamond"){ c.beginPath(); c.moveTo(x,y-r); c.lineTo(x+r*.85,y); c.lineTo(x,y+r); c.lineTo(x-r*.85,y); c.closePath(); c.fillStyle=col; c.fill(); c.stroke(); return; }
      c.beginPath(); c.moveTo(x,y-r); c.lineTo(x+r*.95,y+r*.75); c.lineTo(x-r*.95,y+r*.75); c.closePath(); c.fillStyle=col; c.fill(); c.stroke(); }
   hitPeak(px,py){
     let best=null,bd=26;
@@ -1925,21 +1928,128 @@ const LANDMARKS_RAW=[
  ["Hassan II Mosque","MA",33.6086,-7.6326,"Casablanca"],["Blue Lagoon","IS",63.8804,-22.4495,"Reykjanes"],["Prague Castle","CZ",50.0911,14.4005,"Prague"],
  ["Merlion","SG",1.2868,103.8545,"Singapore"],["Burj Al Arab","AE",25.1412,55.1853,"Dubai"]
 ];
-let LMOBJS=null;
-function lmList(){
-  if(LMOBJS||!world) return LMOBJS||[];
-  LMOBJS=LANDMARKS_RAW.map(([name,iso,lat,lon,where],i)=>{ const c=world.quiz.find(x=>x.iso===iso); if(!c) return null;
-    return {lm:true,glyph:"diamond",iso:"lm_"+i,name,lat,lon,gcx:lon,gcy:lat,where,country:c,cont:c.facts.continent||"",fame:i,valid:false,facts:{continent:c.facts.continent||""},
+const CITIES_RAW=[   // [name, country code, lat, lon, population in thousands, is a national capital, region]. Natural Earth populated places, biggest first
+["Tokyo","JP",35.69,139.75,35676,1,""],["New York","US",40.75,-73.98,19040,0,""],["Mexico City","MX",19.44,-99.13,19028,1,"Distrito Federal"],
+["Mumbai","IN",19.02,72.86,18978,0,"Maharashtra"],["São Paulo","BR",-23.56,-46.63,18845,0,""],["Delhi","IN",28.67,77.23,15926,0,""],
+["Shanghai","CN",31.22,121.43,14987,0,""],["Kolkata","IN",22.5,88.32,14787,0,"West Bengal"],["Dhaka","BD",23.73,90.41,12797,1,""],
+["Buenos Aires","AR",-34.6,-58.4,12795,1,"Ciudad de Buenos Aires"],["Los Angeles","US",33.99,-118.18,12500,0,"California"],["Karachi","PK",24.87,66.99,12130,0,"Sind"],
+["Cairo","EG",30.05,31.25,11893,1,"Al Qahirah"],["Rio de Janeiro","BR",-22.92,-43.23,11748,0,""],["Ōsaka","JP",34.75,135.46,11294,0,"Osaka"],
+["Beijing","CN",39.93,116.39,11106,1,""],["Manila","PH",14.61,120.98,11100,1,"Metropolitan Manila"],["Moscow","RU",55.75,37.61,10452,1,"Moskva"],
+["Istanbul","TR",41.11,29.01,10061,0,""],["Paris","FR",48.87,2.33,9904,1,"Île-de-France"],["Seoul","KR",37.57,127.0,9796,1,""],
+["Lagos","NG",6.45,3.39,9466,0,""],["Jakarta","ID",-6.17,106.83,9125,1,"Jakarta Raya"],["Chicago","US",41.83,-87.75,8990,0,"Illinois"],
+["Guangzhou","CN",23.15,113.32,8829,0,"Guangdong"],["London","GB",51.5,-0.12,8567,1,"Westminster"],["Lima","PE",-12.05,-77.05,8012,1,""],
+["Tehran","IR",35.67,51.42,7873,1,""],["Kinshasa","CD",-4.33,15.31,7843,1,"Kinshasa City"],["Bogota","CO",4.6,-74.09,7772,1,""],
+["Shenzhen","CN",22.55,114.12,7581,0,"Guangdong"],["Wuhan","CN",30.58,114.27,7243,0,"Hubei"],["Hong Kong","HK",22.31,114.18,7206,0,""],
+["Tianjin","CN",39.13,117.2,7180,0,""],["Chennai","IN",13.09,80.28,7163,0,"Tamil Nadu"],["Taipei","TW",25.04,121.57,6900,1,"Taipei City"],
+["Bengaluru","IN",12.97,77.56,6787,0,"Karnataka"],["Bangkok","TH",13.75,100.51,6704,1,"Bangkok Metropolis"],["Lahore","PK",31.56,74.35,6577,0,"Punjab"],
+["Chongqing","CN",29.57,106.59,6461,0,""],["Hyderabad","IN",17.4,78.48,6376,0,"Telangana"],["Amaravati","IN",16.53,80.52,5800,0,"Andhra Pradesh"],
+["Santiago","CL",-33.45,-70.67,5720,1,"Región Metropolitana de Santiago"],["Miami","US",25.79,-80.23,5585,0,"Florida"],["Belo Horizonte","BR",-19.91,-43.92,5575,0,"Minas Gerais"],
+["Madrid","ES",40.4,-3.69,5567,1,"Comunidad de Madrid"],["Philadelphia","US",40.0,-75.17,5492,0,"Pennsylvania"],["Ahmedabad","IN",23.03,72.58,5375,0,"Dadra and Nagar Haveli"],
+["Ho Chi Minh City","VN",10.78,106.69,5314,0,"H? Chí Minh city"],["Toronto","CA",43.7,-79.42,5213,0,"Ontario"],["Singapore","SG",1.29,103.85,5184,1,""],
+["Luanda","AO",-8.84,13.23,5173,1,""],["Baghdad","IQ",33.34,44.39,5054,1,""],["Barcelona","ES",41.39,2.18,4920,0,"Cataluña"],
+["Dallas","US",32.82,-96.84,4798,0,"Texas"],["Shenyeng","CN",41.81,123.45,4787,0,"Liaoning"],["Khartoum","SD",15.59,32.53,4754,1,""],
+["Pune","IN",18.53,73.85,4672,0,"Maharashtra"],["Sydney","AU",-33.92,151.18,4630,0,"New South Wales"],["St.  Petersburg","RU",59.94,30.31,4553,0,"City of St. Petersburg"],
+["Chattogram","BD",22.33,91.8,4529,0,"Chittagong"],["Dongguan","CN",23.05,113.74,4528,0,"Guangdong"],["Atlanta","US",33.83,-84.4,4506,0,"Georgia"],
+["Boston","US",42.33,-71.07,4467,0,"Massachusetts"],["Riyadh","SA",24.64,46.77,4465,1,"Ar Riyad"],["Houston","US",29.82,-95.34,4459,0,"Texas"],
+["Hanoi","VN",21.04,105.85,4378,1,"Thái Nguyên"],["Washington,  D.C.","US",38.9,-77.01,4338,1,"District of Columbia"],["Guadalajara","MX",20.67,-103.33,4198,0,"Jalisco"],
+["Melbourne","AU",-37.82,144.97,4170,0,"Victoria"],["Alexandria","EG",31.2,29.95,4165,0,"Al Iskandariyah"],["Chengdu","CN",30.67,104.07,4123,0,"Sichuan"],
+["Detroit","US",42.33,-83.08,4101,0,"Michigan"],["Yangon","MM",16.79,96.16,4088,0,""],["Xian","CN",34.28,108.89,4009,0,"Shaanxi"],
+["Porto Alegre","BR",-30.05,-51.2,3917,0,"Rio Grande do Sul"],["Surat","IN",21.2,72.84,3842,0,"Dadra and Nagar Haveli"],["Abidjan","CI",5.32,-4.04,3802,1,"Lagunes"],
+["Brasília","BR",-15.78,-47.92,3717,1,"Distrito Federal"],["Ankara","TR",39.93,32.86,3716,1,""],["Monterrey","MX",25.67,-100.33,3712,0,"Nuevo León"],
+["Nanjing","CN",32.05,118.78,3679,0,"Jiangsu"],["Montréal","CA",45.5,-73.59,3678,0,"Québec"],["Guiyang","CN",26.58,106.72,3662,0,"Guizhou"],
+["Recife","BR",-8.07,-34.92,3651,0,"Pernambuco"],["Harbin","CN",45.75,126.65,3621,0,"Heilongjiang"],["Fortaleza","BR",-3.75,-38.58,3602,0,"Ceará"],
+["Ürümqi","CN",43.81,87.57,3575,0,"Xinjiang Uygur"],["Phoenix","US",33.54,-112.07,3551,0,"Arizona"],["Salvador","BR",-12.97,-38.48,3484,0,"Bahia"],
+["Busan","KR",35.1,129.01,3480,0,""],["San Francisco","US",37.77,-122.42,3450,0,"California"],["Johannesburg","ZA",-26.17,28.03,3435,0,"Gauteng"],
+["Berlin","DE",52.52,13.4,3406,1,""],["Algiers","DZ",36.77,3.05,3354,1,"Alger"],["Rome","IT",41.9,12.48,3339,1,"Lazio"],
+["Pyongyang","KP",39.02,125.75,3300,1,"P'yongyang"],["Medellín","CO",6.28,-75.58,3297,0,"Antioquia"],["Kabul","AF",34.52,69.18,3277,1,""],
+["Athens","GR",37.99,23.73,3242,1,"Attiki"],["Nagoya","JP",35.16,136.91,3230,0,"Aichi"],["Cape Town","ZA",-33.92,18.43,3215,1,"Western Cape"],
+["Changchun","CN",43.87,125.34,3183,0,"Jilin"],["Casablanca","MA",33.6,-7.62,3181,0,"Grand Casablanca"],["Dalian","CN",38.92,121.63,3167,0,"Liaoning"],
+["Kanpur","IN",26.46,80.32,3162,0,"Uttar Pradesh"],["Kano","NG",12.0,8.52,3140,0,""],["Tel Aviv","IL",32.08,34.77,3112,0,""],
+["Addis Ababa","ET",9.04,38.7,3100,1,""],["Curitiba","BR",-25.42,-49.32,3084,0,"Paraná"],["Seattle","US",47.57,-122.34,3074,0,"Washington"],
+["Zibo","CN",36.8,118.05,3061,0,"Shandong"],["Jeddah","SA",21.52,39.22,3012,0,"Makkah"],["Nairobi","KE",-1.28,36.81,3010,1,""],
+["Hangzhou","CN",30.25,120.17,3007,0,"Zhejiang"],["Caracas","VE",10.5,-66.92,2985,1,"Distrito Capital"],["Milan","IT",45.47,9.2,2945,0,"Lombardia"],
+["Kunming","CN",25.07,102.68,2931,0,"Yunnan"],["Dar es Salaam","TZ",-6.8,39.27,2930,1,"Dar-Es-Salaam"],["Jaipur","IN",26.92,75.81,2917,0,"Rajasthan"],
+["San Diego","US",32.82,-117.18,2916,0,"California"],["Taiyuan","CN",37.88,112.54,2913,0,"Shanxi"],["Frankfurt","DE",50.1,8.68,2895,0,"Hessen"],
+["Qingdao","CN",36.09,120.33,2866,0,"Shandong"],["Surabaya","ID",-7.25,112.75,2845,0,"Jawa Timur"],["Lisbon","PT",38.72,-9.15,2812,1,"Lisboa"],
+["Jinan","CN",36.68,116.99,2798,0,"Shandong"],["Fukuoka","JP",33.6,130.41,2792,0,""],["Campinas","BR",-22.9,-47.1,2791,0,"São Paulo"],
+["Kaohsiung","TW",22.63,120.27,2769,0,"Kaohsiung City"],["Aleppo","SY",36.23,37.17,2738,0,"Aleppo (Halab)"],["Durban","ZA",-29.86,30.98,2729,0,"KwaZulu-Natal"],
+["Kyiv","UA",50.44,30.51,2709,1,"Kiev"],["Lucknow","IN",26.86,80.91,2695,0,"Uttar Pradesh"],["Zhengzhou","CN",34.76,113.66,2636,0,"Henan"],
+["Taichung","TW",24.15,120.68,2629,0,"Taichung City"],["Ibadan","NG",7.38,3.93,2628,0,"Oyo"],["Minneapolis","US",44.98,-93.25,2616,0,"Minnesota"],
+["Fuzhou","CN",26.08,119.3,2606,0,"Fujian"],["Changsha","CN",28.2,112.97,2604,0,"Hunan"],["Dakar","SN",14.72,-17.48,2604,1,""],
+["İzmir","TR",38.44,27.15,2587,0,"Izmir"],["Lanzhou","CN",36.06,103.79,2561,0,"Gansu"],["Incheon","KR",37.48,126.64,2550,0,"Inch'on-gwangyoksi"],
+["Sapporo","JP",43.08,141.34,2544,0,"Hokkaido"],["Xiamen","CN",24.45,118.08,2519,0,"Fujian"],["Guayaquil","EC",-2.22,-79.92,2514,0,"Guayas"],
+["George Town","MY",5.41,100.33,2500,0,"Pulau Pinang"],["San Juan","PR",18.44,-66.13,2479,0,""],["Mashhad","IR",36.27,59.57,2469,0,"Razavi Khorasan"],
+["Damascus","SY",33.5,36.3,2466,1,""],["Tunis","TN",36.8,10.18,2412,1,""],["Vienna","AT",48.2,16.36,2400,1,"Wien"],
+["Tripoli","LY",32.89,13.18,2189,1,"Tajura' wa an Nawahi al Arba"],["Tashkent","UZ",41.31,69.29,2184,1,""],["Havana","CU",23.13,-82.37,2174,1,"Ciudad de la Habana"],
+["Santo Domingo","DO",18.47,-69.9,2154,1,"Distrito Nacional"],["Baku","AZ",40.4,49.86,2122,1,"Baki"],["Accra","GH",5.55,-0.22,2121,1,"Greater Accra"],
+["Kuwait City","KW",29.37,47.98,2063,1,"Al Kuwayt"],["Sanaa","YE",15.36,44.2,2008,1,"Amanat Al Asimah"],["Port-au-Prince","HT",18.54,-72.34,1998,1,"Ouest"],
+["Bucharest","RO",44.44,26.1,1942,1,""],["Asunción","PY",-25.29,-57.64,1870,1,""],["Beirut","LB",33.87,35.51,1846,1,""],
+["Minsk","BY",53.9,27.56,1805,1,""],["Brussels","BE",50.84,4.33,1743,1,""],["Warsaw","PL",52.25,21.0,1707,1,"Masovian"],
+["Rabat","MA",34.03,-6.84,1705,1,"Rabat - Salé - Zemmour - Zaer"],["Quito","EC",-0.21,-78.5,1701,1,"Pichincha"],["Antananarivo","MG",-18.91,47.51,1697,1,""],
+["Budapest","HU",47.5,19.08,1679,1,""],["Yaoundé","CM",3.87,11.51,1611,1,"Centre"],["La Paz","BO",-16.5,-68.15,1590,1,""],
+["Abuja","NG",9.09,7.53,1576,1,"Federal Capital Territory"],["Harare","ZW",-17.82,31.04,1572,1,""],["Montevideo","UY",-34.86,-56.17,1513,1,""],
+["Bamako","ML",12.65,-8.0,1494,1,""],["Conakry","GN",9.53,-13.68,1494,1,""],["Phnom Penh","KH",11.55,104.91,1466,1,""],
+["Lomé","TG",6.13,1.22,1452,1,"Maritime"],["Doha","QA",25.29,51.53,1450,1,"Ad Dawhah"],["Kuala Lumpur","MY",3.17,101.7,1448,1,"Selangor"],
+["Maputo","MZ",-25.95,32.59,1446,1,""],["San Salvador","SV",13.71,-89.2,1433,1,""],["Kampala","UG",0.32,32.58,1420,1,""],
+["Brazzaville","CG",-4.26,15.28,1355,1,"Pool"],["Pretoria","ZA",-25.7,28.23,1338,1,"Gauteng"],["Lusaka","ZM",-15.41,28.28,1328,1,""],
+["San José","CR",9.94,-84.09,1284,1,""],["Panama City","PA",8.97,-79.53,1281,1,"Panama"],["Stockholm","SE",59.35,18.1,1264,1,""],
+["Sofia","BG",42.69,23.31,1185,1,"Grad Sofiya"],["Prague","CZ",50.09,14.46,1162,1,""],["Ouagadougou","BF",12.37,-1.53,1149,1,"Kadiogo"],
+["Ottawa","CA",45.42,-75.7,1145,1,"Ontario"],["Helsinki","FI",60.18,24.93,1115,1,"Southern Finland"],["Yerevan","AM",40.18,44.51,1102,1,"Erevan"],
+["Mogadishu","SO",2.07,45.36,1100,1,"Banaadir"],["Tbilisi","GE",41.73,44.79,1100,1,""],["Belgrade","RS",44.82,20.47,1099,1,"Grad Beograd"],
+["Dushanbe","TJ",38.56,68.77,1086,1,"Tadzhikistan Territories"],["København","DK",55.68,12.56,1085,1,"Hovedstaden"],["Amman","JO",31.95,35.93,1060,1,""],
+["Dublin","IE",53.34,-6.25,1059,1,""],["Monrovia","LR",6.31,-10.8,1041,1,"Montserrado"],["Amsterdam","NL",52.35,4.91,1031,1,"Noord-Holland"],
+["Jerusalem","IL",31.78,35.21,1029,1,""],["Guatemala City","GT",14.62,-90.53,1024,1,"Guatemala"],["N'Djamena","TD",12.12,15.05,989,1,"Hadjer-Lamis"],
+["Tegucigalpa","HN",14.1,-87.22,946,1,"Francisco Morazán"],["Kingston","JM",17.98,-76.77,938,1,""],["Naypyidaw","MM",19.77,96.12,930,1,"Mandalay"],
+["Djibouti","DJ",11.6,43.15,923,1,""],["Managua","NI",12.15,-86.27,920,1,""],["Niamey","NE",13.52,2.11,915,1,""],
+["Tirana","AL",41.33,19.82,895,1,"Durrës"],["Kathmandu","NP",27.72,85.31,895,1,"Bhaktapur"],["Ulaanbaatar","MN",47.92,106.91,885,1,""],
+["Kigali","RW",-1.95,30.06,860,1,"Kigali City"],["Bishkek","KG",42.88,74.58,837,1,""],["Oslo","NO",59.92,10.75,835,1,""],
+["Bangui","CF",4.37,18.56,832,1,""],["Freetown","SL",8.47,-13.24,827,1,"Western"],["Islamabad","PK",33.7,73.16,780,1,"F.C.T."],
+["Cotonou","BJ",6.4,2.52,762,1,"Ouémé"],["Vientiane","LA",17.97,102.6,754,1,"Vientiane [prefecture]"],["Riga","LV",56.95,24.1,743,1,""],
+["Nouakchott","MR",18.09,-15.98,742,1,""],["Muscat","OM",23.61,58.59,735,1,""],["Ashgabat","TM",37.95,58.38,728,1,"Ahal"],
+["Zagreb","HR",45.8,16.0,723,1,"Grad Zagreb"],["Sarajevo","BA",43.85,18.38,697,1,""],["Chișinău","MD",47.01,28.86,688,1,"Chisinau"],
+["Lilongwe","MW",-13.98,33.78,647,1,""],["Asmara","ER",15.33,38.93,621,1,"Anseba"],["Abu Dhabi","AE",24.47,54.37,603,1,""],
+["Port Louis","MU",-20.17,57.5,595,1,""],["Libreville","GA",0.39,9.46,578,1,"Estuaire"],["Manama","BH",26.24,50.58,564,1,""],
+["Vilnius","LT",54.68,25.32,542,1,"Vilniaus"],["Skopje","MK",42.0,21.43,494,1,"Centar"],["Bloemfontein","ZA",-29.12,26.23,463,1,"Orange Free State"],
+["Bratislava","SK",48.15,17.12,424,1,"Bratislavský"],["Bissau","GW",11.87,-15.6,403,1,""],["Tallinn","EE",59.43,24.73,394,1,"Harju"],
+["Wellington","NZ",-41.3,174.78,393,1,"Manawatu-Wanganui"],["Valletta","MT",35.9,14.51,368,1,""],["Maseru","LS",-29.32,27.48,361,1,""],
+["Nur-Sultan","KZ",51.18,71.43,346,1,"Aqmola"],["Bujumbura","BI",-3.38,29.36,332,1,"Bujumbura Mairie"],["Canberra","AU",-35.28,149.13,328,1,"Australian Capital Territory"],
+["New Delhi","IN",28.6,77.2,318,1,"Delhi"],["Ljubljana","SI",46.06,14.51,315,1,"Osrednjeslovenska"],["Bandar Seri Begawan","BN",4.88,114.93,296,1,"Brunei and Muara"],
+["Port-of-Spain","TT",10.65,-61.52,295,1,"Port of Spain"],["Port Moresby","PG",-9.46,147.19,284,1,"Central"],["Bern","CH",46.92,7.47,275,1,""],
+["Windhoek","NA",-22.57,17.08,268,1,"Khomas"],["Georgetown","GY",6.8,-58.17,264,1,"East Berbice-Corentyne"],["Paramaribo","SR",5.84,-55.17,254,1,""],
+["Dili","TL",-8.56,125.58,234,1,""],["Nassau","BS",25.08,-77.35,228,1,""],["Sucre","BO",-19.04,-65.26,225,1,"Chuquisaca"],
+["Nicosia","CY",35.17,33.37,224,1,""],["Colombo","LK",6.93,79.86,217,1,""],["Gaborone","BW",-24.65,25.91,208,1,"South-East"],
+["Yamoussoukro","CI",6.82,-5.28,206,1,"Lacs"],["Bridgetown","BB",13.1,-59.62,191,1,"Saint Michael"],["Suva","FJ",-18.13,178.44,175,1,"Central"],
+["Reykjavík","IS",64.15,-21.95,166,1,"Suðurnes"],["Malabo","GQ",3.75,8.78,156,1,"Bioko Norte"],["Podgorica","ME",42.47,19.27,146,1,""],
+["Moroni","KM",-11.7,43.24,129,1,""],["Praia","CV",14.92,-23.52,113,1,""],["Malé","MV",4.17,73.5,113,1,""],
+["Luxembourg","LU",49.61,6.13,107,1,""],["Thimphu","BT",27.47,89.64,99,1,""],["Mbabane","SZ",-26.32,31.13,90,1,"Hhohho"],
+["São Tomé","ST",0.33,6.73,88,1,""],["Honiara","SB",-9.44,159.95,76,1,"Guadalcanal"],["Apia","WS",-13.84,-171.74,62,1,""],
+["Andorra","AD",42.5,1.52,54,1,""],["Hamilton","BM",32.29,-64.78,52,1,""],["Kingstown","VC",13.15,-61.21,49,1,""],
+["Port Vila","VU",-17.73,168.32,44,1,"Shefa"],["Banjul","GM",13.45,-16.59,43,1,""],["Nuku'alofa","TO",-21.14,-175.22,43,1,""],
+["Castries","LC",14.0,-61.0,38,1,""],["Monaco","MC",43.74,7.41,36,1,""],["Vaduz","LI",47.13,9.52,36,1,""],
+["Saint John's","AG",17.12,-61.85,35,1,""],["Saint George's","GD",12.05,-61.74,34,1,""],["Victoria","SC",-4.62,55.45,34,1,""],
+["San Marino","SM",43.94,12.44,30,1,""],["Tarawa","KI",1.34,173.02,29,1,""],["Majuro","MH",7.1,171.38,25,1,""],
+["Roseau","DM",15.3,-61.39,23,1,"Saint George"],["Basseterre","KN",17.3,-62.72,22,1,""],["Belmopan","BZ",17.25,-88.77,15,1,"Cayo"],
+["Melekeok","PW",7.49,134.63,7,1,""],["Funafuti","TV",-8.52,179.22,5,1,""],["Palikir","FM",6.92,158.15,5,1,""],
+["Vatican City","VA",41.9,12.45,1,1,"Lazio"]
+];
+const lmSetOf=()=>curMode==="CITIES"?"cities":"lm";
+const LMSETS={};
+function lmList(set){ set=set||lmSetOf();
+  if(LMSETS[set]||!world) return LMSETS[set]||[];
+  const cities=set==="cities", src=cities?CITIES_RAW:LANDMARKS_RAW;
+  return LMSETS[set]=src.map((r,i)=>{ const name=r[0], iso=r[1], lat=r[2], lon=r[3], where=cities?(r[6]||(r[5]?"Capital":"")):r[4], pop=cities?r[4]:0, cap=cities&&r[5]===1;
+    const c=world.quiz.find(x=>x.iso===iso); if(!c) return null;
+    return {lm:true,cityObj:cities,glyph:cities?"dot":"diamond",iso:(cities?"ct_":"lm_")+i,name,lat,lon,gcx:lon,gcy:lat,where,pop,cap,country:c,cont:c.facts.continent||"",fame:i,valid:false,facts:{continent:c.facts.continent||""},
       get main(){ const q=PROJ.fwd(lon,lat); return {l:q[0]-.02,r:q[0]+.02,t:q[1]-.02,b:q[1]+.02}; },
       get gc(){ const la=lat*Math.PI/180, lo=lon*Math.PI/180, cl=Math.cos(la); return {v:[cl*Math.cos(lo),cl*Math.sin(lo),Math.sin(la)],rho:.01,rhoMain:.01}; }}; }).filter(Boolean);
-  return LMOBJS;
 }
-const lmPool=(diff,ks)=>{ const names=ks.map(k=>CONTINENTS[k]&&CONTINENTS[k].key).filter(Boolean), all=lmList();
-  const make=d=>all.filter(p=>p.fame<(d==="EASY"?20:d==="MEDIUM"?40:999)&&(!names.length||names.includes(p.cont)));
+const lmPool=(diff,ks,set)=>{ set=set||lmSetOf(); const names=ks.map(k=>CONTINENTS[k]&&CONTINENTS[k].key).filter(Boolean), all=lmList(set), cut=set==="cities"?(diff==="EASY"?30:diff==="MEDIUM"?90:9999):(diff==="EASY"?20:diff==="MEDIUM"?40:999);
+  const make=d=>all.filter(p=>p.fame<(d==="EASY"?cut:d==="MEDIUM"?cut:999999)&&(!names.length||names.includes(p.cont)));
   let l=make(diff); if(l.length<6) l=make("HARD"); if(l.length<4) l=all.slice(); return l; };
 const LM_DIFF={EASY:"The 20 most famous sites.",MEDIUM:"The 40 best-known sites.",HARD:"Every site in the list."};
-function buildLandmarks(diff,ks,count){
-  const pool=lmPool(diff,ks), all=lmList(), n=count==="ALL"?pool.length:Math.min(count,pool.length), used=new Set(), out=[];
+const CITY_DIFF={EASY:"The 30 biggest cities.",MEDIUM:"The 90 biggest cities.",HARD:"Every city in the list, with smaller capitals."};
+function buildLandmarks(diff,ks,count,set){
+  const pool=lmPool(diff,ks,set), all=lmList(set), noun=set==="cities"?"city":"landmark", n=count==="ALL"?pool.length:Math.min(count,pool.length), used=new Set(), out=[];
   const nearL=t=>all.filter(p=>p!==t).sort((a,b)=>Math.hypot(a.lon-t.lon,a.lat-t.lat)-Math.hypot(b.lon-t.lon,b.lat-t.lat));
   for(let i=0;i<n;i++){
     const left=pool.filter(p=>!used.has(p.iso)); if(!left.length) break;
@@ -1947,7 +2057,7 @@ function buildLandmarks(diff,ks,count){
     if(r<.45){ const d=shuffle(world.quiz.filter(c=>c!==t.country&&c.valid).sort((a,b)=>Math.hypot(a.gcx-t.lon,a.gcy-t.lat)-Math.hypot(b.gcx-t.lon,b.gcy-t.lat)).slice(0,10)).slice(0,3);
       out.push({kind:"LMCOUNTRY",lm:true,target:t,prompt:`Which country is ${t.name} in?`,choices:shuffle([t.country.name,...d.map(c=>c.name)]),answer:t.country.name}); }
     else if(r<.75) out.push({kind:"FIND",lm:true,target:t,prompt:"Find",choices:[],answer:t.name});
-    else { const d=shuffle(nearL(t).slice(0,8)).slice(0,3); out.push({kind:"LMNAME",lm:true,target:t,prompt:"Which landmark is marked?",choices:shuffle([t.name,...d.map(p=>p.name)]),answer:t.name}); }
+    else { const d=shuffle(nearL(t).slice(0,8)).slice(0,3); out.push({kind:"LMNAME",lm:true,target:t,prompt:`Which ${noun} is marked?`,choices:shuffle([t.name,...d.map(p=>p.name)]),answer:t.name}); }
   }
   return out;
 }
@@ -2136,6 +2246,7 @@ function numCard(q){
 }
 function landmarkCard(q){
   const p=q.target;
+  if(p.cityObj) return `<div class="card"><div class="flagwrap">${flagImg(p.country,38)}</div><div><b>${esc(p.name)}</b><small>${p.cap?"Capital of ":""}<span>${esc(p.country.name)}</span></small><small>Population <span>${p.pop>=1000?(p.pop/1000).toFixed(1)+" million":p.pop+" thousand"}</span></small>${p.where&&p.where!=="Capital"?`<small>${esc(p.where)}</small>`:""}</div></div>`;
   return `<div class="card"><div class="flagwrap">${flagImg(p.country,38)}</div><div><b>${esc(p.name)}</b><small>${esc(p.where)}</small><small><span>${esc(p.country.name)}</span></small></div></div>`;
 }
 function peakCard(q){
@@ -2300,7 +2411,7 @@ function checkAchievements(){
 }
 function startGame(mode){
   const th=effTheme(mode), ks=effRegions(mode), diff=th?"HARD":difficulty, opts={theme:th,smart};
-  if(mode==="LANDMARKS") return launch(mode,buildLandmarks(difficulty,ks,qCount),ks,false,{peaks:true,lmk:true,diff:difficulty,smart:false});
+  if(mode==="LANDMARKS"||mode==="CITIES"){ const set=mode==="CITIES"?"cities":"lm"; return launch(mode,buildLandmarks(difficulty,ks,qCount,set),ks,false,{peaks:true,lmk:true,lmset:set,diff:difficulty,smart:false}); }
   if(mode==="PEAKS") return launch(mode,buildPeaks(difficulty,ks,qCount),ks,false,{peaks:true,diff:difficulty,smart:false});
   if(mode==="RIVERS") return startRivers(ks);
   if(mode==="LAKES") return startLakes(ks);
@@ -2354,7 +2465,7 @@ function launch(mode,qs,ks,practice,extra){
         attempts:0,locked:false,picked:null,ok:false,pts:0,speed:0,timedOut:false,marks:{},results:[],answerMs:0,
         qStart:0,deadline:0,limit:CHOICE_LIMIT,pausedAt:0,...(extra||{})};
   gameId++; gameMap.done=game.done; gameMap.homeView=regionView(ks); gameMap.homeGeo=regionGeo(ks); gameMap.noBorders=borderless;
-  gameMap.setPeaks(game.peaks?(game.lmk?lmList():PEAKOBJS):null); gameMap.setRivers(game.rivers?RIVEROBJS:null); gameMap.setLakes(game.lakes?LAKEOBJS:null);
+  gameMap.setPeaks(game.peaks?(game.lmk?lmList(game.lmset):PEAKOBJS):null); gameMap.setRivers(game.rivers?RIVEROBJS:null); gameMap.setLakes(game.lakes?LAKEOBJS:null);
   game.qs.slice(0,15).forEach(q=>{ if(q.peak||q.river||q.lake||q.lm) return; const im=new Image(); im.src=flagUrl(q.target); });   // warm the flag cache
   show("play"); beginQuestion();
 }
@@ -2629,7 +2740,7 @@ function setupCards(mode,forStudy){                              // shared by th
   const where=mode==="CONT"?["none","Region","World","This mode always uses every region"]
     :T?["region","Theme",T.label,`${T.members.length} ${UNITS()}`,T.icon]
     :mode==="PEAKS"?["region","Region",dispRegion(),`${peakPool(difficulty,regionKeys()).length} peaks`]
-    :mode==="LANDMARKS"?["region","Region",dispRegion(),`${lmPool(difficulty,regionKeys()).length} landmarks`]
+    :mode==="LANDMARKS"||mode==="CITIES"?["region","Region",dispRegion(),`${lmPool(difficulty,regionKeys()).length} ${mode==="CITIES"?"cities":"landmarks"}`]
     :mode==="RIVERS"?["region","Region",dispRegion(),RIVEROBJS?`${riverPool(difficulty,regionKeys()).length} rivers`:"Downloads on first play"]
     :mode==="LAKES"?["region","Region",dispRegion(),LAKEOBJS?`${lakePool(difficulty,regionKeys()).length} lakes`:"Downloads on first play"]
     :["region","Region",dispRegion(),`${regionCount()} ${UNITS()}`];
@@ -2639,14 +2750,14 @@ function setupCards(mode,forStudy){                              // shared by th
   const last=ri.endless?["run","Run",runLabel(mode),(runRule==="SUDDEN"?"one miss ends it":runRule==="LIVES"?"misses cost a life":"")+(sprintOn?(runRule==="ROUND"?"":", ")+"a miss costs 3 seconds":"")]
     :RUN_FREE.has(mode)?["count","Questions",qCount==="ALL"?"All":String(qCount),"per round"]
     :runRule==="ROUND"&&!sprintOn?["run","Run",qCount==="ALL"?"All questions":qCount+" questions","Standard round. Tap for lives or a clock"]
-    :["count","Questions",qCount==="ALL"?"All":String(qCount),qCount==="ALL"?`${mode==="PEAKS"?peakPool(difficulty,regionKeys()).length:mode==="LANDMARKS"?lmPool(difficulty,regionKeys()).length:mode==="RIVERS"?(RIVEROBJS?riverPool(difficulty,regionKeys()).length:"up to 70"):mode==="LAKES"?(LAKEOBJS?lakePool(difficulty,regionKeys()).length:"up to 60"):buildPool(T?"HARD":difficulty,effRegions(mode),effTheme(mode)).pool.length} in this pool`:"per round"];
+    :["count","Questions",qCount==="ALL"?"All":String(qCount),qCount==="ALL"?`${mode==="PEAKS"?peakPool(difficulty,regionKeys()).length:(mode==="LANDMARKS"||mode==="CITIES")?lmPool(difficulty,regionKeys()).length:mode==="RIVERS"?(RIVEROBJS?riverPool(difficulty,regionKeys()).length:"up to 70"):mode==="LAKES"?(LAKEOBJS?lakePool(difficulty,regionKeys()).length:"up to 60"):buildPool(T?"HARD":difficulty,effRegions(mode),effTheme(mode)).pool.length} in this pool`:"per round"];
   return [["mode","Game mode",MODES[mode][0],MODES[mode][1],MODE_ICON[mode]],where,diff,last];
 }
 const CARD_ICON={run:["flame","chal"],pack:["map","locate"],where:["globe","locate"],diff:["target","chal"],count:["hash","quiz"],none:["lock","chal"],region:["globe","locate"]};
 const cardsHtml=cards=>cards.map(([k,l,v,s,ic])=>{ const [i0,cat]=ic?[ic,"quiz"]:(CARD_ICON[k]||["sliders","quiz"]);
   const c=k==="mode"?"cat-"+catOf(curMode):"cat-"+cat;
   return `<button class="ocard" data-card="${k}" data-msg="${esc(s)}"><span class="oi chipic ${c}">${ico(i0,19)}</span><span class="ot"><span class="v">${esc(v)}</span><span class="s"><b class="k">${l}</b> · ${esc(s)}</span></span></button>`; }).join("");
-const MODE_ICON={EVERY:"chevrons",FLAG:"flag",FLAGMAP:"pin",CAPMAP:"landmark",FIND:"search",NAME:"tag",SHAPE:"shape",CAPITAL:"landmark",CONT:"globe",NEIGH:"link",PATH:"route",ODD:"target",MIX:"shuffle",LIVES:"heart",STREAK:"flame",SPRINT:"timer",PEAKS:"mountain",RIVERS:"river",LAKES:"droplet",CAPREV:"swap",NUMBERS:"scale",TF:"question",LANDMARKS:"monument"};
+const MODE_ICON={EVERY:"chevrons",FLAG:"flag",FLAGMAP:"pin",CAPMAP:"landmark",FIND:"search",NAME:"tag",SHAPE:"shape",CAPITAL:"landmark",CONT:"globe",NEIGH:"link",PATH:"route",ODD:"target",MIX:"shuffle",LIVES:"heart",STREAK:"flame",SPRINT:"timer",PEAKS:"mountain",RIVERS:"river",LAKES:"droplet",CAPREV:"swap",NUMBERS:"scale",TF:"question",LANDMARKS:"monument",CITIES:"city"};
 const CAT_OF={Locate:"locate",Identify:"flags",Knowledge:"quiz",Puzzles:"chal",Places:"physical",Mixed:"learn"};
 const catOf=k=>{ const g=MODE_GROUPS.find(([,ks])=>ks.includes(k)); return g?CAT_OF[g[0]]:"quiz"; };
 const refreshSetup=()=>{ renderHome(); renderStudy(); };
@@ -2679,7 +2790,7 @@ function renderSheet(){
       Object.entries(CONTINENTS).filter(([k,c])=>!c.sub).map(([k,c])=>`<button data-c="${k}" class="${(k==="ALL"?(regions.size===0&&!theme):regions.has(k))?"sel":""}">${c.label}</button>`).join("")+
       `</div>`+(Object.values(CONTINENTS).some(c=>c.sub)?`<p class="grp" style="margin-top:10px">Pacific<span>Oceania in two halves</span></p><div class="chips wrapchips">`+
       Object.entries(CONTINENTS).filter(([k,c])=>c.sub).map(([k,c])=>`<button data-c="${k}" class="${regions.has(k)?"sel":""}">${c.label}</button>`).join("")+`</div>`:"")+
-      `<p class="note">${curMode==="PEAKS"?peakPool(difficulty,regionKeys()).length+" peaks":curMode==="LANDMARKS"?lmPool(difficulty,regionKeys()).length+" landmarks":curMode==="RIVERS"?(RIVEROBJS?riverPool(difficulty,regionKeys()).length+" rivers":"Rivers are matched to continents after the first download"):curMode==="LAKES"?(LAKEOBJS?lakePool(difficulty,regionKeys()).length+" lakes":"Lakes are matched to continents after the first download"):regionCount()+" "+UNITS()} in this selection.</p>`+
+      `<p class="note">${curMode==="PEAKS"?peakPool(difficulty,regionKeys()).length+" peaks":(curMode==="LANDMARKS"||curMode==="CITIES")?lmPool(difficulty,regionKeys()).length+(curMode==="CITIES"?" cities":" landmarks"):curMode==="RIVERS"?(RIVEROBJS?riverPool(difficulty,regionKeys()).length+" rivers":"Rivers are matched to continents after the first download"):curMode==="LAKES"?(LAKEOBJS?lakePool(difficulty,regionKeys()).length+" lakes":"Lakes are matched to continents after the first download"):regionCount()+" "+UNITS()} in this selection.</p>`+
       (tiles?`<p class="grp">Themes<span>a set of ${UNITS()} with something in common</span></p><div class="tiles">${tiles}</div>`:"")+
       (pick1("letter").length?`<p class="grp">Starting with</p><div class="chips wrapchips">${chips("letter")}</div>`:"")+
       (pick1("sub").length?`<p class="grp">Sub-regions</p><div class="chips wrapchips">${chips("sub")}</div>`:"")+
@@ -2687,7 +2798,7 @@ function renderSheet(){
   else if(sheetKind==="pack"){ title="Map";
     html=Object.entries(PACKS).map(([k,P])=>`<button class="opt ${k===pack?"sel":""}" data-pack="${k}"><div><b>${P.label}</b><small>${P.blurb}${k!=="WORLD"&&!worlds[k]?" (downloads on first use)":""}</small></div></button>`).join("")+`<p class="note">Each map keeps its own scores. Progress on your map is tracked separately too.</p>`; }
   else if(sheetKind==="diff"){ title="Difficulty";
-    html=Object.entries(DIFFS).map(([k,[l,s]])=>`<button class="opt ${k===difficulty?"sel":""}" data-d="${k}"><div><b>${l}: ${s}</b><small>${(curMode==="PEAKS"?PEAK_DIFF:curMode==="LANDMARKS"?LM_DIFF:curMode==="RIVERS"?RIVER_DIFF:curMode==="LAKES"?LAKE_DIFF:DIFF_DESC)[k]}</small></div></button>`).join(""); }
+    html=Object.entries(DIFFS).map(([k,[l,s]])=>`<button class="opt ${k===difficulty?"sel":""}" data-d="${k}"><div><b>${l}: ${s}</b><small>${(curMode==="PEAKS"?PEAK_DIFF:curMode==="LANDMARKS"?LM_DIFF:curMode==="CITIES"?CITY_DIFF:curMode==="RIVERS"?RIVER_DIFF:curMode==="LAKES"?LAKE_DIFF:DIFF_DESC)[k]}</small></div></button>`).join(""); }
   else if(sheetKind==="run"){ title="How you play";
     const pool=buildPool(effTheme(curMode)?"HARD":difficulty,effRegions(curMode),effTheme(curMode)).pool.length;
     const free=RUN_FREE.has(curMode);
@@ -2757,7 +2868,7 @@ function renderPlay(){
   else if(q.kind==="FIND"&&q.capOnly) p=`<div><small>Tap the ${UNIT()} whose capital is</small><div class="big inl">${esc(q.target.capital)}</div></div>`;
   else if(q.kind==="FIND"&&q.flagOnly) p=`${flagImg(q.target,40)}<span>Tap the country with this flag</span>`;
   else if(q.kind==="CONT") p=`${flagImg(q.target,32)}<span>${esc(q.prompt)}</span>`;
-  else if(q.kind==="FIND"&&q.lm) p=`<div><small>Find the landmark</small><div class="big inl">${esc(q.target.name)}</div></div>`;
+  else if(q.kind==="FIND"&&q.lm) p=`<div><small>Find the ${q.target.cityObj?"city":"landmark"}</small><div class="big inl">${esc(q.target.name)}</div></div>`;
   else if(q.kind==="FIND"&&q.lake) p=`<div><small>Find the lake</small><div class="big inl">${esc(q.target.name)}</div></div>`;
   else if(q.kind==="FIND"&&q.peak) p=`<div><small>Find the peak</small><div class="big inl">${esc(q.target.name)}</div></div>`;
   else if(q.kind==="FIND") p=`<div><small>Find</small><div class="big inl">${flagImg(q.target,20)}<span>${esc(q.target.name)}</span></div></div>`;
@@ -2775,7 +2886,7 @@ function renderPlay(){
   $("choices").classList.toggle("c6",!g.locked&&q.choices.length===6);
   $("choices").innerHTML=g.locked ? (g.sprint?"":(q.kind==="BIGGER"?numCard(q):q.lm?landmarkCard(q):q.peak?peakCard(q):q.river?riverCard(q):q.lake?lakeCard(q):q.kind==="PATH"?pathCard(q):countryCard(q.target))+neighbourNote(q)) :
     q.choices.map((c,i)=>`<button data-i="${i}">${q.icons&&q.icons[c]?`<span class="flagfb">${q.icons[c]}</span> `:""}${esc(c)}</button>`).join("");
-  $("hint").textContent=q.choices.length||g.locked?"":q.lm?"Tap the diamond for that site. Zoom in to tell close ones apart.":q.kind==="PATH"?"Tap countries that border each other to build a chain. Tap your last pick to undo it.":q.lake?"Tap the lake. Zoom in for the small ones.":q.peak?"Tap the triangle for that peak. Zoom in to tell close ones apart.":(g.elim?"Grey "+UNITS()+" are done.":"");
+  $("hint").textContent=q.choices.length||g.locked?"":q.lm?(q.target.cityObj?"Tap the dot for that city. Zoom in to tell close ones apart.":"Tap the diamond for that site. Zoom in to tell close ones apart."):q.kind==="PATH"?"Tap countries that border each other to build a chain. Tap your last pick to undo it.":q.lake?"Tap the lake. Zoom in for the small ones.":q.peak?"Tap the triangle for that peak. Zoom in to tell close ones apart.":(g.elim?"Grey "+UNITS()+" are done.":"");
 }
 
 /* ---- study mode: flashcards ---- */
