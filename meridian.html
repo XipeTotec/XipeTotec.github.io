@@ -778,7 +778,7 @@ const RUN_FREE=new Set(["PEAKS","RIVERS","LAKES","LANDMARKS"]);   // these use t
 const CHALLENGES=new Set(["LIVES","STREAK","SPRINT"]);
 const KIND_SETS={MIX:["FIND","NAME","CAPITAL","FLAG"],EVERY:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],LIVES:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],STREAK:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],SPRINT:["NAME","FLAG","CAPITAL","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],NUMBERS:["BIGGER","BIGGER","POPBAND"],TF:["TF"]};
 const CONT_LABELS=["Africa","Asia","Europe","North America","South America","Oceania"];
-const LIVES_OPTS=[3,5,10], SPRINT_OPTS=[[30,0],[60,0],[90,0],[120,0],[30,2],[60,3],[90,3],[120,3]], HL_KINDS=["NAME","CAPITAL","CONT","NEIGH","SHAPE","PEAKNAME","RIVERNAME","RIVERFLOW","RIVERTHRU","LAKENAME","POPBAND","LMNAME","LMCOUNTRY"];
+const LIVES_OPTS=[3,5,10], SPRINT_OPTS=[30,60,90,120], INC_OPTS=[0,1,2,3,5], HL_KINDS=["NAME","CAPITAL","CONT","NEIGH","SHAPE","PEAKNAME","RIVERNAME","RIVERFLOW","RIVERTHRU","LAKENAME","POPBAND","LMNAME","LMCOUNTRY"];
 const NO_REC=new Set(["ODD","TF","BIGGER","POPBAND","PATH"]);       // these don't prove you know where a country is, so they stay off Your map
 const pairQ=q=>q.kind==="PEAKHIGH"||q.kind==="BIGGER"||q.kind==="PATH";
 /* ---- mountains: a curated list, so this mode works offline and needs no extra data ---- */
@@ -2542,7 +2542,7 @@ function renderSheet(){
         `<p class="grp">Rule</p>`+rule("ROUND","Standard round","A set number of questions, then your score.")+rule("LIVES","Lives","Keep going until you run out of lives.")+rule("SUDDEN","Sudden death","One wrong answer ends the run.")+
         (runRule==="LIVES"?`<p class="grp">Lives</p><div class="chips">${LIVES_OPTS.map(n=>`<button data-lives="${n}" class="${n===livesN?"sel":""}">${n} lives</button>`).join("")}</div>`:"")+
         `<p class="grp">Clock</p><button class="toggle" data-sprinton="1" role="switch" aria-checked="${sprintOn}" style="background:var(--panel-hi)"><div><b>Clock</b><small>Answer as many as you can before time runs out.</small></div><span class="sw"></span></button>`+
-        (sprintOn?`<div class="chips wrapchips" style="margin-top:8px">${SPRINT_OPTS.map(([a,b])=>`<button data-clock="${a}+${b}" class="${a===sprintS&&b===sprintInc?"sel":""}">${clockStr(a,b)}</button>`).join("")}</div><p class="note">Like chess: 60+3 is 60 seconds to start, plus 3 seconds for every correct answer. Each miss still costs 3 seconds.</p>`:""))+
+        (sprintOn?`<p class="grp" style="margin-top:12px">Time<span>seconds on the clock</span></p><div class="chips">${SPRINT_OPTS.map(n=>`<button data-sprint="${n}" class="${n===sprintS?"sel":""}">${n}</button>`).join("")}</div><p class="grp" style="margin-top:12px">Increment<span>seconds added per correct answer</span></p><div class="chips">${INC_OPTS.map(n=>`<button data-inc="${n}" class="${n===sprintInc?"sel":""}">${n?"+"+n:"None"}</button>`).join("")}</div><p class="note">Like chess: 60 with +3 is written 60+3. Each miss still costs 3 seconds.</p>`:""))+
       ((free||(runRule==="ROUND"&&!sprintOn))?`<p class="grp">Questions<span>${pool} in your selection</span></p><div class="chips">${COUNTS.map(n=>`<button data-n="${n}" class="${n===qCount?"sel":""}">${n==="ALL"?"All":n}</button>`).join("")}</div>`:"")+
       `<button class="done" id="sheetDone">Done</button>`; }
   else if(sheetKind==="count"){ title="Questions per round";
@@ -2558,13 +2558,13 @@ function renderSheet(){
   for(const el of [pn.querySelector(".grab"),pn.querySelector(".sheethead")]){ el.style.touchAction="none"; el.addEventListener("pointerdown",start); el.addEventListener("pointermove",move); el.addEventListener("pointerup",end); el.addEventListener("pointercancel",end); } })();
 function sheetClick(e){
   if(e.target.closest("#sheetScrim,#sheetClose,#sheetDone")) return closeSheet();
-  const o=e.target.closest("[data-pack],[data-mode],[data-d],[data-n],[data-c],[data-elim],[data-smart],[data-terr],[data-nobord],[data-lives],[data-sprint],[data-clock],[data-rule],[data-sprinton],[data-tsel],[data-gostudy],[data-leave]"); if(!o) return; const d=o.dataset;
+  const o=e.target.closest("[data-pack],[data-mode],[data-d],[data-n],[data-c],[data-elim],[data-smart],[data-terr],[data-nobord],[data-lives],[data-sprint],[data-inc],[data-rule],[data-sprinton],[data-tsel],[data-gostudy],[data-leave]"); if(!o) return; const d=o.dataset;
   if(d.leave){ closeSheet(); quitRound(); return; }
   if(d.gostudy){ closeSheet(); showTab("study"); return; }
   if(d.rule){ runRule=d.rule; store.setRaw("meridian_run",runRule); renderSheet(); refreshSetup(); return; }
   if(d.sprinton){ sprintOn=!sprintOn; store.setRaw("meridian_sprinton",sprintOn?"1":"0"); renderSheet(); refreshSetup(); return; }
   if(d.lives){ livesN=+d.lives; store.setRaw("meridian_lives",String(livesN)); renderSheet(); refreshSetup(); return; }
-  if(d.clock){ const [a,b]=d.clock.split("+"); sprintS=+a; sprintInc=+b||0; store.setRaw("meridian_sprint",String(sprintS)); store.setRaw("meridian_sprintinc",String(sprintInc)); renderSheet(); refreshSetup(); return; }
+  if(d.inc){ sprintInc=+d.inc; store.setRaw("meridian_sprintinc",String(sprintInc)); renderSheet(); refreshSetup(); return; }
   if(d.sprint){ sprintS=+d.sprint; store.setRaw("meridian_sprint",String(sprintS)); renderSheet(); refreshSetup(); return; }
   if(d.elim){ elim=!elim; store.setRaw("meridian_elim",elim?"1":"0"); renderSheet(); refreshSetup(); return; }          // these two stay open
   if(d.terr){ territories=!territories; store.setRaw("meridian_terr",territories?"1":"0"); world.setTerritories(territories); renderSheet(); refreshSetup(); renderHome(); renderSettings(); return; }
