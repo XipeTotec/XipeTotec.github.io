@@ -2207,6 +2207,15 @@ const BADGES=[
   ["streak25","trend","Blazing","25 in a row in one round or run",g=>g.bestStreak>=25],
   ["streak50","orbit","Unstoppable","50 in a row in one round or run",g=>g.bestStreak>=50],
   ["streak100","crown","Legendary","100 in a row in one round or run",g=>g.bestStreak>=100],
+  ["lightning","bolt","Lightning","10 correct in a row, each in under 3 seconds",g=>(g.fastBest||0)>=10],
+  ["photo","timer","Photo finish","A correct answer with under 1 second left on the clock",g=>!!g.photo],
+  ["clutch","target","Clutch","A correct answer with under 3 seconds left on the clock",g=>!!g.clutch],
+  ["comeback","heart","Comeback","Down to your last life, then 10 correct in a row",g=>(g.comebackBest||0)>=10],
+  ["hardcore","hex","Hardcore","A perfect round on Hard",(g,t)=>g.diff==="HARD"&&!g.theme&&!g.practice&&!g.daily&&!g.endless&&t>=5&&g.correct===t],
+  ["continental","compass","Continental","A perfect round on a single continent",(g,t)=>pack==="WORLD"&&g.regions.length===1&&["AFRICA","ASIA","EUROPE","NORTH_AMERICA","SOUTH_AMERICA","OCEANIA"].includes(g.regions[0])&&!g.theme&&!g.practice&&!g.daily&&!g.endless&&t>=5&&g.correct===t],
+  ["cartographer","map","Cartographer","A perfect Eliminate round with No borders on",(g,t)=>!!g.elim&&!!g.nb&&!g.practice&&!g.endless&&t>=5&&g.correct===t],
+  ["pathfinder","route","Pathfinder","A Border path round where every route is the shortest",g=>{ const ps=(g.qs||[]).slice(0,g.results.length).filter(q=>q.kind==="PATH"); return ps.length>=5&&ps.every(q=>q.steps===q.par); }],
+  ["millennial","hash","Millennial","Earned for every 1,000 correct answers in total",()=>false],
   ["survivor","heart","Survivor","25 correct in one Lives run",g=>!!g.maxLives&&g.correct>=25],
   ["hot","trend","Hot streak","15 in a row in a Streak run",g=>(g.sudden||g.mode==="STREAK")&&g.correct>=15],
   ["sprinter","chevrons","Sprinter","20 correct in one Sprint",g=>!!g.sprint&&g.correct>=20],
@@ -2226,6 +2235,9 @@ function awardBadges(g,total,ms){
   for(const [id,icon,title,,test] of BADGES) if(test(g,total,ms)){
     const prev=(badges[id]||{n:0}).n, n=grantBadge(id), a=tierOf(prev), b=tierOf(n);
     out.push({id,icon,title,n,tierUp:b&&(!a||a[0]!==b[0])?b[1]:null}); }
+  const have=(badges.millennial||{n:0}).n, want=Math.floor((counters.correct||0)/1000);       // one for every thousand correct answers
+  if(want>have){ let n=have; while(n<want) n=grantBadge("millennial"); const a=tierOf(have), b=tierOf(n);
+    out.push({id:"millennial",icon:"hash",title:"Millennial",n,tierUp:b&&(!a||a[0]!==b[0])?b[1]:null}); }
   return out;
 }
 const badgeText=b=>`${b.title} ×${b.n}`+(b.tierUp?` · ${b.tierUp}!`:"");
@@ -2288,7 +2300,7 @@ function startPracticeWith(list,label){
 }
 function startPractice(){ startPracticeWith(weakList(),"weak spots"); }
 function launch(mode,qs,ks,practice,extra){
-  game={mode,diff:difficulty,regions:ks,count:practice?qs.length:qCount,terr:territories,timed,practice,elim:elim&&!practice,globe:settings.globe,done:{},qs,i:0,score:0,streak:0,bestStreak:0,correct:0,
+  game={mode,diff:difficulty,nb:borderless,regions:ks,count:practice?qs.length:qCount,terr:territories,timed,practice,elim:elim&&!practice,globe:settings.globe,done:{},qs,i:0,score:0,streak:0,bestStreak:0,correct:0,
         attempts:0,locked:false,picked:null,ok:false,pts:0,speed:0,timedOut:false,marks:{},results:[],answerMs:0,
         qStart:0,deadline:0,limit:CHOICE_LIMIT,pausedAt:0,...(extra||{})};
   gameId++; gameMap.done=game.done; gameMap.homeView=regionView(ks); gameMap.homeGeo=regionGeo(ks); gameMap.noBorders=borderless;
@@ -2351,7 +2363,10 @@ document.addEventListener("visibilitychange",()=>{
 
 function lock(ok,pts,q,wrongHit,speed=0,timedOut=false){ if(game) game.lockedAt=performance.now();
   const g=game; if(!g.sprint){ renderTimer(); stopTimer(); }     // freeze the bar where it stopped (the sprint clock keeps running)
-  g.answerMs+=Math.min(performance.now()-g.qStart,g.limit*1000);
+  const el=performance.now()-g.qStart, rem=(g.timed||g.sprint)?remainingMs():0;
+  g.answerMs+=Math.min(el,g.limit*1000);
+  if(ok){ if(rem>0&&rem<1000) g.photo=true; if(rem>0&&rem<3000) g.clutch=true; }       // close calls on the clock
+  if(ok&&el<3000){ g.fastRun=(g.fastRun||0)+1; g.fastBest=Math.max(g.fastBest||0,g.fastRun); } else g.fastRun=0;
   g.results[g.i]=ok;
   if(!NO_REC.has(q.kind)&&!q.lm){              // odd-one-out, true/false and number questions don't prove you know a country
     recordResult(q.target.iso, ok&&(q.kind!=="FIND"||g.attempts===0));
@@ -2362,10 +2377,11 @@ function lock(ok,pts,q,wrongHit,speed=0,timedOut=false){ if(game) game.lockedAt=
     streak:ok?g.streak+1:0,bestStreak:ok?Math.max(g.bestStreak,g.streak+1):g.bestStreak,correct:g.correct+(ok?1:0),
     marks:{...(pairQ(q)?{[q.other.iso]:PAL.nb}:{}),...(q.kind==="LMCOUNTRY"?{[q.target.country.iso]:PAL.nb}:{}),...(q.kind==="RIVERTHRU"?{[q.riverObj.iso]:PAL.nb}:{}),...(q.kind==="NEIGH"?Object.fromEntries(q.neighbors.map(i=>[i,PAL.nb])):q.kind==="ODD"?Object.fromEntries(q.group.map(i=>[i,PAL.nb])):{}),...(wrongHit?{[wrongHit]:PAL.bad}:{}),[q.target.iso]:ok?PAL.ok:PAL.amber}});
   if(g.endless&&!ok){
-    if(g.maxLives){ g.lives--; if(g.lives<=0) g.over=true; }
+    if(g.maxLives){ g.lives--; if(g.lives<=0) g.over=true; else if(g.lives===1) g.sinceLast=0; }
     if(g.sudden||g.mode==="STREAK") g.over=true;
     if(g.sprint){ g.sprintEnd-=3000; g.deadline=g.sprintEnd; }                  // a miss costs 3 seconds
   }
+  if(ok&&g.maxLives&&g.lives===1&&g.sinceLast!=null){ g.sinceLast++; g.comebackBest=Math.max(g.comebackBest||0,g.sinceLast); }     // survived on the last life
   if(g.endless&&ok&&g.sprint&&g.sprintInc){ g.sprintEnd+=g.sprintInc*1000; g.deadline=g.sprintEnd; timerGain(g.sprintInc); }      // a correct answer earns time back
   if(q.kind==="PATH") g.marks=pathMarks(q,true,ok);
   gameMap.solo=null; gameMap.setMarks(g.marks); if(!stay(q,q.kind==="ODD"?[q.target,...q.groupC]:pairQ(q)?[q.target,q.other]:q.kind==="RIVERTHRU"?[q.target,q.riverObj]:[q.target],true)) gameMap.run(q.kind==="ODD"?[q.target,...q.groupC]:pairQ(q)?[q.target,q.other]:q.kind==="RIVERTHRU"?[q.target,q.riverObj]:q.target,false,focusPad(q,true)); gameMap.setPulses([{iso:q.target.iso,color:ok?PAL.ok:PAL.amber}]);
