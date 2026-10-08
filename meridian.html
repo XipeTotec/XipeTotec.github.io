@@ -709,8 +709,19 @@ function nbColours(){                                                           
   const p=settings.palette, key=p+"|"+settings.cb+"|"+PAL.tones[1]+"|"+DIM_COL; if(key===_nbKey) return _nbSet;
   _nbKey=key; _nbSet=p==="ONE"?ALT.map(i=>scaleHex(ONE_COL,STEPS[i])):p==="CALM"?ALT.map(i=>scaleHex(PAL.tones[1],STEPS[i])):settings.cb?NB_COLS_CB:NB_COLS;
   return _nbSet; }
+const rgbOf=c=>{ if(c[0]==="#"){ const n=parseInt(c.slice(1),16); return [n>>16,(n>>8)&255,n&255]; } return (c.match(/\d+/g)||[0,0,0]).slice(0,3).map(Number); };
+const lumOf=c=>{ const [r,g,b]=rgbOf(c); return (.2126*r+.7152*g+.0722*b)/255; };
+let _nbLand="",_nbLandKey="";
+function nbDark(){ return lumOf(PAL.ocean)<.5; }
+function nbLand(){                                                                      // the one land colour: the palette colour that stands furthest from the sea, pushed further still
+  const set=nbColours(), key=_nbKey+"|"+PAL.ocean; if(key===_nbLandKey) return _nbLand;
+  const so=lumOf(PAL.ocean); let best=set[0]; for(const c of set) if(Math.abs(lumOf(c)-so)>Math.abs(lumOf(best)-so)) best=c;
+  const [r,g,b]=rgbOf(best), t=nbDark()?[255,255,255]:[0,0,0], m=.3, mx=(v,i)=>Math.round(v+(t[i]-v)*m);
+  _nbLandKey=key; return _nbLand=`rgb(${mx(r,0)},${mx(g,1)},${mx(b,2)})`;
+}
+const nbDone=()=>nbDark()?"#3A4651":"#B9C3CB";                                          // answered places: a clear grey, apart from both land and sea
 function borderlessColour(k){
-  return nbColours()[0];                                                                // one flat colour: no outlines and no colour hints, so you have to know the map
+  return nbLand();                                                                // one flat colour: no outlines and no colour hints, so you have to know the map
   const w=k.world||world; if(!w) return nbColours()[k.hv%6];
   if(!w._nbCol||w._nbColN!==w.countries.length){ const nb=w.neighbors(), col=new Map();
     const order=[...w.countries].sort((a,b)=>((nb.get(b.iso)||{size:0}).size)-((nb.get(a.iso)||{size:0}).size));
@@ -1547,7 +1558,7 @@ class MapView {
       if(settings.grid){ c.strokeStyle=PAL.grid; c.lineWidth=.8/s; c.stroke(PROJ.grid); }
       c.strokeStyle=PAL.border; c.lineWidth=1.1/s; c.lineJoin="round";
       for(const k of this.world.countries){ if(this.marks[k.iso]||(solo&&k.iso!==solo)||!vis(k)) continue;
-        c.fillStyle=this.done[k.iso]?PAL.done:toneOf(k,sel,nb); c.fill(k.path,"evenodd"); if(nb){ c.strokeStyle=c.fillStyle; c.stroke(k.path); c.strokeStyle=PAL.border; } else c.stroke(k.edge); }
+        c.fillStyle=this.done[k.iso]?(nb?nbDone():PAL.done):toneOf(k,sel,nb); c.fill(k.path,"evenodd"); if(nb){ c.strokeStyle=c.fillStyle; c.stroke(k.path); c.strokeStyle=PAL.border; } else c.stroke(k.edge); }
       for(const k of this.world.countries){ if(solo||this.done[k.iso]!=="bad"||this.marks[k.iso]||!vis(k)) continue;   // eliminated but missed: grey with a red edge
         c.strokeStyle=PAL.bad; c.lineWidth=1.8/s; c.stroke(k.edge); }
       c.strokeStyle=PAL.border; c.lineWidth=1.1/s;
@@ -1557,7 +1568,7 @@ class MapView {
         for(const k of this.world.countries){ if(!k.valid||!this.world.quizSet.has(k)||!vis(k)) continue;
           const b=k.main; if(Math.max(b.r-b.l,b.b-b.t)*s>=8) continue;
           const mk=this.marks[k.iso]; if(!mk&&sel&&!inSel(sel,k)&&settings.palette!=="CALM") continue;
-          c.beginPath(); c.arc((b.l+b.r)/2,(b.t+b.b)/2,(mk?7:5)/s,0,6.2832); c.fillStyle=mk||(this.done[k.iso]?PAL.done:toneOf(k,sel,nb)); c.fill();
+          c.beginPath(); c.arc((b.l+b.r)/2,(b.t+b.b)/2,(mk?7:5)/s,0,6.2832); c.fillStyle=mk||(this.done[k.iso]?(nb?nbDone():PAL.done):toneOf(k,sel,nb)); c.fill();
           c.lineWidth=1.2/s; c.strokeStyle="rgba(255,255,255,.75)"; c.stroke(); } }
       if(this.lakes){ c.strokeStyle=PAL.border; c.lineWidth=1/s;
         for(const lk of this.lakes){ if(this.marks[lk.iso]) continue; c.fillStyle=PAL.lake; c.fill(lk.path(),"evenodd"); c.stroke(lk.path()); }
@@ -1606,7 +1617,7 @@ class MapView {
       const P=new Path2D(); let any=false; for(const poly of k.polys) for(const ring of poly.g3) any=this.ringPath(P,ring,B,R,cx,cy)||any;
       if(any){ paths.set(k,P); info.push([k,sx,sy,cz]); } }
     for(const [k,P] of paths){ if(this.marks[k.iso]||(solo&&k.iso!==solo)) continue;
-      c.fillStyle=this.done[k.iso]?PAL.done:toneOf(k,sel,nb); c.fill(P,"evenodd"); if(nb){ c.strokeStyle=c.fillStyle; c.stroke(P); c.strokeStyle=PAL.border; } else c.stroke(P); }
+      c.fillStyle=this.done[k.iso]?(nb?nbDone():PAL.done):toneOf(k,sel,nb); c.fill(P,"evenodd"); if(nb){ c.strokeStyle=c.fillStyle; c.stroke(P); c.strokeStyle=PAL.border; } else c.stroke(P); }
     if(!solo){ c.lineWidth=1.8; c.strokeStyle=PAL.bad; for(const [k,P] of paths) if(this.done[k.iso]==="bad"&&!this.marks[k.iso]) c.stroke(P); c.lineWidth=1; c.strokeStyle=PAL.border; }
     for(const [k,P] of paths){ const col=this.marks[k.iso]; if(!col||(solo&&k.iso!==solo)) continue; c.fillStyle=col; c.fill(P,"evenodd"); if(nb){ c.strokeStyle=c.fillStyle; c.stroke(P); c.strokeStyle=PAL.border; } else c.stroke(P); }
     const shade=c.createRadialGradient(cx-R*.3,cy-R*.35,R*.2,cx,cy,R*1.01);          // a little shading so it reads as a ball
@@ -1616,7 +1627,7 @@ class MapView {
       for(const [k,sx,sy,cz] of info){ if(!k.valid||!this.world.quizSet.has(k)||cz<.05) continue;
         if(2*R*Math.sin(Math.min(k.gc.rho,1.5))>=7) continue;
         const mk=this.marks[k.iso]; if(!mk&&sel&&!inSel(sel,k)&&settings.palette!=="CALM") continue;
-        c.beginPath(); c.arc(sx,sy,mk?7:5,0,6.2832); c.fillStyle=mk||(this.done[k.iso]?PAL.done:toneOf(k,sel,nb)); c.fill();
+        c.beginPath(); c.arc(sx,sy,mk?7:5,0,6.2832); c.fillStyle=mk||(this.done[k.iso]?(nb?nbDone():PAL.done):toneOf(k,sel,nb)); c.fill();
         c.lineWidth=1.2; c.strokeStyle="rgba(255,255,255,.75)"; c.stroke(); } }
     if(this.lakes){ c.strokeStyle=PAL.border; c.lineWidth=1;
       const draw=(lk,col)=>{ const P=new Path2D(); let any=false; for(const pl of lk.rings3) for(const ring of pl) any=this.ringPath(P,ring,B,R,cx,cy)||any; if(any){ c.fillStyle=col; c.fill(P,"evenodd"); c.stroke(P); } };
