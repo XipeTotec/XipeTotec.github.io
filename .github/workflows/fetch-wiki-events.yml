@@ -1,0 +1,30 @@
+name: Fetch Wikipedia events
+
+# Runs when the wiki-fetch branch is pushed (or by hand) and commits the raw
+# Wikipedia data back to that branch. It never touches main or the live site.
+on:
+  push:
+    branches: [wiki-fetch]
+    paths: [tools/fetch_wiki_events.py, .github/workflows/fetch-wiki-events.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python tools/fetch_wiki_events.py
+      - name: Commit raw data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add data/raw
+          git commit -m "Raw Wikipedia events data" || echo "No changes"
+          git push
