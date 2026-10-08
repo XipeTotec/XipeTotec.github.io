@@ -2219,10 +2219,10 @@ const BADGES=[
   ["perfect","checkcircle","Perfect round","Every answer right in a round of 5 or more",(g,t)=>!g.endless&&t>=5&&g.correct===t],
   ["sharp","crosshair","Sharpshooter","90% or better in a round of 20 or more",(g,t)=>!g.endless&&t>=20&&g.correct/t>=.9],
   ["speed","bolt","Quick on the draw","A timed round at 80% or better, under 4 seconds a question",(g,t,ms)=>g.timed&&t>=5&&g.correct/t>=.8&&ms<4000],
-  ["streak10","flame","On fire","10 in a row in one round or run",g=>g.bestStreak>=10],
-  ["streak25","flame","Blazing","25 in a row in one round or run",g=>g.bestStreak>=25],
-  ["streak50","flame","Inferno","50 in a row in one round or run",g=>g.bestStreak>=50],
-  ["streak100","flame","Immolation","100 in a row in one round or run",g=>g.bestStreak>=100],
+  ["streak10","flame","On fire","Every 10 in a row earns one. A wrong answer resets the count.",g=>(g.sk&&g.sk[10])||0],
+  ["streak25","flame","Blazing","Every 25 in a row earns one. A wrong answer resets the count.",g=>(g.sk&&g.sk[25])||0],
+  ["streak50","flame","Inferno","Every 50 in a row earns one. A wrong answer resets the count.",g=>(g.sk&&g.sk[50])||0],
+  ["streak100","flame","Immolation","Every 100 in a row earns one. A wrong answer resets the count.",g=>(g.sk&&g.sk[100])||0],
   ["lightning","bolt","Lightning","10 correct in a row, each in under 3 seconds",g=>(g.fastBest||0)>=10],
   ["photo","timer","Photo finish","A correct answer with under 1 second left on the clock",g=>!!g.photo],
   ["clutch","target","Clutch","A correct answer with under 3 seconds left on the clock",g=>!!g.clutch],
@@ -2250,17 +2250,18 @@ const roman=n=>{ let r=""; for(const [v,s] of [[100,"C"],[90,"XC"],[50,"L"],[40,
 const tierOf=n=>{ const t=TIERS.find(([m])=>n>=m); if(!t) return null; const k=Math.floor((n-t[0])/t[3]); return [t[0],t[1],t[2],t[1]+(k?" "+roman(k):""),t[0]+(k+1)*t[3],t[3]]; };
 const nextTier=n=>{ const t=tierOf(n); const m=t?t[4]:5; return [m,tierOf(m)[3]]; };
 function grantBadge(id){ const b=badges[id]||(badges[id]={n:0,last:0}); b.n++; b.last=Date.now(); store.setRaw(BADGE_KEY,JSON.stringify(badges)); return b.n; }
+const bumpSk=(sk,s)=>{ const o={...(sk||{})}; for(const m of [10,25,50,100]) if(s%m===0) o[m]=(o[m]||0)+1; return o; };
 function awardBadges(g,total,ms){
   const out=[];
-  for(const [id,icon,title,,test] of BADGES) if(test(g,total,ms)){
-    const prev=(badges[id]||{n:0}).n, n=grantBadge(id), a=tierOf(prev), b=tierOf(n);
-    out.push({id,icon,title,n,tierUp:b&&(!a||a[3]!==b[3])?b[3]:null}); }
+  for(const [id,icon,title,,test] of BADGES){ const r=test(g,total,ms), times=r===true?1:(+r||0); if(times<1) continue;
+    const prev=(badges[id]||{n:0}).n; let n=prev; for(let i=0;i<times;i++) n=grantBadge(id); const a=tierOf(prev), b=tierOf(n);
+    out.push({id,icon,title,n,gained:times,tierUp:b&&(!a||a[3]!==b[3])?b[3]:null}); }
   const have=(badges.millennial||{n:0}).n, want=Math.floor((counters.correct||0)/1000);       // one for every thousand correct answers
   if(want>have){ let n=have; while(n<want) n=grantBadge("millennial"); const a=tierOf(have), b=tierOf(n);
     out.push({id:"millennial",icon:"hash",title:"Millennial",n,tierUp:b&&(!a||a[3]!==b[3])?b[3]:null}); }
   return out;
 }
-const badgeText=b=>`${b.title} ×${b.n}`+(b.tierUp?` · ${b.tierUp}!`:"");
+const badgeText=b=>`${b.title}${b.gained>1?" +"+b.gained:""} ×${b.n}`+(b.tierUp?` · ${b.tierUp}!`:"");
 const badgeTag=b=>`${ico(b.icon,15)} ${esc(badgeText(b))}`;
 function checkAchievements(){
   const fresh=[];
@@ -2394,7 +2395,7 @@ function lock(ok,pts,q,wrongHit,speed=0,timedOut=false){ if(game) game.lockedAt=
   }
   if(ok){ const kk=q.flagOnly?"FLAGMAP":q.capOnly?"CAPMAP":q.peak?"PEAK":q.lm?"LANDMARK":q.river?"RIVER":q.lake?"LAKE":q.kind; counters.byKind[kk]=(counters.byKind[kk]||0)+1; counters.correct++; saveCounters(); }
   Object.assign(g,{locked:true,ok,pts,speed,timedOut,score:g.score+pts,
-    streak:ok?g.streak+1:0,bestStreak:ok?Math.max(g.bestStreak,g.streak+1):g.bestStreak,correct:g.correct+(ok?1:0),
+    streak:ok?g.streak+1:0,sk:ok?bumpSk(g.sk,g.streak+1):g.sk,bestStreak:ok?Math.max(g.bestStreak,g.streak+1):g.bestStreak,correct:g.correct+(ok?1:0),
     marks:{...(pairQ(q)?{[q.other.iso]:PAL.nb}:{}),...(q.kind==="LMCOUNTRY"?{[q.target.country.iso]:PAL.nb}:{}),...(q.kind==="RIVERTHRU"?{[q.riverObj.iso]:PAL.nb}:{}),...(q.kind==="NEIGH"?Object.fromEntries(q.neighbors.map(i=>[i,PAL.nb])):q.kind==="ODD"?Object.fromEntries(q.group.map(i=>[i,PAL.nb])):{}),...(wrongHit?{[wrongHit]:PAL.bad}:{}),[q.target.iso]:ok?PAL.ok:PAL.amber}});
   if(g.endless&&!ok){
     if(g.maxLives){ g.lives--; if(g.lives<=0) g.over=true; else if(g.lives===1) g.sinceLast=0; }
