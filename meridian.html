@@ -500,6 +500,56 @@ h1{font-size:40px}
   #home.packed .menu{grid-template-columns:minmax(0,1fr)}
   #home.packed .menu>.cap:nth-of-type(3),#home.packed .menu>#cards{grid-column:1}
 }
+
+/* ---- badges and achievements, flashier ---- */
+.hero{position:relative;display:flex;align-items:center;gap:16px;padding:18px 16px;margin:2px 0 14px;border-radius:22px;overflow:hidden;border:1px solid rgba(244,185,66,.35);
+  background:radial-gradient(120% 140% at 0% 0%,rgba(244,185,66,.28),transparent 55%),radial-gradient(90% 120% at 100% 100%,rgba(143,114,242,.22),transparent 60%),var(--panel);
+  animation:heroin .6s cubic-bezier(.2,.8,.2,1) both}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.16) 48%,transparent 62%);transform:translateX(-120%);animation:sweep 4.5s ease-in-out 1s infinite;pointer-events:none}
+.hero .big{position:relative;width:78px;height:78px;border-radius:50%;flex:none;display:grid;place-items:center;color:#2B1C00;
+  background:conic-gradient(from 210deg,#FFE59A,#E09B12,#FFF3C4,#D99A1E,#FFE59A);box-shadow:0 0 0 4px rgba(244,185,66,.18),0 8px 26px rgba(244,185,66,.45);animation:glow 3s ease-in-out infinite}
+.hero .big::before{content:"";position:absolute;inset:7px;border-radius:50%;background:linear-gradient(145deg,#F9CC66,#D99A1E);box-shadow:inset 0 2px 0 rgba(255,255,255,.55),inset 0 -3px 6px rgba(120,70,0,.35)}
+.hero .big svg,.hero .big .ic{position:relative;z-index:1}
+.hero h3{margin:0;font-family:var(--serif);font-size:24px;line-height:1.1}
+.hero p{margin:4px 0 8px;font-size:12.5px;color:var(--dim)}
+.hero .tally{display:flex;flex-wrap:wrap;gap:6px}
+.hero .tally span{font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:999px;color:#241800;box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+.tally .t1{background:linear-gradient(145deg,#E5AD74,#A8672F)}.tally .t2{background:linear-gradient(145deg,#F2F6F8,#9DAEBA)}.tally .t3{background:linear-gradient(145deg,#FFE07F,#E09B12)}.tally .t4{background:linear-gradient(145deg,#D6F8FF,#62BEE3)}
+.tally .off{opacity:.35;filter:grayscale(.6)}
+.hero .ring{position:relative;width:84px;height:84px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:conic-gradient(#F9CC66 calc(var(--p)*1%),rgba(255,255,255,.08) 0);box-shadow:0 0 22px rgba(244,185,66,.35)}
+.hero .ring::before{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--panel)}
+.hero .ring b{position:relative;font-family:var(--serif);font-size:22px}
+.hero .ring b small{font-size:11px;color:var(--dim);font-weight:600}
+.achgrid{background:none;border:0;border-radius:0;overflow:visible;display:grid;grid-template-columns:1fr;gap:9px}
+.achc{position:relative;overflow:hidden;border:1px solid var(--hair);border-radius:18px;padding:12px 14px;background:var(--panel);animation:cardin .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*45ms)}
+.achc:last-child{border-bottom:1px solid var(--hair)}
+.achc .ai{position:relative;overflow:hidden;width:48px;height:48px;border-radius:50%}
+.achc.got .ai{box-shadow:inset 0 2px 0 rgba(255,255,255,.55),inset 0 -3px 5px rgba(100,60,0,.35),0 4px 14px rgba(244,185,66,.35)}
+.achc.got .ai::after,.achc.t3 .ai::after,.achc.t4 .ai::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.75) 50%,transparent 70%);transform:translateX(-130%);animation:sweep 3.2s ease-in-out infinite;animation-delay:calc(var(--i,0)*180ms)}
+.achc.got{border-color:rgba(244,185,66,.5);background:linear-gradient(135deg,rgba(244,185,66,.14),transparent 55%),var(--panel)}
+.achc.t1{border-color:#C98A4B;background:linear-gradient(135deg,rgba(201,138,75,.2),transparent 55%),var(--panel)}
+.achc.t2{border-color:#B8C4CC;background:linear-gradient(135deg,rgba(184,196,204,.2),transparent 55%),var(--panel)}
+.achc.t3{border-color:#F4B942;background:linear-gradient(135deg,rgba(244,185,66,.26),transparent 55%),var(--panel);box-shadow:0 0 18px rgba(244,185,66,.22)}
+.achc.t4{border-color:#8EE5FF;background:linear-gradient(135deg,rgba(142,229,255,.26),transparent 55%),var(--panel);box-shadow:0 0 22px rgba(142,229,255,.3);animation:cardin .5s cubic-bezier(.2,.8,.2,1) both,pulse4 2.8s ease-in-out infinite}
+.achc.t4 .ai{box-shadow:inset 0 2px 0 rgba(255,255,255,.7),0 0 18px rgba(142,229,255,.65)}
+.achc.t3 .ai{box-shadow:inset 0 2px 0 rgba(255,255,255,.6),0 0 16px rgba(244,185,66,.6)}
+.achc.lock{opacity:.8;background:var(--panel);border-style:dashed}
+.achc.lock .ai{background:var(--panel-hi);color:var(--dim);box-shadow:none}
+.achc.lock .ai::after{content:none}
+.achc .cnt{background:linear-gradient(145deg,#FFE07F,#E09B12);color:#241800;padding:1px 8px;font-weight:800}
+.achc .tl{font-weight:700}
+.achc .pb{height:7px;border-radius:4px;background:rgba(255,255,255,.08)}
+.achc .pb i{background:linear-gradient(90deg,#E09B12,#FFE07F);background-size:200% 100%;animation:barshine 2.4s linear infinite;border-radius:4px}
+.achc:active{transform:scale(.985)}
+@keyframes sweep{0%,55%{transform:translateX(-130%)}100%{transform:translateX(130%)}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 4px rgba(244,185,66,.18),0 8px 26px rgba(244,185,66,.4)}50%{box-shadow:0 0 0 7px rgba(244,185,66,.12),0 8px 36px rgba(244,185,66,.7)}}
+@keyframes heroin{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes cardin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes pulse4{0%,100%{box-shadow:0 0 18px rgba(142,229,255,.25)}50%{box-shadow:0 0 30px rgba(142,229,255,.55)}}
+@keyframes barshine{from{background-position:0 0}to{background-position:-200% 0}}
+@media (min-width:900px){.achgrid{grid-template-columns:1fr 1fr}}
+@media (prefers-reduced-motion:reduce){.hero,.hero::after,.hero .big,.achc,.achc .ai::after,.achc .pb i{animation:none!important}}
 </style>
 </head>
 <body>
@@ -2692,8 +2742,13 @@ function renderAch(){
       +(n?`<small class="tl">${tr?tr[1]+(nt?" · ":""):""}${nt?`${n} / ${nt[0]} to ${nt[1]}`:" · top tier"}</small>${nt?`<div class="pb"><i style="width:${Math.round(n/nt[0]*100)}%"></i></div>`:""}`:`<small class="tl">Not earned yet</small>`)+`</div></div>`; };
   const bsorted=[...BADGES].sort((a,b)=>((badges[b[0]]||{n:0}).n>0)-((badges[a[0]]||{n:0}).n>0)||(badges[b[0]]||{n:0}).n-(badges[a[0]]||{n:0}).n);
   const bTotal=Object.values(badges).reduce((s,b)=>s+b.n,0);
-  $("badgeBody").innerHTML=`<p class="note">Earn these again and again. Bronze at 5, Silver at 10, Gold at 25, Platinum at 50.</p><div class="achgrid">${bsorted.map(bcard).join("")}</div>`;
-  $("achBody").innerHTML=`<p class="note">One-time milestones. The closest ones to finishing come first.</p><div class="achgrid">${sorted.map(card).join("")}</div>`;
+  const tiers=Object.fromEntries(TIERS.map(([,,k])=>[k,0])); for(const [id] of BADGES){ const t=tierOf((badges[id]||{n:0}).n); if(t) tiers[t[2]]++; }
+  const kinds=BADGES.filter(([id])=>(badges[id]||{n:0}).n>0).length, pctA=list.length?Math.round(got/list.length*100):0;
+  const nextA=sorted.find(a=>!achDone[a.id]);
+  let ci=0; const num=h=>h.replace(/<div class="achc /g,()=>`<div style="--i:${Math.min(ci++,16)}" class="achc `);
+  $("badgeBody").innerHTML=`<div class="hero"><span class="big">${ico("medal",34)}</span><div><h3>${bTotal} badge${bTotal===1?"":"s"} earned</h3><p>${kinds} of ${BADGES.length} kinds collected. Earn them again to climb the tiers.</p><div class="tally">${TIERS.slice().reverse().map(([,n,k])=>`<span class="${k}${tiers[k]?"":" off"}">${n} ${tiers[k]}</span>`).join("")}</div></div></div><p class="note">Bronze at 5, Silver at 10, Gold at 25, Platinum at 50.</p><div class="achgrid">${num(bsorted.map(bcard).join(""))}</div>`;
+  ci=0;
+  $("achBody").innerHTML=`<div class="hero"><span class="ring" style="--p:${pctA}"><b>${got}<small>/${list.length}</small></b></span><div><h3>${pctA}% unlocked</h3><p>${nextA?`Next up: <b>${esc(nextA.title)}</b>, ${Math.min(nextA.prog,nextA.target)} of ${nextA.target}.`:"Every milestone unlocked. Legend."}</p></div></div><p class="note">One-time milestones. The closest ones to finishing come first.</p><div class="achgrid">${num(sorted.map(card).join(""))}</div>`;
   $("ptBadges").innerHTML=`Badges <em>${bTotal}</em>`; $("ptAch").innerHTML=`Achievements <em>${got}/${list.length}</em>`;
 }
 function renderOffline(){
