@@ -2223,7 +2223,7 @@ const BADGES=[
   ["streak25","flame","Blazing","Every 25 in a row earns one. A wrong answer resets the count.",g=>(g.sk&&g.sk[25])||0],
   ["streak50","flame","Inferno","Every 50 in a row earns one. A wrong answer resets the count.",g=>(g.sk&&g.sk[50])||0],
   ["streak100","flame","Immolation","Every 100 in a row earns one. A wrong answer resets the count.",g=>(g.sk&&g.sk[100])||0],
-  ["lightning","bolt","Lightning","10 correct in a row, each in under 3 seconds",g=>(g.fastBest||0)>=10],
+  ["lightning","bolt","Lightning","Every 10 correct in a row, each in under 3 seconds, earns one. A slow or wrong answer resets the count.",g=>g.fastN||0],
   ["photo","timer","Photo finish","A correct answer with under 1 second left on the clock",g=>!!g.photo],
   ["clutch","target","Clutch","A correct answer with under 3 seconds left on the clock",g=>!!g.clutch],
   ["comeback","heart","Comeback","Down to your last life, then 10 correct in a row",g=>(g.comebackBest||0)>=10],
@@ -2387,7 +2387,7 @@ function lock(ok,pts,q,wrongHit,speed=0,timedOut=false){ if(game) game.lockedAt=
   const el=performance.now()-g.qStart, rem=(g.timed||g.sprint)?remainingMs():0;
   g.answerMs+=Math.min(el,g.limit*1000);
   if(ok){ if(rem>0&&rem<1000) g.photo=true; if(rem>0&&rem<3000) g.clutch=true; }       // close calls on the clock
-  if(ok&&el<3000){ g.fastRun=(g.fastRun||0)+1; g.fastBest=Math.max(g.fastBest||0,g.fastRun); } else g.fastRun=0;
+  if(ok&&el<3000){ g.fastRun=(g.fastRun||0)+1; g.fastBest=Math.max(g.fastBest||0,g.fastRun); if(g.fastRun%10===0) g.fastN=(g.fastN||0)+1; } else g.fastRun=0;
   g.results[g.i]=ok;
   if(!NO_REC.has(q.kind)&&!q.lm){              // odd-one-out, true/false and number questions don't prove you know a country
     recordResult(q.target.iso, ok&&(q.kind!=="FIND"||g.attempts===0));
