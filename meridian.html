@@ -271,6 +271,9 @@ button:focus:not(:focus-visible){outline:none}
 #choices button.ok{background:var(--ok);color:var(--on-accent)}
 #choices button.bad{background:var(--bad);color:var(--on-accent)}
 #choices button.off{background:var(--panel);color:var(--dim)}
+#choices button,.chips button,#status button,.pace .pt button,.seg button,#tabs button{transition:transform .08s ease-out,filter .12s,background .15s}
+#choices button:active,.chips button:active,#status button:active,.pace .pt button:active,.seg button:active{transform:scale(.95);filter:brightness(1.18)}
+@media (prefers-reduced-motion:reduce){#choices button,.chips button,#status button,.pace .pt button{transition:none}#choices button:active,.chips button:active,#status button:active,.pace .pt button:active{transform:none}}
 .panel.slim{height:calc(112px + env(safe-area-inset-bottom))}
 .panel.slim #choices{display:none}
 #hint:empty{display:none}
@@ -1765,17 +1768,20 @@ class MapView {
     this.draw(); this.drawOverlay();
   }
   bind(){
-    const cv=this.cv, ptrs=new Map(); let down=null, moved=false, lastDist=0;
+    const cv=this.cv, ptrs=new Map(); let down=null, moved=false, lastDist=0, vel=0, lastT=0;
     const pos=e=>{ const r=cv.getBoundingClientRect(); return [e.clientX-r.left,e.clientY-r.top]; };
     cv.addEventListener("pointerdown",e=>{ cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,pos(e));
-      if(ptrs.size===1){ down={p:pos(e),t:performance.now()}; moved=false; } else { moved=true; lastDist=0; } });
+      if(ptrs.size===1){ down={p:pos(e),t:performance.now()}; moved=false; vel=0; lastT=e.timeStamp; } else { moved=true; lastDist=0; } });
     cv.addEventListener("pointermove",e=>{
       if(!ptrs.has(e.pointerId)) return; const prev=ptrs.get(e.pointerId), now=pos(e); ptrs.set(e.pointerId,now);
       if(ptrs.size===1){
-        if(down && Math.hypot(now[0]-down.p[0],now[1]-down.p[1])>6) moved=true;
+        if(down && Math.hypot(now[0]-down.p[0],now[1]-down.p[1])>(e.pointerType==="mouse"?6:10)) moved=true;
+        const dt=Math.max(1,e.timeStamp-lastT); lastT=e.timeStamp; const sp=Math.hypot(now[0]-prev[0],now[1]-prev[1])/dt; vel=vel?vel*.7+sp*.3:sp;
+        const gain=1+Math.min(1.6,Math.max(0,(vel-.5)*.9));            // drag faster and the map travels further than your finger: slow drags stay exact
+        const ddx=(now[0]-prev[0])*gain, ddy=(now[1]-prev[1])*gain;
         if(moved&&this.globe){ const k=.95/this.gR()/RAD; cancelAnimationFrame(this.raf);
-          this.g.lon=((this.g.lon-(now[0]-prev[0])*k+540)%360)-180; this.g.lat=Math.max(-85,Math.min(85,this.g.lat+(now[1]-prev[1])*k)); this.draw(); this.drawOverlay(); }
-        else if(moved){ this.ox=this.cx(this.s,this.ox+now[0]-prev[0]); this.oy=this.cy(this.s,this.oy+now[1]-prev[1]); this.schedule("pan"); }
+          this.g.lon=((this.g.lon-ddx*k+540)%360)-180; this.g.lat=Math.max(-85,Math.min(85,this.g.lat+ddy*k)); this.draw(); this.drawOverlay(); }
+        else if(moved){ this.ox=this.cx(this.s,this.ox+ddx); this.oy=this.cy(this.s,this.oy+ddy); this.schedule("pan"); }
       } else if(ptrs.size===2){
         const [a,b]=[...ptrs.values()], dist=Math.hypot(a[0]-b[0],a[1]-b[1]);
         if(lastDist) this.zoomAt((a[0]+b[0])/2,(a[1]+b[1])/2,dist/lastDist);
@@ -2416,7 +2422,7 @@ function answerChoice(label){
   if(!game||game.locked) return; const q=game.qs[game.i], ok=label===q.answer, sp=ok?speedBonus():0;
   game.picked=label; lock(ok,ok?100+bonus(game)+sp:0,q,null,sp);
 }
-function tapAdvance(){ if(game&&game.locked&&!game.sprint&&performance.now()-(game.lockedAt||0)>350) nextQuestion(); }   // tap anywhere to continue
+function tapAdvance(){ if(game&&game.locked&&!game.sprint&&performance.now()-(game.lockedAt||0)>150) nextQuestion(); }   // tap anywhere to continue
 function tapMap(c){
   if(game&&game.locked) return tapAdvance();
   if(!game) return; const q=game.qs[game.i]; if(q.kind==="PATH") return pathTap(c,q); if(q.kind!=="FIND") return;
