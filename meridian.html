@@ -2237,17 +2237,20 @@ const BADGES=[
   ["practice","refresh","Back to basics","Finish a practice round",g=>!!g.practice],
   ["deck","bookcheck","Deck cleared","Finish a whole flashcard deck",()=>false]
 ];
-const TIERS=[[50,"Platinum","t4"],[25,"Gold","t3"],[10,"Silver","t2"],[5,"Bronze","t1"]];
-const tierOf=n=>TIERS.find(([m])=>n>=m)||null, nextTier=n=>[...TIERS].reverse().find(([m])=>n<m)||null;
+/* a bronze is 5 badges, a silver is 5 bronzes, a gold is 5 silvers, a platinum is 5 golds. Every further bronze's worth lifts the level: Silver I, Silver II ... */
+const TIERS=[[625,"Platinum","t4"],[125,"Gold","t3"],[25,"Silver","t2"],[5,"Bronze","t1"]];
+const roman=n=>{ let r=""; for(const [v,s] of [[100,"C"],[90,"XC"],[50,"L"],[40,"XL"],[10,"X"],[9,"IX"],[5,"V"],[4,"IV"],[1,"I"]]) while(n>=v){ r+=s; n-=v; } return r; };
+const tierOf=n=>{ const t=TIERS.find(([m])=>n>=m); return t?[t[0],t[1],t[2],t[1]+" "+roman(Math.floor((n-t[0])/5)+1)]:null; };
+const nextTier=n=>{ const m=(Math.floor(n/5)+1)*5; return [m,tierOf(m)[3]]; };
 function grantBadge(id){ const b=badges[id]||(badges[id]={n:0,last:0}); b.n++; b.last=Date.now(); store.setRaw(BADGE_KEY,JSON.stringify(badges)); return b.n; }
 function awardBadges(g,total,ms){
   const out=[];
   for(const [id,icon,title,,test] of BADGES) if(test(g,total,ms)){
     const prev=(badges[id]||{n:0}).n, n=grantBadge(id), a=tierOf(prev), b=tierOf(n);
-    out.push({id,icon,title,n,tierUp:b&&(!a||a[0]!==b[0])?b[1]:null}); }
+    out.push({id,icon,title,n,tierUp:b&&(!a||a[3]!==b[3])?b[3]:null}); }
   const have=(badges.millennial||{n:0}).n, want=Math.floor((counters.correct||0)/1000);       // one for every thousand correct answers
   if(want>have){ let n=have; while(n<want) n=grantBadge("millennial"); const a=tierOf(have), b=tierOf(n);
-    out.push({id:"millennial",icon:"hash",title:"Millennial",n,tierUp:b&&(!a||a[0]!==b[0])?b[1]:null}); }
+    out.push({id:"millennial",icon:"hash",title:"Millennial",n,tierUp:b&&(!a||a[3]!==b[3])?b[3]:null}); }
   return out;
 }
 const badgeText=b=>`${b.title} ×${b.n}`+(b.tierUp?` · ${b.tierUp}!`:"");
@@ -2775,14 +2778,14 @@ function renderAch(){
   const sorted=[...list.filter(a=>achDone[a.id]),...list.filter(a=>!achDone[a.id]).sort((x,y)=>y.prog/y.target-x.prog/x.target)];
   const bcard=def=>{ const [id,icon,title,desc]=def, n=(badges[id]||{n:0}).n, tr=tierOf(n), nt=nextTier(n);
     return `<div class="achc ${n?"got":"lock"} ${tr?tr[2]:""}"><span class="ai">${ico(icon,20)}</span><div><b>${esc(title)}${n?` <em class="cnt">×${n}</em>`:""}</b><small>${esc(desc)}</small>`
-      +(n?`<small class="tl">${tr?tr[1]+(nt?" · ":""):""}${nt?`${n} / ${nt[0]} to ${nt[1]}`:" · top tier"}</small>${nt?`<div class="pb"><i style="width:${Math.round(n/nt[0]*100)}%"></i></div>`:""}`:`<small class="tl">Not earned yet</small>`)+`</div></div>`; };
+      +(n?`<small class="tl">${tr?tr[3]+" · ":""}${n} / ${nt[0]} to ${nt[1]}</small><div class="pb"><i style="width:${(n%5)*20}%"></i></div>`:`<small class="tl">Not earned yet</small>`)+`</div></div>`; };
   const bsorted=[...BADGES].sort((a,b)=>((badges[b[0]]||{n:0}).n>0)-((badges[a[0]]||{n:0}).n>0)||(badges[b[0]]||{n:0}).n-(badges[a[0]]||{n:0}).n);
   const bTotal=Object.values(badges).reduce((s,b)=>s+b.n,0);
   const tiers=Object.fromEntries(TIERS.map(([,,k])=>[k,0])); for(const [id] of BADGES){ const t=tierOf((badges[id]||{n:0}).n); if(t) tiers[t[2]]++; }
   const kinds=BADGES.filter(([id])=>(badges[id]||{n:0}).n>0).length, pctA=list.length?Math.round(got/list.length*100):0;
   const nextA=sorted.find(a=>!achDone[a.id]);
   let ci=0; const num=h=>h.replace(/<div class="achc /g,()=>`<div style="--i:${Math.min(ci++,16)}" class="achc `);
-  $("badgeBody").innerHTML=`<div class="hero"><span class="big">${ico("medal",34)}</span><div><h3>${bTotal} badge${bTotal===1?"":"s"} earned</h3><p>${kinds} of ${BADGES.length} kinds collected. Earn them again to climb the tiers.</p><div class="tally">${TIERS.slice().reverse().map(([,n,k])=>`<span class="${k}${tiers[k]?"":" off"}">${n} ${tiers[k]}</span>`).join("")}</div></div></div><p class="note">Bronze at 5, Silver at 10, Gold at 25, Platinum at 50.</p><div class="achgrid">${num(bsorted.map(bcard).join(""))}</div>`;
+  $("badgeBody").innerHTML=`<div class="hero"><span class="big">${ico("medal",34)}</span><div><h3>${bTotal} badge${bTotal===1?"":"s"} earned</h3><p>${kinds} of ${BADGES.length} kinds collected. Earn them again to climb the tiers.</p><div class="tally">${TIERS.slice().reverse().map(([,n,k])=>`<span class="${k}${tiers[k]?"":" off"}">${n} ${tiers[k]}</span>`).join("")}</div></div></div><p class="note">5 badges make a Bronze, 5 Bronzes a Silver, 5 Silvers a Gold, 5 Golds a Platinum. Each extra Bronze lifts the level: Silver I, Silver II and so on.</p><div class="achgrid">${num(bsorted.map(bcard).join(""))}</div>`;
   ci=0;
   $("achBody").innerHTML=`<div class="hero"><span class="ring" style="--p:${pctA}"><b>${got}<small>/${list.length}</small></b></span><div><h3>${pctA}% unlocked</h3><p>${nextA?`Next up: <b>${esc(nextA.title)}</b>, ${Math.min(nextA.prog,nextA.target)} of ${nextA.target}.`:"Every milestone unlocked. Legend."}</p></div></div><p class="note">One-time milestones. The closest ones to finishing come first.</p><div class="achgrid">${num(sorted.map(card).join(""))}</div>`;
   $("ptBadges").innerHTML=`Badges <em>${bTotal}</em>`; $("ptAch").innerHTML=`Achievements <em>${got}/${list.length}</em>`;
