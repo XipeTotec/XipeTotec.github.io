@@ -13,6 +13,7 @@
   --serif:Georgia,"Iowan Old Style","Times New Roman",serif;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+button:not(:disabled):active{transform:scale(.96);filter:brightness(1.15)}
 html,body{margin:0;height:100%;background:var(--ocean-deep);color:var(--text);
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
@@ -271,6 +272,16 @@ button:focus:not(:focus-visible){outline:none}
 #choices button.ok{background:var(--ok);color:var(--on-accent)}
 #choices button.bad{background:var(--bad);color:var(--on-accent)}
 #choices button.off{background:var(--panel);color:var(--dim)}
+#choices button,.chips button,#status button,.pace .pt button,.seg button,#tabs button{transition:transform .08s ease-out,filter .12s,background .15s}
+#choices button:active,.chips button:active,#status button:active,.pace .pt button:active,.seg button:active{transform:scale(.95);filter:brightness(1.18)}
+@media (prefers-reduced-motion:reduce){#choices button,.chips button,#status button,.pace .pt button{transition:none}#choices button:active,.chips button:active,#status button:active,.pace .pt button:active{transform:none}}
+#pauseOv{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:rgba(7,21,33,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#pauseOv.hidden{display:none}
+#pauseOv>div{text-align:center;display:grid;gap:12px;justify-items:center}
+#pauseOv h3{margin:0;font-family:var(--serif);font-size:30px}#pauseOv p{margin:0;color:var(--dim)}
+#pauseOv .nx{position:relative;background:var(--amber);color:var(--on-accent);font-weight:700;padding:12px 34px;border-radius:999px;font-size:16px}
+.sk{background:var(--panel-hi);color:var(--dim);font-weight:600;padding:6px 14px;border-radius:999px;font-size:13px;margin-left:8px}
+#status .sk{padding:6px 14px}
 .panel.slim{height:calc(112px + env(safe-area-inset-bottom))}
 .panel.slim #choices{display:none}
 #hint:empty{display:none}
@@ -592,9 +603,11 @@ h1{font-size:40px}
   <header class="top">
     <button class="x" id="quit" aria-label="Quit round" data-ico="x" data-size="20"></button>
     <div class="prog"><div class="pl"><small id="qn"></small><span id="tsec"></span></div><div class="segs" id="segs"></div></div>
+    <button class="x hidden" id="pauseBtn" aria-label="Pause" data-ico="pause" data-size="20"></button>
     <div class="score"><b id="score">0</b><small id="streak"></small></div>
   </header>
   <div class="mapwrap"><div class="tbarwrap hidden" id="tbarwrap"><div id="tbar"></div></div><canvas id="gameMap"></canvas><button id="zoomOut" aria-label="Zoom out to world" data-ico="expand" data-size="19"></button></div>
+  <div id="pauseOv" class="hidden"><div><h3>Paused</h3><p>The clock is stopped and the map is hidden.</p><button id="resumeBtn" class="nx">Resume</button><button id="pauseQuit" class="sk">Quit round</button></div></div>
   <div class="panel"><div id="prompt"></div><div id="status"></div><div id="choices"></div><div id="hint"></div></div>
 </section>
 
@@ -1196,6 +1209,7 @@ const DIFFS = {EASY:["Easy","Well known",50,.4], MEDIUM:["Medium","Most places",
 const $ = id => document.getElementById(id);
 /* ---- icons: one small set of line icons instead of emoji ---- */
 const ICONS={
+  pause:'<rect x="7" y="5" width="3.6" height="14" rx="1" fill="currentColor"/><rect x="13.4" y="5" width="3.6" height="14" rx="1" fill="currentColor"/>',
   play:'<path d="M8 5v14l11-7z" fill="currentColor"/>',
   book:'<path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5z"/><path d="M12 6.5v13"/>',
   bookcheck:'<path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5z"/><path d="M14.5 10.5l-2.5 2.5-1.5-1.5"/>',
@@ -1765,17 +1779,20 @@ class MapView {
     this.draw(); this.drawOverlay();
   }
   bind(){
-    const cv=this.cv, ptrs=new Map(); let down=null, moved=false, lastDist=0;
+    const cv=this.cv, ptrs=new Map(); let down=null, moved=false, lastDist=0, vel=0, lastT=0;
     const pos=e=>{ const r=cv.getBoundingClientRect(); return [e.clientX-r.left,e.clientY-r.top]; };
     cv.addEventListener("pointerdown",e=>{ cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId,pos(e));
-      if(ptrs.size===1){ down={p:pos(e),t:performance.now()}; moved=false; } else { moved=true; lastDist=0; } });
+      if(ptrs.size===1){ down={p:pos(e),t:performance.now()}; moved=false; vel=0; lastT=e.timeStamp; } else { moved=true; lastDist=0; } });
     cv.addEventListener("pointermove",e=>{
       if(!ptrs.has(e.pointerId)) return; const prev=ptrs.get(e.pointerId), now=pos(e); ptrs.set(e.pointerId,now);
       if(ptrs.size===1){
-        if(down && Math.hypot(now[0]-down.p[0],now[1]-down.p[1])>6) moved=true;
+        if(down && Math.hypot(now[0]-down.p[0],now[1]-down.p[1])>(e.pointerType==="mouse"?6:10)) moved=true;
+        const dt=Math.max(1,e.timeStamp-lastT); lastT=e.timeStamp; const sp=Math.hypot(now[0]-prev[0],now[1]-prev[1])/dt; vel=vel?vel*.7+sp*.3:sp;
+        const gain=1+Math.min(1.6,Math.max(0,(vel-.5)*.9));            // drag faster and the map travels further than your finger: slow drags stay exact
+        const ddx=(now[0]-prev[0])*gain, ddy=(now[1]-prev[1])*gain;
         if(moved&&this.globe){ const k=.95/this.gR()/RAD; cancelAnimationFrame(this.raf);
-          this.g.lon=((this.g.lon-(now[0]-prev[0])*k+540)%360)-180; this.g.lat=Math.max(-85,Math.min(85,this.g.lat+(now[1]-prev[1])*k)); this.draw(); this.drawOverlay(); }
-        else if(moved){ this.ox=this.cx(this.s,this.ox+now[0]-prev[0]); this.oy=this.cy(this.s,this.oy+now[1]-prev[1]); this.schedule("pan"); }
+          this.g.lon=((this.g.lon-ddx*k+540)%360)-180; this.g.lat=Math.max(-85,Math.min(85,this.g.lat+ddy*k)); this.draw(); this.drawOverlay(); }
+        else if(moved){ this.ox=this.cx(this.s,this.ox+ddx); this.oy=this.cy(this.s,this.oy+ddy); this.schedule("pan"); }
       } else if(ptrs.size===2){
         const [a,b]=[...ptrs.values()], dist=Math.hypot(a[0]-b[0],a[1]-b[1]);
         if(lastDist) this.zoomAt((a[0]+b[0])/2,(a[1]+b[1])/2,dist/lastDist);
@@ -2355,8 +2372,8 @@ function stopTimer(){ cancelAnimationFrame(timerRaf); timerRaf=0; }
 function remainingMs(){ return Math.max(0,game.deadline-performance.now()); }
 function renderTimer(){
   const wrap=$("tbarwrap"), tx=$("tsec");
-  if(!game||!(game.timed||game.sprint)){ wrap.classList.add("hidden"); tx.textContent=""; return; }
-  wrap.classList.remove("hidden");
+  if(!game||!(game.timed||game.sprint)){ wrap.classList.add("hidden"); $("pauseBtn").classList.add("hidden"); tx.textContent=""; return; }
+  wrap.classList.remove("hidden"); $("pauseBtn").classList.remove("hidden");
   const big=!!(game.sprint&&game.sprintInc); wrap.classList.toggle("big",big); tx.classList.toggle("big",big);
   const rem=remainingMs(), low=rem<5000;
   $("tbar").style.transform=`scaleX(${Math.min(1,rem/(game.limit*1000))})`; $("tbar").classList.toggle("low",low);
@@ -2378,11 +2395,20 @@ function startTimer(){
 function onTimeout(){ if(game&&game.sprint){ if(!$("result").classList.contains("hidden")||$("play").classList.contains("hidden")) return; return finish(); }
   if(!game||game.locked) return; lock(false,0,game.qs[game.i],null,0,true); }
 const speedBonus=()=>game.timed?Math.round(SPEED_BONUS*remainingMs()/(game.limit*1000)):0;
+/* pause: stop the clock, hide the map and the question, resume where it stopped */
+function freezeClock(){ if(game&&!game.pausedAt&&(game.timed||game.sprint)&&!(game.locked&&!game.sprint)){ game.pausedAt=performance.now(); stopTimer(); } }
+function thawClock(){ if(game&&game.pausedAt){ const d=performance.now()-game.pausedAt; game.deadline+=d; game.qStart+=d; if(game.sprint) game.sprintEnd=game.deadline; game.pausedAt=0; startTimer(); } }
+function pauseGame(){ if(!game||game.paused||$("play").classList.contains("hidden")) return; game.paused=true; freezeClock(); $("pauseOv").classList.remove("hidden"); }
+function resumeGame(){ if(!game||!game.paused) return; game.paused=false; $("pauseOv").classList.add("hidden"); if(!document.hidden) thawClock(); }
+/* skip: put this question back at the end so it comes round again */
+function skipQuestion(){ const g=game; if(!g||g.locked||g.paused) return;
+  if(g.endless&&g.i+1>=g.qs.length) extendQuestions();
+  if(g.i+1>=g.qs.length) return;
+  const [q]=g.qs.splice(g.i,1); g.qs.push(q); g.skips=(g.skips||0)+1; beginQuestion(); }
 /* pause the clock while the tab is hidden */
 document.addEventListener("visibilitychange",()=>{
   if(!game||!(game.timed||game.sprint)||(game.locked&&!game.sprint)||$("play").classList.contains("hidden")) return;
-  if(document.hidden){ game.pausedAt=performance.now(); stopTimer(); }
-  else if(game.pausedAt){ const d=performance.now()-game.pausedAt; game.deadline+=d; game.qStart+=d; if(game.sprint) game.sprintEnd=game.deadline; game.pausedAt=0; startTimer(); }
+  if(document.hidden) freezeClock(); else if(!game.paused) thawClock();
 });
 
 function lock(ok,pts,q,wrongHit,speed=0,timedOut=false){ if(game) game.lockedAt=performance.now();
@@ -2416,7 +2442,7 @@ function answerChoice(label){
   if(!game||game.locked) return; const q=game.qs[game.i], ok=label===q.answer, sp=ok?speedBonus():0;
   game.picked=label; lock(ok,ok?100+bonus(game)+sp:0,q,null,sp);
 }
-function tapAdvance(){ if(game&&game.locked&&!game.sprint&&performance.now()-(game.lockedAt||0)>350) nextQuestion(); }   // tap anywhere to continue
+function tapAdvance(){ if(game&&game.locked&&!game.sprint&&performance.now()-(game.lockedAt||0)>80) nextQuestion(); }   // tap anywhere to continue
 function tapMap(c){
   if(game&&game.locked) return tapAdvance();
   if(!game) return; const q=game.qs[game.i]; if(q.kind==="PATH") return pathTap(c,q); if(q.kind!=="FIND") return;
@@ -2730,7 +2756,7 @@ function renderPlay(){
   else if(g.locked&&q.kind==="PATH"){ txt=`✕ ${q.steps&&q.steps>q.par+3?"Too far. ":""}Shortest: ${q.answer}`; col="var(--amber)"; }
   else if(g.locked){ txt="✕ "+(g.timedOut?"Time's up. ":"")+`It was ${q.answer}`+(g.maxLives?(g.lives>0?` · ${g.lives} li${g.lives===1?"fe":"ves"} left`:" · no lives left"):""); col="var(--amber)"; }
   else if(g.attempts===1){ txt="✕ Not quite. One more try."; col="var(--bad)"; }
-  $("status").innerHTML=`<span style="color:${col}">${esc(txt)}</span>`+(g.locked&&!g.sprint?`<button id="nextBtn" class="nx">${last?"See results":"Next"}</button>`:q.kind==="PATH"&&!g.locked?`<button id="giveUp" class="nx">Give up</button>`:"");
+  $("status").innerHTML=`<span style="color:${col}">${esc(txt)}</span>`+(g.locked&&!g.sprint?`<button id="nextBtn" class="nx">${last?"See results":"Next"}</button>`:q.kind==="PATH"&&!g.locked?`<button id="giveUp" class="nx">Give up</button>`:"")+(!g.locked&&(g.endless||g.i+1<g.qs.length)?`<button id="skipBtn" class="sk">Skip</button>`:"");
   document.querySelector(".panel").classList.toggle("slim",!q.choices.length&&q.kind==="FIND"&&!q.lm&&!q.lake&&!q.peak);
   $("choices").classList.toggle("c6",!g.locked&&q.choices.length===6);
   $("choices").innerHTML=g.locked ? (g.sprint?"":(q.kind==="BIGGER"?numCard(q):q.lm?landmarkCard(q):q.peak?peakCard(q):q.river?riverCard(q):q.lake?lakeCard(q):q.kind==="PATH"?pathCard(q):countryCard(q.target))+neighbourNote(q)) :
@@ -2961,7 +2987,7 @@ function init(w){
 
 $("terrBtn").addEventListener("click",()=>{ territories=!territories; store.setRaw("meridian_terr",territories?"1":"0"); world.setTerritories(territories); renderHome(); renderSettings(); });
 $("choices").addEventListener("click",e=>{ const b=e.target.closest("button[data-i]"); if(b&&game) answerChoice(game.qs[game.i].choices[+b.dataset.i]); });
-$("status").addEventListener("click",e=>{ if(e.target.id==="nextBtn") nextQuestion(); else if(e.target.id==="giveUp"&&game&&!game.locked){ const q=game.qs[game.i]; q.steps=q.chain.length-1; lock(false,0,q,null,0); } });
+$("status").addEventListener("click",e=>{ if(e.target.id==="nextBtn") nextQuestion(); else if(e.target.id==="skipBtn") skipQuestion(); else if(e.target.id==="giveUp"&&game&&!game.locked){ const q=game.qs[game.i]; q.steps=q.chain.length-1; lock(false,0,q,null,0); } });
 $("play").addEventListener("click",e=>{ if(e.target.closest("button,a,input,.toggle,#gameMap,.tbarwrap")) return; tapAdvance(); });   // the answer card and empty space also continue
 function quitRound(){ stopTimer(); gameId++; game=null; gameMap.dull=false; gameMap.setPulses([]); show("home"); }
 $("quit").addEventListener("click",()=>{ const g=game; if(g&&g.results.length&&$("result").classList.contains("hidden")) openSheet("leave"); else quitRound(); });
@@ -2988,10 +3014,13 @@ $("sheet").addEventListener("click",sheetClick);
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&sheetKind) closeSheet(); });
 /* keyboard on desktop: 1-6 answer, Enter / Space / right arrow continue */
 document.addEventListener("keydown",e=>{
-  if(e.repeat||e.ctrlKey||e.metaKey||e.altKey||sheetKind||!game||$("play").classList.contains("hidden")||/INPUT|TEXTAREA|SELECT/.test((e.target||{}).tagName||"")) return;
+  if(game&&game.paused&&(e.key==="Escape"||e.key==="p"||e.key==="Enter"||e.key===" ")){ e.preventDefault(); return resumeGame(); }
+  if(!e.repeat&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&game&&!sheetKind&&!game.locked&&e.key==="p"&&!game.paused&&!/INPUT|TEXTAREA|SELECT/.test((e.target||{}).tagName||"")){ e.preventDefault(); return pauseGame(); }
+  if(e.repeat||e.ctrlKey||e.metaKey||e.altKey||sheetKind||!game||(game&&game.paused)||$("play").classList.contains("hidden")||/INPUT|TEXTAREA|SELECT/.test((e.target||{}).tagName||"")) return;
   if(/^[1-6]$/.test(e.key)&&!game.locked){ const b=$("choices").querySelectorAll("button")[+e.key-1]; if(b){ e.preventDefault(); b.click(); } }
-  else if(game.locked&&!game.sprint&&(e.key==="Enter"||e.key===" "||e.key==="ArrowRight")){ e.preventDefault(); if(performance.now()-(game.lockedAt||0)>200) nextQuestion(); }
+  else if(game.locked&&!game.sprint&&(e.key==="Enter"||e.key===" "||e.key==="ArrowRight")){ e.preventDefault(); if(performance.now()-(game.lockedAt||0)>80) nextQuestion(); }
 });
+$("pauseBtn").addEventListener("click",pauseGame); $("resumeBtn").addEventListener("click",resumeGame); $("pauseQuit").addEventListener("click",()=>{ resumeGame(); $("quit").click(); });
 $("sumBtn").addEventListener("click",()=>showTab("settings"));
 $("tabs").addEventListener("click",e=>{ const b=e.target.closest("button[data-tab]"); if(b) showTab(b.dataset.tab); });
 $("weeklyBtn").addEventListener("click",()=>{ const W=weeklyTheme(); if(W) startTheme(W.id); });
