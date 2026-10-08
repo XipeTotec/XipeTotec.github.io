@@ -2757,7 +2757,7 @@ function renderPlay(){
   else if(g.locked&&q.kind==="PATH"){ txt=`✕ ${q.steps&&q.steps>q.par+3?"Too far. ":""}Shortest: ${q.answer}`; col="var(--amber)"; }
   else if(g.locked){ txt="✕ "+(g.timedOut?"Time's up. ":"")+`It was ${q.answer}`+(g.maxLives?(g.lives>0?` · ${g.lives} li${g.lives===1?"fe":"ves"} left`:" · no lives left"):""); col="var(--amber)"; }
   else if(g.attempts===1){ txt="✕ Not quite. One more try."; col="var(--bad)"; }
-  $("status").innerHTML=`<span style="color:${col}">${esc(txt)}</span>`+(g.locked&&!g.sprint?`<button id="nextBtn" class="nx">${last?"See results":"Next"}</button>`:q.kind==="PATH"&&!g.locked?`<button id="giveUp" class="nx">Give up</button>`:"")+(!g.locked&&(g.endless||g.i+1<g.qs.length)?`<button id="skipBtn" class="sk"${(g.skipLeft??1)>0?"":" disabled"}>Skip · ${g.skipLeft??1}</button>`:"");
+  $("status").innerHTML=`<span style="color:${col}">${esc(txt)}</span>`+(g.locked&&!g.sprint?`<button id="nextBtn" class="nx">${last?"See results":"Next"}</button>`:q.kind==="PATH"&&!g.locked?`<button id="giveUp" class="nx">Give up</button>`:"")+(!g.locked&&(g.endless||g.i+1<g.qs.length)?`<button id="skipBtn" class="sk"${(g.skipLeft??1)>0?"":" disabled"}>Skip</button>`:"");
   document.querySelector(".panel").classList.toggle("slim",!q.choices.length&&q.kind==="FIND"&&!q.lm&&!q.lake&&!q.peak);
   $("choices").classList.toggle("c6",!g.locked&&q.choices.length===6);
   $("choices").innerHTML=g.locked ? (g.sprint?"":(q.kind==="BIGGER"?numCard(q):q.lm?landmarkCard(q):q.peak?peakCard(q):q.river?riverCard(q):q.lake?lakeCard(q):q.kind==="PATH"?pathCard(q):countryCard(q.target))+neighbourNote(q)) :
