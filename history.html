@@ -1,0 +1,893 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Year by Year: a history quiz. Guess the year an event happened, or which event happened in a given year.">
+<meta name="theme-color" content="#e9eef2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f161d" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Year by Year">
+<meta property="og:title" content="Year by Year">
+<meta property="og:description" content="A history quiz with 585 events from 776 BC to 2023. Guess the year, or guess the event.">
+<title>Year by Year History Quiz</title>
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one centred column — mode tabs, a timeline progress rail, then a single question card with answers below */
+*{box-sizing:border-box}
+:root{
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#e9eef2; --surface:#f8fafb; --ink:#14202c; --muted:#5a6976; --line:#c9d3db;
+  --accent:#1f5f8b; --accent-ink:#ffffff; --brass:#a5660f;
+  --good:#2f7a45; --good-bg:#e1f1e5; --bad:#b03a2e; --bad-bg:#f8e2df;
+  --display:"Young Serif",Georgia,"Times New Roman",serif;
+  --body:"Atkinson Hyperlegible",system-ui,-apple-system,Segoe UI,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f161d; --surface:#17212b; --ink:#e6edf3; --muted:#93a3b1; --line:#2b3a47;
+  --accent:#6fb3e0; --accent-ink:#0b1620; --brass:#e0a54a;
+  --good:#7fd197; --good-bg:#16301f; --bad:#f09084; --bad-bg:#3a1c19; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f161d; --surface:#17212b; --ink:#e6edf3; --muted:#93a3b1; --line:#2b3a47;
+  --accent:#6fb3e0; --accent-ink:#0b1620; --brass:#e0a54a;
+  --good:#7fd197; --good-bg:#16301f; --bad:#f09084; --bad-bg:#3a1c19; color-scheme:dark}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:640px;margin:0 auto;padding-inline:16px;padding-block:24px 48px;display:flex;flex-direction:column;gap:20px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.home{font-size:.85rem;color:var(--muted);text-decoration:none;width:100%}
+.home:hover{color:var(--ink)}
+h1{font-family:var(--display);font-weight:400;font-size:2rem;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h1 span{color:var(--brass)}
+.stats{font-family:var(--mono);font-size:.85rem;color:var(--muted);display:flex;gap:14px;font-variant-numeric:tabular-nums}
+.stats b{color:var(--ink);font-weight:600}
+.controls{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;min-width:52px}
+.count{margin:0;font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.chip{font:inherit;font-size:.9rem;border:1px solid var(--line);background:transparent;color:var(--ink);padding:6px 12px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip:focus-visible,.ans:focus-visible,.btn:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+/* timeline progress */
+.rail{position:relative;display:grid;grid-template-columns:repeat(var(--n,10),1fr);align-items:center;padding-block:6px}
+.rail::before{content:"";position:absolute;left:0;right:0;top:50%;height:2px;background:var(--line)}
+.tick{position:relative;justify-self:center;width:12px;height:12px;border-radius:50%;background:var(--bg);border:2px solid var(--line)}
+.tick.now{border-color:var(--brass);background:var(--brass);transform:scale(1.25)}
+.tick.ok{background:var(--good);border-color:var(--good)}
+.tick.no{background:var(--bad);border-color:var(--bad)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:24px 20px;display:flex;flex-direction:column;gap:14px}
+.kicker{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--brass);font-weight:700;margin:0}
+.q{font-family:var(--display);font-size:1.45rem;line-height:1.3;margin:0;text-wrap:balance}
+.q.year{font-family:var(--mono);font-weight:600;font-size:3.2rem;letter-spacing:-.02em;line-height:1}
+.era{font-size:.85rem;color:var(--muted);margin:0}
+.answers{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+.answers.events{grid-template-columns:1fr}
+.ans{font:inherit;text-align:left;background:var(--surface);color:var(--ink);border:1.5px solid var(--line);border-radius:6px;padding:14px 16px;cursor:pointer;transition:border-color .15s,background .15s;min-width:0}
+.answers:not(.events) .ans{font-family:var(--mono);font-size:1.3rem;font-weight:600;text-align:center;font-variant-numeric:tabular-nums}
+.ans:hover:not(:disabled){border-color:var(--accent)}
+.ans:disabled{cursor:default}
+.ans.right{background:var(--good-bg);border-color:var(--good);color:var(--ink)}
+.ans.wrong{background:var(--bad-bg);border-color:var(--bad)}
+.ans.dim{opacity:.55}
+.feedback{border-left:3px solid var(--good);padding:4px 0 4px 14px;display:flex;flex-direction:column;gap:4px}
+.feedback.miss{border-color:var(--bad)}
+.feedback strong{font-size:1.05rem}
+.feedback p{margin:0;color:var(--muted);max-width:62ch}
+.btn{font:inherit;font-weight:700;background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;padding:12px 20px;cursor:pointer;align-self:flex-start}
+.final{font-family:var(--mono);font-size:3.4rem;font-weight:600;margin:0;line-height:1}
+.final small{font-size:1.2rem;color:var(--muted)}
+.review{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.review li{display:grid;grid-template-columns:5.5rem 1fr;gap:12px;border-top:1px solid var(--line);padding-top:8px;font-size:.95rem}
+.review .y{font-family:var(--mono);font-weight:600;color:var(--brass)}
+.review .m{color:var(--bad);font-size:.85rem}
+@media (max-width:420px){.q.year{font-size:2.6rem}.answers:not(.events) .ans{font-size:1.1rem}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="home" href="/">← XipeProjec</a>
+    <h1>Year <span>by</span> Year</h1>
+    <div class="stats"><span>Score <b id="score">0</b></span><span>Streak <b id="streak">0</b></span><span>Best <b id="best">–</b></span></div>
+  </header>
+
+  <div class="controls">
+    <div class="row" role="group" aria-label="Question type">
+      <span class="label">Mode</span>
+      <button class="chip" id="m-when" data-mode="when">Guess the year</button>
+      <button class="chip" id="m-what" data-mode="what">Guess the event</button>
+      <button class="chip" id="m-mix" data-mode="mix">Mixed</button>
+    </div>
+    <div class="row" role="group" aria-label="Period">
+      <span class="label">Period</span>
+      <button class="chip" id="e-all" data-era="all">All</button>
+      <button class="chip" id="e-anc" data-era="ancient">Before 1000</button>
+      <button class="chip" id="e-mid" data-era="early">1000–1799</button>
+      <button class="chip" id="e-c19" data-era="c19">1800s</button>
+      <button class="chip" id="e-mod" data-era="modern">1900 on</button>
+    </div>
+    <div class="row" role="group" aria-label="Topic">
+      <span class="label">Topic</span>
+      <button class="chip" id="t-all" data-topic="all">All</button>
+      <button class="chip" id="t-w" data-topic="w">Wars</button>
+      <button class="chip" id="t-p" data-topic="p">Politics</button>
+      <button class="chip" id="t-s" data-topic="s">Science</button>
+      <button class="chip" id="t-x" data-topic="x">Exploration</button>
+      <button class="chip" id="t-c" data-topic="c">Culture</button>
+      <button class="chip" id="t-d" data-topic="d">Disasters</button>
+      <button class="chip" id="t-a" data-topic="a">Australia</button>
+    </div>
+    <p class="count" id="count"></p>
+  </div>
+
+  <div class="rail" id="rail" aria-hidden="true"></div>
+  <main class="card" id="card" aria-live="polite"></main>
+</div>
+
+<script>
+const EVENTS = [
+[-776, "c", "The first recorded Olympic Games are held at Olympia", "Winners were recorded from this year onward, which is how Greeks later counted time in four-year 'Olympiads'."],
+[-753, "p", "Rome is founded, according to Roman tradition", "The date was worked out centuries later by the scholar Varro."],
+[-701, "w", "The Assyrian king Sennacherib besieges Jerusalem", "The city held out, and the siege is described in both Assyrian records and the Bible."],
+[-612, "w", "Babylonians and Medes destroy Nineveh, the Assyrian capital", "The fall of Nineveh brought the Assyrian Empire to an end."],
+[-585, "s", "A solar eclipse halts a battle between the Lydians and Medes", "Herodotus says Thales of Miletus predicted it; it is one of the earliest precisely datable events."],
+[-539, "w", "Cyrus the Great of Persia captures Babylon", "He allowed exiled Jews to return to Jerusalem."],
+[-509, "p", "Rome expels its last king and becomes a republic, by tradition", "Power passed to two consuls elected every year."],
+[-508, "p", "Cleisthenes' reforms lay the foundations of Athenian democracy", "He reorganised citizens into ten tribes."],
+[-490, "w", "Athenians defeat the Persians at the Battle of Marathon", "The legend of a runner carrying news to Athens inspired the modern marathon."],
+[-480, "w", "The Spartans make their stand at Thermopylae", "Persia then lost its fleet at Salamis later the same year."],
+[-479, "w", "The Greeks defeat the Persians at Plataea", "It ended Persia's invasion of Greece. Confucius died the same year."],
+[-447, "c", "Work begins on the Parthenon in Athens", "It was built as a temple to Athena on the Acropolis."],
+[-431, "w", "The Peloponnesian War begins between Athens and Sparta", "It lasted 27 years and ended in Athens' defeat."],
+[-429, "p", "Pericles dies during a plague in Athens", "He had led Athens for about 30 years."],
+[-404, "w", "Athens surrenders to Sparta", "It ended the Peloponnesian War."],
+[-399, "p", "Socrates is sentenced to death in Athens", "He was convicted of impiety and corrupting the young, and drank hemlock."],
+[-338, "w", "Philip II of Macedon defeats Athens and Thebes at Chaeronea", "The victory gave Macedon control of Greece."],
+[-331, "w", "Alexander the Great defeats Darius III at Gaugamela", "The win opened the way to the Persian capitals."],
+[-323, "p", "Alexander the Great dies in Babylon", "He was 32, and his empire split among his generals soon after."],
+[-264, "w", "The First Punic War begins between Rome and Carthage", "It was fought largely at sea over control of Sicily."],
+[-221, "p", "Qin Shi Huang unifies China and becomes its first emperor", "He standardised writing, coins and weights."],
+[-218, "w", "Hannibal crosses the Alps with war elephants", "He led a Carthaginian army into Italy."],
+[-216, "w", "Hannibal crushes a Roman army at Cannae", "It was one of Rome's worst defeats."],
+[-212, "s", "Archimedes is killed when Romans take Syracuse", "His machines had helped defend the city during the siege."],
+[-202, "w", "Scipio defeats Hannibal at Zama", "The battle ended the Second Punic War."],
+[-168, "w", "Rome defeats Macedon at Pydna", "It ended the Macedonian kingdom."],
+[-146, "w", "Rome destroys Carthage", "Corinth was also destroyed by Rome in the same year."],
+[-133, "p", "Tiberius Gracchus is killed in Rome", "His land reforms angered the Senate."],
+[-73, "w", "Spartacus leads a slave revolt against Rome", "His army defeated several Roman forces before being crushed in 71 BC."],
+[-63, "w", "Pompey captures Jerusalem", "Judea came under Roman influence."],
+[-55, "w", "Julius Caesar first invades Britain", "He returned the next year with a larger force."],
+[-52, "w", "Vercingetorix surrenders to Caesar at Alesia", "It completed Rome's conquest of Gaul."],
+[-49, "w", "Julius Caesar crosses the Rubicon", "Leading his army into Italy started a civil war."],
+[-48, "w", "Caesar defeats Pompey at Pharsalus", "Pompey fled to Egypt and was killed there."],
+[-45, "s", "The Julian calendar takes effect", "It introduced the 365-day year with a leap day."],
+[-44, "p", "Julius Caesar is assassinated in Rome", "He was stabbed on the Ides of March, 15 March."],
+[-31, "w", "Octavian defeats Antony and Cleopatra at Actium", "He became sole ruler of the Roman world."],
+[-30, "p", "Cleopatra dies and Egypt becomes a Roman province", "She was the last ruler of the Ptolemaic dynasty."],
+[-27, "p", "Octavian takes the name Augustus and becomes the first Roman emperor", "His reign began about two centuries of relative peace."],
+[9, "w", "Germanic tribes destroy three Roman legions in the Teutoburg Forest", "Rome never again tried to conquer Germany east of the Rhine."],
+[14, "p", "Emperor Augustus dies", "The month of August is named after him."],
+[43, "w", "Rome invades Britain under Emperor Claudius", "Britain stayed a Roman province for nearly 400 years."],
+[64, "d", "The Great Fire of Rome", "Nero blamed the Christians for it."],
+[70, "w", "Roman forces destroy the Second Temple in Jerusalem", "The Western Wall is a surviving part of its platform."],
+[79, "d", "Mount Vesuvius erupts and buries Pompeii", "The ash preserved the town so well that excavations still reveal daily life."],
+[80, "c", "The Colosseum in Rome is inaugurated", "The opening games lasted 100 days."],
+[105, "s", "Cai Lun presents papermaking to the Chinese emperor, by tradition", "Paper had existed earlier, but he improved and spread the process."],
+[117, "p", "The Roman Empire reaches its greatest extent under Trajan", "Trajan died this year."],
+[122, "p", "Construction of Hadrian's Wall begins in Britain", "It ran about 117 km across northern England."],
+[180, "p", "Marcus Aurelius dies", "His Meditations are still widely read."],
+[212, "p", "Caracalla grants Roman citizenship to almost all free people in the empire", "The decree is known as the Constitutio Antoniniana."],
+[220, "p", "The Han dynasty ends in China", "China split into the Three Kingdoms."],
+[284, "p", "Diocletian becomes Roman emperor", "He split the empire's rule among four emperors."],
+[312, "w", "Constantine wins the Battle of the Milvian Bridge", "He credited the Christian God with his victory."],
+[313, "c", "The Edict of Milan grants tolerance to Christians in the Roman Empire", "It was agreed by emperors Constantine and Licinius."],
+[325, "c", "The Council of Nicaea meets", "It produced the Nicene Creed."],
+[330, "p", "Constantine dedicates Constantinople as the new capital", "The city was built on the site of Byzantium."],
+[378, "w", "The Goths defeat the Romans at Adrianople", "Emperor Valens was killed in the battle."],
+[395, "p", "The Roman Empire is permanently divided into East and West", "It happened on the death of Theodosius I."],
+[410, "w", "The Visigoths sack Rome", "It was the first time in 800 years an enemy had taken the city."],
+[451, "w", "Attila the Hun is fought to a halt at the Catalaunian Plains", "A Roman and Visigoth army stopped his advance into Gaul."],
+[455, "w", "The Vandals sack Rome", "The word 'vandalism' comes from this group."],
+[476, "p", "The last Western Roman emperor, Romulus Augustulus, is deposed", "Historians often use this year to mark the end of the Western Roman Empire."],
+[486, "w", "Clovis defeats the last Roman ruler in Gaul at Soissons", "He founded the Frankish kingdom."],
+[527, "p", "Justinian becomes Byzantine emperor", "His law code shaped legal systems across Europe."],
+[529, "c", "Benedict founds the monastery at Monte Cassino, by tradition", "His Rule shaped Western monasticism."],
+[537, "c", "The Hagia Sophia is completed in Constantinople", "It was the world's largest cathedral for nearly 1,000 years."],
+[541, "d", "The Plague of Justinian breaks out", "It was the first recorded pandemic of bubonic plague."],
+[618, "p", "The Tang dynasty is founded in China", "Its era is often seen as a golden age of Chinese culture."],
+[622, "c", "Muhammad migrates from Mecca to Medina (the Hijra)", "The Islamic calendar counts its years from this journey."],
+[632, "c", "The Prophet Muhammad dies in Medina", "Abu Bakr became the first caliph."],
+[636, "w", "Arab forces defeat the Byzantines at the Yarmouk River", "It led to the Muslim conquest of Syria."],
+[661, "p", "The Umayyad Caliphate is founded", "Its capital was Damascus."],
+[680, "c", "Husayn ibn Ali is killed at Karbala", "The event is central to Shia Islam."],
+[710, "p", "Nara becomes Japan's capital", "It was modelled on the Chinese capital Chang'an."],
+[711, "w", "Umayyad forces cross into Spain", "Muslim rule in parts of Iberia lasted until 1492."],
+[732, "w", "Charles Martel defeats an Umayyad army near Tours", "The battle halted the Umayyad advance into France."],
+[750, "p", "The Abbasids overthrow the Umayyad Caliphate", "They moved the capital to Baghdad soon after."],
+[751, "w", "Abbasid forces defeat a Tang army at the Talas River", "Tradition links it to papermaking spreading west."],
+[762, "p", "Baghdad is founded as the Abbasid capital", "It became one of the largest cities in the world."],
+[793, "w", "Vikings raid the monastery at Lindisfarne", "The raid is often seen as the start of the Viking Age."],
+[794, "p", "Heian-kyō, later Kyoto, becomes Japan's capital", "It stayed the capital for over 1,000 years."],
+[800, "p", "Charlemagne is crowned emperor by the Pope on Christmas Day", "It was the first time in centuries a Western ruler held the imperial title."],
+[814, "p", "Charlemagne dies", "He was buried at Aachen."],
+[843, "p", "The Treaty of Verdun divides Charlemagne's empire", "The split roughly foreshadowed France and Germany."],
+[859, "c", "The University of al-Qarawiyyin is founded in Fez, by tradition", "It was founded by Fatima al-Fihri."],
+[868, "s", "The Diamond Sutra is printed in China", "It is the oldest surviving printed book with a date."],
+[878, "w", "Alfred the Great defeats the Danes at Edington", "The win saved Wessex from Viking conquest."],
+[930, "p", "Iceland's Althing parliament first meets", "It is one of the oldest parliaments in the world."],
+[960, "p", "The Song dynasty is founded in China", "The Song era saw paper money and gunpowder weapons."],
+[962, "p", "Otto I is crowned Holy Roman Emperor", "The Holy Roman Empire lasted until 1806."],
+[987, "p", "Hugh Capet becomes King of France", "His family ruled France for over 800 years."],
+[1016, "p", "Cnut becomes King of England", "He later ruled Denmark and Norway too."],
+[1054, "c", "The Great Schism splits the Eastern and Western churches", "It divided Catholic and Orthodox Christianity."],
+[1066, "w", "William of Normandy wins the Battle of Hastings", "The Norman conquest reshaped England's language and law."],
+[1071, "w", "The Seljuk Turks defeat the Byzantines at Manzikert", "It opened Anatolia to Turkish settlement."],
+[1077, "c", "Emperor Henry IV seeks the Pope's forgiveness at Canossa", "He reportedly waited three days in the snow."],
+[1086, "p", "The Domesday Book survey of England is completed", "It recorded land and property for William the Conqueror."],
+[1088, "c", "The University of Bologna is founded, by tradition", "It is considered the oldest university in continuous operation."],
+[1095, "c", "Pope Urban II calls for the First Crusade", "He made the call at the Council of Clermont."],
+[1099, "w", "Crusaders capture Jerusalem", "They founded the Kingdom of Jerusalem."],
+[1147, "w", "The Second Crusade sets out", "It failed to take Damascus."],
+[1163, "c", "Construction begins on Notre-Dame de Paris", "It took nearly 200 years to finish."],
+[1170, "c", "Thomas Becket is murdered in Canterbury Cathedral", "He was killed by knights of Henry II."],
+[1187, "w", "Saladin captures Jerusalem", "The loss prompted the Third Crusade."],
+[1192, "p", "Minamoto no Yoritomo becomes shogun", "It began military rule in Japan."],
+[1202, "s", "Fibonacci publishes Liber Abaci", "It spread Hindu-Arabic numerals in Europe."],
+[1204, "w", "Crusaders sack Constantinople", "The Fourth Crusade never reached the Holy Land."],
+[1206, "p", "Temüjin is proclaimed Genghis Khan", "He went on to found the largest land empire in history."],
+[1212, "w", "Christian kingdoms defeat the Almohads at Las Navas de Tolosa", "It was a turning point in the Reconquista."],
+[1215, "p", "King John agrees to the Magna Carta", "It set the idea that even the king is bound by law."],
+[1227, "p", "Genghis Khan dies", "His burial place is still unknown."],
+[1240, "w", "The Mongols destroy Kyiv", "The city had been the centre of Kievan Rus'."],
+[1241, "w", "The Mongols defeat European armies at Legnica and Mohi", "They withdrew after the Great Khan died."],
+[1258, "w", "Mongol forces sack Baghdad", "The fall ended the Abbasid Caliphate."],
+[1260, "w", "The Mamluks defeat the Mongols at Ain Jalut", "It was the first major Mongol defeat in open battle."],
+[1265, "p", "Simon de Montfort's parliament meets in England", "It included elected town representatives."],
+[1271, "x", "Marco Polo sets out for China", "His account of Asia became famous across Europe."],
+[1274, "w", "The Mongols first invade Japan", "A storm helped drive them off."],
+[1279, "w", "The Mongols complete their conquest of Song China", "Kublai Khan's Yuan dynasty ruled all of China."],
+[1281, "w", "A typhoon wrecks the second Mongol invasion of Japan", "The Japanese called the storm kamikaze, 'divine wind'."],
+[1291, "w", "Acre falls, ending the crusader states", "It was the last major crusader stronghold in the Holy Land."],
+[1295, "x", "Marco Polo returns to Venice", "He had been away 24 years."],
+[1307, "c", "The Knights Templar are arrested across France", "The arrests began on Friday 13 October."],
+[1314, "w", "Robert the Bruce defeats the English at Bannockburn", "It was a key victory for Scottish independence."],
+[1320, "p", "The Declaration of Arbroath asserts Scottish independence", "It was a letter to the Pope."],
+[1324, "c", "Mansa Musa of Mali makes his pilgrimage to Mecca", "His gold spending reportedly caused inflation in Cairo."],
+[1325, "p", "Tenochtitlan is founded by the Mexica, by tradition", "It later became Mexico City."],
+[1337, "w", "The Hundred Years' War begins", "England and France fought on and off until 1453."],
+[1346, "w", "The English defeat the French at Crécy", "English longbowmen proved decisive."],
+[1347, "d", "The Black Death reaches Europe through Sicily", "Within a few years it killed roughly a third of Europe's population."],
+[1368, "p", "The Ming dynasty is founded in China", "It ruled for nearly 300 years."],
+[1378, "c", "The Western Schism begins with rival popes", "At one point there were three popes."],
+[1381, "p", "The Peasants' Revolt breaks out in England", "Rebels took London before the revolt was crushed."],
+[1389, "w", "The Ottomans fight the Serbs at Kosovo", "Both the Ottoman sultan and Serbian prince were killed."],
+[1397, "p", "The Kalmar Union joins Denmark, Norway and Sweden", "It was led by Queen Margaret I."],
+[1402, "w", "Timur defeats the Ottomans at Ankara", "Sultan Bayezid I was captured."],
+[1405, "x", "Zheng He sets out on the first of his treasure voyages", "His fleets reached as far as East Africa."],
+[1410, "w", "Poland and Lithuania defeat the Teutonic Knights at Grunwald", "It was one of the largest battles of medieval Europe."],
+[1415, "w", "Henry V defeats the French at Agincourt", "The English army was badly outnumbered."],
+[1415, "c", "Jan Hus is burned at the stake", "He was a Czech church reformer."],
+[1420, "c", "The Forbidden City in Beijing is completed", "It was home to emperors for nearly 500 years."],
+[1431, "c", "Joan of Arc is burned at the stake in Rouen", "She was made a saint in 1920."],
+[1434, "p", "Cosimo de' Medici takes control of Florence", "The Medici family were great patrons of art."],
+[1453, "w", "Constantinople falls to the Ottoman Empire", "Mehmed II's capture ended the Byzantine Empire."],
+[1455, "s", "The Gutenberg Bible is printed", "It was the first major book printed with movable metal type in Europe."],
+[1469, "p", "Ferdinand of Aragon and Isabella of Castile marry", "Their marriage united Spain."],
+[1478, "c", "The Spanish Inquisition is established", "It lasted until 1834."],
+[1480, "p", "Russia ends Mongol overlordship at the Ugra River", "Ivan III's stand ended the 'Tatar yoke'."],
+[1485, "w", "Henry Tudor wins the Battle of Bosworth", "Richard III was killed and the Tudor dynasty began."],
+[1488, "x", "Bartolomeu Dias rounds the Cape of Good Hope", "He proved ships could sail from the Atlantic to the Indian Ocean."],
+[1492, "x", "Columbus's first voyage reaches the Caribbean", "He landed in the Bahamas believing he had reached Asia."],
+[1492, "w", "Granada falls to Ferdinand and Isabella", "It ended Muslim rule in Spain."],
+[1494, "p", "The Treaty of Tordesillas divides the New World between Spain and Portugal", "The line is why Brazil speaks Portuguese."],
+[1497, "x", "John Cabot reaches North America", "He landed in Newfoundland or nearby."],
+[1498, "x", "Vasco da Gama reaches India by sea", "He landed at Calicut after sailing around Africa."],
+[1500, "x", "Pedro Álvares Cabral reaches Brazil", "He claimed it for Portugal."],
+[1506, "c", "Construction begins on the new St Peter's Basilica", "It took about 120 years to complete."],
+[1509, "p", "Henry VIII becomes King of England", "He was 17."],
+[1510, "w", "The Portuguese capture Goa", "It stayed Portuguese until 1961."],
+[1511, "w", "The Portuguese capture Malacca", "It controlled the spice trade route."],
+[1512, "c", "Michelangelo finishes painting the Sistine Chapel ceiling", "He worked on it for four years."],
+[1513, "x", "Balboa becomes the first European to see the Pacific from the Americas", "He crossed the Isthmus of Panama."],
+[1516, "c", "Thomas More publishes Utopia", "He coined the word 'utopia'."],
+[1517, "c", "Martin Luther issues his Ninety-five Theses", "His challenge set off the Protestant Reformation."],
+[1519, "x", "Hernán Cortés lands in Mexico", "Magellan's fleet also set sail this year."],
+[1519, "c", "Leonardo da Vinci dies in France", "He spent his last years at Amboise."],
+[1520, "p", "Suleiman the Magnificent becomes Ottoman sultan", "The empire reached its height under his rule."],
+[1521, "w", "Tenochtitlan falls to Cortés and his allies", "It ended the Aztec Empire."],
+[1522, "x", "Survivors of Magellan's expedition complete the first circumnavigation", "Only one of five ships made it home."],
+[1524, "w", "The German Peasants' War begins", "It was the largest European uprising before the French Revolution."],
+[1526, "w", "Babur wins the First Battle of Panipat and founds the Mughal Empire", "The Mughals ruled much of India for over 300 years."],
+[1527, "w", "Imperial troops sack Rome", "The Pope fled to Castel Sant'Angelo."],
+[1529, "w", "The Ottomans besiege Vienna", "The siege failed and marked the limit of Ottoman expansion into Europe."],
+[1532, "w", "Pizarro captures the Inca emperor Atahualpa", "It began the Spanish conquest of the Inca Empire."],
+[1534, "c", "The Act of Supremacy makes Henry VIII head of the Church of England", "It broke England from the Pope's authority."],
+[1535, "c", "Thomas More is executed", "He refused to accept Henry VIII as head of the Church."],
+[1536, "p", "Anne Boleyn is executed", "She was the second of Henry VIII's six wives."],
+[1540, "c", "The Pope approves the Jesuit order", "It was founded by Ignatius of Loyola."],
+[1543, "s", "Copernicus publishes his model of the Sun at the centre", "The book appeared in the year he died."],
+[1545, "c", "The Council of Trent opens", "It led the Catholic Counter-Reformation."],
+[1547, "p", "Ivan the Terrible is crowned the first Tsar of Russia", "He was 16 years old."],
+[1549, "c", "Francis Xavier arrives in Japan", "He brought Christianity there."],
+[1555, "c", "The Peace of Augsburg lets German princes choose their state's religion", "It allowed Lutheranism or Catholicism."],
+[1556, "d", "The Shaanxi earthquake strikes China", "It is the deadliest earthquake on record. Akbar became Mughal emperor this year."],
+[1558, "p", "Elizabeth I becomes Queen of England", "She reigned for 44 years."],
+[1564, "c", "William Shakespeare is born in Stratford-upon-Avon", "Galileo was born the same year."],
+[1565, "w", "The Knights of St John hold off the Great Siege of Malta", "The Ottomans withdrew after four months."],
+[1568, "w", "The Dutch Revolt against Spain begins", "It started the Eighty Years' War."],
+[1571, "w", "A Christian fleet defeats the Ottomans at Lepanto", "It was the last great battle between galleys."],
+[1572, "c", "The St Bartholomew's Day massacre of Huguenots in France", "Thousands of Protestants were killed."],
+[1580, "x", "Francis Drake completes his circumnavigation", "He was knighted the next year."],
+[1582, "s", "The Gregorian calendar is introduced", "Ten days were skipped to correct the calendar."],
+[1587, "p", "Mary, Queen of Scots is executed", "Her death helped prompt the Spanish Armada."],
+[1588, "w", "The Spanish Armada is defeated", "English ships and storms wrecked Spain's invasion fleet."],
+[1590, "p", "Toyotomi Hideyoshi unifies Japan", "He ended over a century of civil war."],
+[1592, "w", "Japan invades Korea", "Korean admiral Yi Sun-sin used 'turtle ships'."],
+[1598, "c", "The Edict of Nantes grants rights to French Protestants", "It ended the French Wars of Religion."],
+[1599, "c", "The Globe Theatre is built in London", "Many of Shakespeare's plays premiered there."],
+[1600, "w", "Tokugawa Ieyasu wins the Battle of Sekigahara", "The English East India Company was also chartered this year."],
+[1602, "p", "The Dutch East India Company is founded", "It is often called the first multinational company."],
+[1603, "p", "The Tokugawa shogunate is established in Japan", "It ruled Japan until 1868."],
+[1605, "p", "The Gunpowder Plot to blow up Parliament is foiled", "Guy Fawkes was caught guarding the barrels."],
+[1606, "a", "Willem Janszoon makes the first recorded European landing in Australia", "His ship, the Duyfken, reached Cape York Peninsula."],
+[1607, "x", "Jamestown is founded in Virginia", "It was the first lasting English settlement in North America."],
+[1608, "x", "Samuel de Champlain founds Quebec", "It became the capital of New France."],
+[1610, "s", "Galileo discovers four moons of Jupiter", "They showed not everything orbits the Earth."],
+[1611, "c", "The King James Bible is published", "It shaped the English language for centuries."],
+[1613, "p", "Michael Romanov becomes tsar", "The Romanovs ruled Russia until 1917."],
+[1616, "c", "William Shakespeare dies", "Miguel de Cervantes died the same year."],
+[1616, "a", "Dirk Hartog lands at Shark Bay in Western Australia", "He left an inscribed pewter plate."],
+[1618, "w", "The Thirty Years' War begins", "It started with the Defenestration of Prague."],
+[1619, "p", "The first enslaved Africans are brought to Virginia", "They arrived at Point Comfort on an English ship."],
+[1620, "x", "The Mayflower lands in Massachusetts", "The Pilgrims founded Plymouth Colony."],
+[1623, "c", "Shakespeare's First Folio is published", "It preserved 18 plays never printed before."],
+[1626, "x", "The Dutch buy Manhattan from the Lenape", "Peter Minuit made the deal for New Amsterdam."],
+[1628, "s", "William Harvey describes the circulation of the blood", "He showed the heart pumps blood around the body."],
+[1629, "a", "The Dutch ship Batavia is wrecked off Western Australia", "A mutiny and massacre followed among survivors."],
+[1632, "c", "Construction of the Taj Mahal begins", "Shah Jahan built it as a tomb for his wife Mumtaz Mahal."],
+[1633, "s", "Galileo is convicted by the Inquisition", "He spent the rest of his life under house arrest."],
+[1636, "c", "Harvard College is founded", "It is the oldest university in the US."],
+[1637, "s", "René Descartes publishes his Discourse on Method", "It contains 'I think, therefore I am'."],
+[1642, "a", "Abel Tasman sights Tasmania", "He named it Van Diemen's Land. The English Civil War also began this year."],
+[1643, "p", "Louis XIV becomes King of France at age four", "He reigned for 72 years."],
+[1644, "p", "The Ming dynasty falls and the Qing take Beijing", "The Qing were the last imperial dynasty of China."],
+[1648, "p", "The Peace of Westphalia ends the Thirty Years' War", "It shaped the idea of sovereign states."],
+[1649, "p", "King Charles I is executed", "England became a republic under Cromwell."],
+[1651, "c", "Thomas Hobbes publishes Leviathan", "He argued for a strong central government."],
+[1652, "x", "The Dutch found Cape Town", "It began as a supply station for ships."],
+[1660, "p", "The monarchy is restored in England under Charles II", "The period is known as the Restoration."],
+[1664, "w", "The English take New Amsterdam and rename it New York", "The Dutch surrendered without a fight."],
+[1665, "d", "The Great Plague strikes London", "Robert Hooke's Micrographia, naming cells, was published this year too."],
+[1666, "d", "The Great Fire of London", "It started in a bakery on Pudding Lane."],
+[1667, "c", "John Milton publishes Paradise Lost", "He was blind when he wrote it."],
+[1679, "p", "England passes the Habeas Corpus Act", "It protects against unlawful detention."],
+[1682, "p", "Peter the Great becomes tsar", "He was 10 and shared the throne at first."],
+[1683, "w", "The Ottoman siege of Vienna is broken", "A relief army led by the Polish king defeated the Ottomans."],
+[1685, "c", "Louis XIV revokes the Edict of Nantes", "Many Huguenots fled France."],
+[1687, "s", "Isaac Newton publishes the Principia", "It set out his laws of motion and gravity."],
+[1688, "a", "William Dampier lands on the north-west coast of Australia", "England's Glorious Revolution happened the same year."],
+[1689, "p", "The English Bill of Rights is passed", "It limited the monarch's powers."],
+[1690, "w", "William III wins the Battle of the Boyne", "It secured Protestant rule in Ireland."],
+[1692, "c", "The Salem witch trials begin", "Twenty people were executed."],
+[1697, "a", "Willem de Vlamingh explores the Swan River", "He named it after its black swans."],
+[1700, "w", "The Great Northern War begins", "Sweden fought Russia and its allies for 21 years."],
+[1701, "w", "The War of the Spanish Succession begins", "It was fought over who would inherit Spain."],
+[1703, "p", "Peter the Great founds St Petersburg", "It became Russia's capital in 1712."],
+[1705, "s", "Edmond Halley predicts the return of his comet", "It reappeared in 1758, after his death."],
+[1707, "p", "The Acts of Union join England and Scotland", "They formed the Kingdom of Great Britain."],
+[1709, "w", "Russia defeats Sweden at Poltava", "It made Russia a major European power."],
+[1712, "s", "Thomas Newcomen builds his first working steam engine", "It pumped water out of mines."],
+[1714, "p", "George I becomes King of Great Britain", "He was the first Hanoverian king."],
+[1715, "p", "Louis XIV dies", "He had reigned for 72 years."],
+[1720, "p", "The South Sea Bubble bursts", "Many investors in Britain were ruined."],
+[1721, "p", "Robert Walpole becomes Britain's first prime minister", "He held the post for over 20 years."],
+[1726, "c", "Jonathan Swift publishes Gulliver's Travels", "It was a satire of politics and society."],
+[1735, "s", "Carl Linnaeus publishes Systema Naturae", "It set up the modern naming of species."],
+[1740, "p", "Frederick the Great becomes King of Prussia", "The War of the Austrian Succession began this year too."],
+[1741, "x", "Vitus Bering reaches Alaska", "He died on the return voyage."],
+[1742, "c", "Handel's Messiah premieres in Dublin", "It was performed for charity."],
+[1746, "w", "The Jacobites are defeated at Culloden", "It was the last pitched battle fought in Britain."],
+[1751, "c", "The first volume of the French Encyclopédie appears", "It was edited by Diderot and d'Alembert."],
+[1752, "s", "Benjamin Franklin's kite experiment", "It showed lightning is electricity."],
+[1755, "d", "An earthquake and tsunami destroy Lisbon", "Samuel Johnson's Dictionary was also published this year."],
+[1756, "w", "The Seven Years' War begins", "It was fought on several continents."],
+[1757, "w", "Robert Clive wins the Battle of Plassey", "It began British rule in Bengal."],
+[1759, "w", "The British capture Quebec on the Plains of Abraham", "Both commanding generals died."],
+[1760, "p", "George III becomes King of Great Britain", "He reigned for 60 years."],
+[1762, "p", "Catherine the Great becomes Empress of Russia", "Rousseau's The Social Contract was published this year."],
+[1763, "p", "The Treaty of Paris ends the Seven Years' War", "France gave up Canada to Britain."],
+[1765, "p", "Britain passes the Stamp Act for its American colonies", "It led to the cry 'no taxation without representation'."],
+[1768, "x", "James Cook sets out on his first Pacific voyage", "He sailed on the Endeavour."],
+[1769, "s", "James Watt patents his improved steam engine", "Cook observed the transit of Venus in Tahiti the same year."],
+[1770, "a", "James Cook charts the east coast of Australia", "He landed at Botany Bay in April. The Boston Massacre was also this year."],
+[1770, "c", "Ludwig van Beethoven is born in Bonn", "He went deaf later in life."],
+[1773, "p", "The Boston Tea Party", "Colonists dumped British tea into Boston Harbor."],
+[1775, "w", "The American Revolutionary War begins at Lexington and Concord", "Fighting broke out in April."],
+[1776, "p", "The American Declaration of Independence is adopted", "Adam Smith's The Wealth of Nations was also published this year."],
+[1778, "x", "James Cook reaches Hawaii", "He was the first European known to land there."],
+[1779, "x", "James Cook is killed in Hawaii", "He died at Kealakekua Bay."],
+[1781, "s", "William Herschel discovers Uranus", "The British also surrendered at Yorktown this year."],
+[1783, "s", "The Montgolfier brothers launch the first crewed balloon flight", "Britain recognised American independence the same year."],
+[1787, "p", "The US Constitution is signed", "It was drafted in Philadelphia."],
+[1788, "a", "The First Fleet arrives at Sydney Cove", "Its arrival on 26 January began British colonisation of Australia."],
+[1789, "p", "Crowds storm the Bastille in Paris", "George Washington became the first US president the same year."],
+[1791, "w", "The Haitian Revolution begins", "Mozart also died this year."],
+[1792, "p", "France abolishes its monarchy and becomes a republic", "The French Revolutionary Wars began this year."],
+[1793, "p", "King Louis XVI is executed", "The Reign of Terror followed."],
+[1794, "p", "Robespierre is executed", "His death ended the Reign of Terror."],
+[1796, "s", "Edward Jenner tests the first smallpox vaccine", "He used material from cowpox."],
+[1798, "w", "Nelson destroys the French fleet at the Battle of the Nile", "Napoleon's army was stranded in Egypt."],
+[1799, "s", "The Rosetta Stone is discovered in Egypt", "It helped scholars decode hieroglyphs."],
+[1800, "s", "Alessandro Volta invents the electric battery", "The volt is named after him."],
+[1801, "p", "Great Britain and Ireland unite as the United Kingdom", "The Union Jack took its current form."],
+[1803, "a", "Matthew Flinders completes the first circumnavigation of Australia", "The US also made the Louisiana Purchase this year."],
+[1804, "p", "Haiti declares independence from France", "Napoleon also crowned himself emperor this year."],
+[1805, "w", "Nelson wins the Battle of Trafalgar", "He was killed in the battle."],
+[1806, "p", "The Holy Roman Empire is dissolved", "Napoleon's victories ended it."],
+[1807, "p", "Britain abolishes the slave trade", "Slavery itself was abolished in 1833."],
+[1808, "a", "The Rum Rebellion overthrows NSW Governor William Bligh", "It is the only military coup in Australia's history."],
+[1810, "w", "Mexico's war of independence begins", "Miguel Hidalgo issued the call to revolt."],
+[1812, "w", "Napoleon invades Russia", "His army was destroyed in the retreat from Moscow."],
+[1813, "a", "Blaxland, Lawson and Wentworth cross the Blue Mountains", "They opened the inland to settlers."],
+[1814, "p", "The Congress of Vienna opens", "It redrew Europe's map after Napoleon."],
+[1815, "w", "Napoleon is defeated at Waterloo", "Mount Tambora in Indonesia also erupted this year."],
+[1816, "d", "The 'Year Without a Summer'", "Ash from Tambora caused crop failures in Europe and North America."],
+[1818, "c", "Mary Shelley publishes Frankenstein", "She began writing it as a teenager."],
+[1819, "x", "Stamford Raffles founds modern Singapore", "It became a British trading post."],
+[1819, "p", "The Peterloo massacre in Manchester", "Cavalry charged a crowd calling for reform."],
+[1820, "x", "Antarctica is first sighted", "Russian, British and American crews all saw it this year."],
+[1821, "p", "Mexico wins independence from Spain", "Napoleon died on Saint Helena the same year."],
+[1822, "p", "Brazil declares independence from Portugal", "Pedro I became its emperor."],
+[1823, "p", "The US announces the Monroe Doctrine", "It warned Europe off the Americas."],
+[1824, "c", "Beethoven's Ninth Symphony premieres", "Brisbane was also founded as a penal settlement this year."],
+[1825, "s", "The Stockton and Darlington Railway opens", "It was the first public railway to use steam locomotives."],
+[1829, "a", "The Swan River Colony is founded in Western Australia", "It grew into the city of Perth."],
+[1830, "s", "The Liverpool and Manchester Railway opens", "It was the first intercity railway run entirely by steam."],
+[1831, "s", "Michael Faraday discovers electromagnetic induction", "Darwin set sail on HMS Beagle this year."],
+[1832, "p", "Britain's Great Reform Act is passed", "It expanded the vote and fixed 'rotten boroughs'."],
+[1833, "p", "Britain passes the Slavery Abolition Act", "It ended slavery in most of the British Empire."],
+[1835, "a", "Melbourne is founded", "John Batman and John Pascoe Fawkner led rival parties."],
+[1836, "a", "The colony of South Australia is proclaimed", "The Battle of the Alamo also took place this year."],
+[1837, "p", "Victoria becomes Queen of the United Kingdom", "She reigned for nearly 64 years."],
+[1838, "a", "The Myall Creek massacre in New South Wales", "It was the first time colonists were hanged for killing Aboriginal people."],
+[1839, "w", "The First Opium War begins", "Britain fought China over the opium trade."],
+[1840, "p", "The Treaty of Waitangi is signed in New Zealand", "It is New Zealand's founding document."],
+[1840, "s", "The Penny Black, the first postage stamp, is issued", "It showed Queen Victoria's head."],
+[1842, "p", "The Treaty of Nanking cedes Hong Kong to Britain", "It ended the First Opium War."],
+[1844, "s", "Samuel Morse sends the first long-distance telegraph message", "It went from Washington to Baltimore."],
+[1845, "d", "The Great Famine begins in Ireland", "Potato blight caused it; about a million people died."],
+[1846, "s", "The planet Neptune is discovered", "It was found by maths before it was seen."],
+[1847, "p", "Liberia declares independence", "It was Africa's first modern republic."],
+[1848, "p", "Revolutions break out across Europe", "Marx and Engels published The Communist Manifesto this year."],
+[1851, "a", "Gold rushes begin in New South Wales and Victoria", "The Great Exhibition was also held in London this year."],
+[1853, "x", "Commodore Perry's ships arrive in Japan", "The Crimean War also began this year."],
+[1854, "a", "The Eureka Stockade rebellion at Ballarat", "Gold miners rebelled over licence fees."],
+[1856, "p", "Victoria and South Australia introduce the secret ballot", "It became known worldwide as the 'Australian ballot'."],
+[1857, "w", "The Indian Rebellion breaks out against British rule", "It led to direct rule by the British Crown."],
+[1858, "s", "Darwin and Wallace's theory of natural selection is presented", "Their papers were read in London. British Crown rule in India began this year."],
+[1859, "s", "Charles Darwin publishes On the Origin of Species", "It set out the theory of evolution by natural selection."],
+[1860, "a", "Burke and Wills set out to cross Australia", "Both died on the return journey in 1861."],
+[1860, "p", "Abraham Lincoln is elected US president", "Southern states began to secede."],
+[1861, "w", "The American Civil War begins", "Russia also freed its serfs this year."],
+[1861, "p", "The Kingdom of Italy is proclaimed", "Victor Emmanuel II became king."],
+[1862, "a", "John McDouall Stuart crosses Australia south to north", "He reached the coast near present-day Darwin."],
+[1863, "w", "The Battle of Gettysburg", "The London Underground also opened this year."],
+[1864, "p", "The first Geneva Convention is signed", "It protected wounded soldiers and medics."],
+[1865, "p", "Abraham Lincoln is assassinated", "He was shot days after the Civil War effectively ended."],
+[1867, "s", "Alfred Nobel patents dynamite", "Canada became a confederation and the US bought Alaska this year."],
+[1868, "p", "The Meiji Restoration begins in Japan", "Japan rapidly industrialised."],
+[1869, "a", "Goyder's survey party founds Palmerston, later renamed Darwin", "The Suez Canal opened the same year."],
+[1869, "s", "Dmitri Mendeleev publishes his periodic table", "He left gaps for undiscovered elements."],
+[1869, "s", "The US transcontinental railroad is completed", "The final spike was driven in Utah."],
+[1870, "w", "The Franco-Prussian War begins", "Prussia won within months."],
+[1871, "p", "Germany is unified as an empire", "Wilhelm I was proclaimed emperor at Versailles."],
+[1871, "d", "The Great Chicago Fire", "It destroyed about 9 square kilometres of the city."],
+[1871, "x", "Henry Stanley finds David Livingstone", "They met at Ujiji near Lake Tanganyika."],
+[1872, "a", "The Overland Telegraph from Adelaide to Darwin is completed", "It linked Australia to the world by cable."],
+[1874, "c", "The first Impressionist exhibition opens in Paris", "Monet showed Impression, Sunrise."],
+[1876, "s", "Alexander Graham Bell patents the telephone", "The Battle of the Little Bighorn was also fought this year."],
+[1877, "s", "Thomas Edison invents the phonograph", "It was the first device to record and replay sound."],
+[1879, "s", "Edison demonstrates a long-lasting light bulb", "The Anglo-Zulu War also began this year."],
+[1880, "a", "Bushranger Ned Kelly is captured at Glenrowan", "He was hanged in Melbourne later that year."],
+[1881, "p", "Tsar Alexander II is assassinated", "He was killed by a bomb in St Petersburg."],
+[1883, "d", "Krakatoa erupts", "The explosion was heard thousands of kilometres away."],
+[1884, "p", "The Berlin Conference on Africa opens", "European powers set rules for carving up the continent."],
+[1885, "s", "Canada's transcontinental railway is completed", "The last spike was driven at Craigellachie."],
+[1886, "s", "Karl Benz patents the motorcar", "The Statue of Liberty was dedicated this year."],
+[1886, "c", "Coca-Cola is first sold in Atlanta", "It was sold as a medicine."],
+[1888, "s", "Kodak releases its first camera", "The slogan was 'You press the button, we do the rest'."],
+[1889, "c", "The Eiffel Tower opens in Paris", "It was built for the World's Fair."],
+[1890, "w", "The Wounded Knee massacre", "US soldiers killed hundreds of Lakota people."],
+[1893, "p", "New Zealand gives women the vote", "It was the first self-governing country to do so."],
+[1894, "p", "The Dreyfus affair begins in France", "An army officer was wrongly convicted of treason."],
+[1895, "s", "Wilhelm Röntgen discovers X-rays", "The Lumière brothers also held the first film screening this year."],
+[1895, "a", "Banjo Paterson writes 'Waltzing Matilda'", "He wrote it in Queensland."],
+[1896, "c", "The first modern Olympic Games are held in Athens", "About 240 athletes took part."],
+[1898, "s", "Marie and Pierre Curie discover radium", "The Spanish–American War was also fought this year."],
+[1899, "w", "The Second Boer War begins in South Africa", "Australian colonies sent troops."],
+[1900, "w", "The Boxer Rebellion in China", "Foreign legations in Beijing were besieged."],
+[1901, "a", "Six colonies federate as the Commonwealth of Australia", "Queen Victoria died weeks later."],
+[1901, "s", "Marconi sends a radio signal across the Atlantic", "The first Nobel Prizes were also awarded this year."],
+[1902, "a", "Australian women win the right to vote in federal elections", "Aboriginal people were excluded until 1962."],
+[1903, "s", "The Wright brothers make the first powered flight", "The first flight lasted 12 seconds."],
+[1903, "p", "Emmeline Pankhurst founds the Women's Social and Political Union", "Its members became known as suffragettes."],
+[1904, "w", "The Russo-Japanese War begins", "Japan's win shocked the European powers."],
+[1905, "s", "Albert Einstein publishes special relativity", "It is called his 'miracle year'."],
+[1906, "d", "An earthquake and fires devastate San Francisco", "Fires did most of the damage."],
+[1908, "s", "Ford launches the Model T", "The Tunguska explosion flattened Siberian forest this year."],
+[1910, "p", "The Union of South Africa is formed", "It joined four British colonies."],
+[1911, "x", "Roald Amundsen reaches the South Pole", "The Northern Territory was also handed from South Australia to the Commonwealth this year."],
+[1911, "p", "The Xinhai Revolution overthrows China's last dynasty", "The Republic of China was founded in 1912."],
+[1911, "c", "The Mona Lisa is stolen from the Louvre", "It was recovered two years later."],
+[1912, "d", "The Titanic sinks on its first voyage", "Over 1,500 people died."],
+[1913, "a", "Canberra is named as Australia's capital", "The name was announced at a ceremony in March."],
+[1914, "w", "Archduke Franz Ferdinand is assassinated in Sarajevo", "The Panama Canal also opened this year."],
+[1915, "w", "ANZAC troops land at Gallipoli", "The 25 April landing is remembered on Anzac Day."],
+[1915, "w", "A German submarine sinks the Lusitania", "Nearly 1,200 people died."],
+[1916, "w", "The Battle of the Somme", "The Easter Rising took place in Dublin this year."],
+[1916, "a", "Australians vote against conscription", "A second vote in 1917 also failed."],
+[1917, "p", "The Bolsheviks seize power in the Russian Revolution", "The US entered the First World War this year."],
+[1917, "p", "The Balfour Declaration is issued", "Britain backed a Jewish homeland in Palestine."],
+[1918, "w", "The armistice ends fighting in the First World War", "A flu pandemic began spreading worldwide this year."],
+[1918, "d", "A flu pandemic begins spreading worldwide", "It killed tens of millions of people."],
+[1919, "p", "The Treaty of Versailles is signed", "Ross and Keith Smith flew from England to Australia this year."],
+[1919, "p", "The Amritsar massacre in India", "British troops fired on an unarmed crowd."],
+[1920, "p", "Women win the vote across the United States", "Qantas was founded in Queensland this year."],
+[1920, "p", "The League of Nations holds its first meeting", "The US never joined."],
+[1921, "s", "Insulin is discovered in Toronto", "Banting and Best led the work."],
+[1922, "s", "Howard Carter discovers Tutankhamun's tomb", "The Soviet Union was formed at the end of this year."],
+[1922, "p", "Mussolini leads the March on Rome", "He became prime minister."],
+[1923, "p", "The Republic of Turkey is proclaimed", "Vegemite was invented in Melbourne this year."],
+[1924, "p", "Lenin dies", "Stalin rose to power after him."],
+[1926, "s", "John Logie Baird demonstrates television", "He showed moving images in London."],
+[1927, "x", "Charles Lindbergh flies solo across the Atlantic", "Parliament House opened in Canberra this year."],
+[1928, "s", "Alexander Fleming discovers penicillin", "Kingsford Smith flew across the Pacific to Australia this year."],
+[1928, "a", "The Royal Flying Doctor Service begins", "Its first flight left Cloncurry in Queensland."],
+[1929, "p", "The Wall Street Crash", "It led into the Great Depression."],
+[1930, "s", "Pluto is discovered", "Gandhi also led the Salt March this year."],
+[1930, "c", "Phar Lap wins the Melbourne Cup", "He was the favourite at 8 to 11."],
+[1931, "c", "The Empire State Building opens", "It was the world's tallest building for nearly 40 years."],
+[1932, "a", "The Sydney Harbour Bridge opens", "A man on horseback cut the ribbon before the official opening."],
+[1933, "p", "Adolf Hitler becomes Chancellor of Germany", "US Prohibition also ended this year."],
+[1934, "w", "Mao's Communists begin the Long March", "It covered about 10,000 km."],
+[1936, "w", "The Spanish Civil War begins", "Berlin also hosted the Olympic Games this year."],
+[1937, "d", "The Hindenburg airship catches fire", "Japan began its full-scale invasion of China this year."],
+[1938, "p", "Kristallnacht attacks on Jews across Germany", "Aboriginal activists held a Day of Mourning on 26 January."],
+[1939, "w", "Germany invades Poland and the Second World War begins", "Australia declared war on 3 September."],
+[1940, "w", "The Battle of Britain is fought in the skies", "The Dunkirk evacuation happened earlier this year."],
+[1940, "w", "The Dunkirk evacuation", "Over 300,000 Allied troops were rescued."],
+[1941, "w", "Japan attacks Pearl Harbor", "Germany invaded the Soviet Union this year."],
+[1941, "w", "Germany invades the Soviet Union", "The invasion was called Operation Barbarossa."],
+[1942, "a", "Japanese aircraft bomb Darwin", "It was the largest attack ever made on Australia."],
+[1942, "w", "The US defeats Japan's navy at Midway", "Australians fought on the Kokoda Track this year."],
+[1943, "w", "The Battle of Stalingrad ends in German surrender", "It was a turning point in the war."],
+[1944, "w", "D-Day: Allied forces land in Normandy", "It was the largest seaborne invasion in history."],
+[1945, "w", "Atomic bombs are dropped on Hiroshima and Nagasaki", "The United Nations was founded this year."],
+[1945, "p", "The United Nations is founded", "Its charter was signed in San Francisco."],
+[1946, "s", "ENIAC, an early electronic computer, is unveiled", "It filled a large room."],
+[1947, "p", "India and Pakistan gain independence", "The Dead Sea Scrolls were found this year."],
+[1947, "s", "The transistor is invented at Bell Labs", "It made modern electronics possible."],
+[1948, "p", "The State of Israel is proclaimed", "Gandhi was assassinated earlier this year."],
+[1948, "p", "The UN adopts the Universal Declaration of Human Rights", "Eleanor Roosevelt chaired its drafting."],
+[1948, "w", "The Berlin Airlift begins", "Planes supplied West Berlin for nearly a year."],
+[1949, "p", "The People's Republic of China is proclaimed", "NATO was also founded this year."],
+[1949, "a", "Work on the Snowy Mountains Scheme begins", "It employed over 100,000 people."],
+[1950, "w", "The Korean War begins", "Australian troops fought in it."],
+[1951, "a", "Australia, New Zealand and the US sign the ANZUS Treaty", "It is still in force."],
+[1952, "p", "Elizabeth II becomes queen", "She reigned for 70 years."],
+[1953, "x", "Hillary and Tenzing reach the summit of Everest", "The structure of DNA was also published this year."],
+[1953, "s", "Watson and Crick describe the double helix of DNA", "Rosalind Franklin's X-ray images were crucial."],
+[1953, "p", "Joseph Stalin dies", "The Korean War armistice was signed this year."],
+[1954, "p", "The US Supreme Court rules school segregation unconstitutional", "The case was Brown v. Board of Education."],
+[1954, "w", "The French are defeated at Dien Bien Phu", "It ended French rule in Indochina."],
+[1955, "p", "Rosa Parks's arrest sparks the Montgomery bus boycott", "It helped launch the civil rights movement."],
+[1955, "p", "The Warsaw Pact is formed", "It was the Soviet answer to NATO."],
+[1956, "a", "Melbourne hosts the Olympic Games", "Television also began broadcasting in Australia this year."],
+[1956, "w", "The Suez Crisis", "Britain, France and Israel invaded Egypt. Hungary rose against Soviet rule this year."],
+[1957, "s", "The Soviet Union launches Sputnik 1", "It was the first artificial satellite."],
+[1957, "p", "Ghana becomes independent", "It was the first sub-Saharan colony to do so."],
+[1957, "p", "The Treaty of Rome founds the European Economic Community", "It had six members."],
+[1958, "s", "NASA is founded", "It was created in response to Sputnik."],
+[1959, "p", "Fidel Castro takes power in Cuba", "Batista fled on New Year's Day."],
+[1960, "s", "The first laser is built", "Seventeen African countries also gained independence this year."],
+[1960, "p", "Police kill 69 protesters at Sharpeville, South Africa", "It was a turning point against apartheid."],
+[1961, "s", "Yuri Gagarin becomes the first human in space", "The Berlin Wall was built this year."],
+[1961, "p", "The Berlin Wall is built", "It divided the city for 28 years."],
+[1962, "w", "The Cuban Missile Crisis", "Aboriginal people won the right to vote in federal elections this year."],
+[1962, "a", "Aboriginal Australians gain the right to vote in federal elections", "Voting became compulsory for them in 1984."],
+[1962, "p", "Algeria becomes independent from France", "It followed an eight-year war."],
+[1963, "p", "President John F. Kennedy is assassinated", "Martin Luther King Jr gave his 'I Have a Dream' speech this year."],
+[1963, "c", "Martin Luther King Jr gives his 'I Have a Dream' speech", "About 250,000 people marched on Washington."],
+[1964, "p", "The US Civil Rights Act becomes law", "Tokyo hosted the Olympics this year."],
+[1965, "x", "Alexei Leonov makes the first spacewalk", "Singapore became independent this year."],
+[1965, "a", "Charles Perkins leads the Freedom Ride through New South Wales", "It exposed racial segregation in country towns."],
+[1965, "p", "Singapore becomes independent", "It separated from Malaysia."],
+[1966, "a", "Gurindji workers begin the Wave Hill walk-off", "Australia also switched to decimal currency this year."],
+[1966, "p", "The Cultural Revolution begins in China", "It lasted ten years."],
+[1966, "a", "Australia switches to decimal currency", "Dollars and cents replaced pounds."],
+[1967, "a", "Australians vote to count Aboriginal people in the census", "Over 90% voted yes."],
+[1967, "s", "The first human heart transplant is performed", "Christiaan Barnard led it in Cape Town."],
+[1967, "w", "The Six-Day War", "Israel fought Egypt, Jordan and Syria."],
+[1968, "p", "Martin Luther King Jr is assassinated", "The Prague Spring was crushed this year."],
+[1968, "w", "The Tet Offensive in Vietnam", "It turned US public opinion against the war."],
+[1969, "x", "Apollo 11 lands the first people on the Moon", "The first ARPANET message was sent this year."],
+[1969, "c", "The Woodstock festival", "About 400,000 people attended."],
+[1969, "s", "The first message is sent over ARPANET", "It was the forerunner of the internet."],
+[1970, "x", "Apollo 13 returns safely after an explosion", "The crew used the lunar module as a lifeboat."],
+[1971, "s", "Intel releases the first commercial microprocessor", "Bangladesh also became independent this year."],
+[1971, "p", "Bangladesh becomes independent", "It had been East Pakistan."],
+[1972, "a", "The Aboriginal Tent Embassy is set up in Canberra", "Gough Whitlam was elected prime minister this year."],
+[1973, "c", "The Sydney Opera House opens", "It took 14 years to build."],
+[1973, "p", "The oil crisis begins", "Arab oil producers cut supplies."],
+[1973, "s", "The first handheld mobile phone call is made", "Martin Cooper of Motorola made it."],
+[1974, "d", "Cyclone Tracy destroys most of Darwin", "Richard Nixon resigned this year."],
+[1974, "p", "Richard Nixon resigns as US president", "He was the first to do so."],
+[1975, "w", "Saigon falls, ending the Vietnam War", "Gough Whitlam was dismissed this year."],
+[1975, "a", "Governor-General John Kerr dismisses the Whitlam government", "It remains Australia's biggest constitutional crisis."],
+[1975, "s", "Microsoft is founded", "Bill Gates and Paul Allen started it."],
+[1976, "a", "The Aboriginal Land Rights (Northern Territory) Act is passed", "Apple was also founded this year."],
+[1976, "s", "Apple is founded", "Steve Jobs and Steve Wozniak started it in a garage."],
+[1976, "p", "Mao Zedong dies", "Deng Xiaoping later took power."],
+[1977, "x", "The Voyager probes are launched", "Voyager 1 is now in interstellar space."],
+[1978, "a", "The Northern Territory gains self-government", "The first IVF baby was born in England this year."],
+[1978, "s", "Louise Brown, the first IVF baby, is born", "She was born in England."],
+[1978, "p", "The Camp David Accords are signed", "Egypt and Israel agreed to peace."],
+[1979, "p", "The Iranian Revolution overthrows the Shah", "The Soviet Union invaded Afghanistan this year."],
+[1979, "w", "The Soviet Union invades Afghanistan", "The war lasted nearly ten years."],
+[1980, "p", "The Solidarity trade union is founded in Poland", "It was led by Lech Wałęsa."],
+[1981, "x", "The first Space Shuttle launches", "IBM also launched its personal computer this year."],
+[1981, "s", "IBM launches its personal computer", "It set the standard for PCs."],
+[1981, "s", "The first cases of AIDS are reported", "They were reported in the US."],
+[1982, "w", "The Falklands War", "Argentina and Britain fought over the islands."],
+[1983, "a", "Australia II wins the America's Cup", "It ended 132 years of American wins."],
+[1984, "d", "A gas leak in Bhopal, India kills thousands", "It was one of the worst industrial disasters ever."],
+[1985, "a", "Uluru is handed back to its traditional owners", "Gorbachev also became Soviet leader this year."],
+[1985, "s", "Scientists report the ozone hole over Antarctica", "It led to a ban on CFCs."],
+[1985, "p", "Mikhail Gorbachev becomes Soviet leader", "He introduced glasnost and perestroika."],
+[1986, "d", "The Chernobyl nuclear disaster", "The Space Shuttle Challenger was also lost this year."],
+[1986, "d", "Space Shuttle Challenger breaks apart after launch", "All seven crew died."],
+[1988, "a", "Australia's new Parliament House opens", "It opened during the Bicentenary."],
+[1989, "p", "The Berlin Wall falls", "Protests in Tiananmen Square were crushed this year."],
+[1989, "p", "Protests in Tiananmen Square are crushed", "Troops cleared the square on 4 June."],
+[1989, "s", "Tim Berners-Lee proposes the World Wide Web", "He worked at CERN."],
+[1990, "p", "Nelson Mandela is released from prison", "Germany reunified this year."],
+[1990, "p", "Germany is reunified", "East and West joined on 3 October."],
+[1990, "s", "The Hubble Space Telescope is launched", "Its mirror flaw was fixed in 1993."],
+[1991, "p", "The Soviet Union is dissolved", "The World Wide Web also went public this year."],
+[1991, "w", "The Gulf War", "A coalition drove Iraq out of Kuwait."],
+[1991, "s", "The World Wide Web goes public", "The first website went online."],
+[1992, "a", "The High Court's Mabo decision recognises native title", "It overturned the idea of terra nullius."],
+[1993, "p", "The Oslo Accords are signed", "Israel and the PLO recognised each other."],
+[1994, "p", "Nelson Mandela becomes South Africa's president", "The Channel Tunnel opened this year."],
+[1994, "w", "The Rwandan genocide", "About 800,000 people were killed in 100 days."],
+[1994, "s", "The Channel Tunnel opens", "It links England and France."],
+[1996, "s", "Dolly the sheep is born, the first cloned mammal", "She was cloned from an adult cell."],
+[1997, "p", "Hong Kong is handed back to China", "Diana, Princess of Wales died this year."],
+[1997, "s", "IBM's Deep Blue beats chess champion Garry Kasparov", "It was the first defeat of a world champion by a computer in a match."],
+[1997, "p", "Diana, Princess of Wales dies in a car crash in Paris", "Her funeral was watched worldwide."],
+[1998, "s", "Google is founded", "The first module of the International Space Station launched this year."],
+[1998, "s", "The first module of the International Space Station launches", "People have lived on it since 2000."],
+[1999, "a", "Australians vote against becoming a republic", "East Timor also voted for independence this year."],
+[1999, "p", "East Timor votes for independence", "It became independent in 2002."],
+[1999, "p", "The euro is launched as a currency", "Notes and coins came in 2002."],
+[2000, "a", "Sydney hosts the Summer Olympics", "Cathy Freeman lit the cauldron."],
+[2001, "w", "The September 11 attacks", "Wikipedia was launched this year."],
+[2001, "s", "Wikipedia is launched", "It became one of the most visited websites."],
+[2002, "p", "Euro notes and coins go into circulation", "Twelve countries switched currency."],
+[2003, "s", "The Human Genome Project is completed", "The US-led invasion of Iraq began this year."],
+[2003, "w", "The US-led invasion of Iraq begins", "Australia sent troops."],
+[2003, "d", "Space Shuttle Columbia breaks up on re-entry", "All seven crew died."],
+[2004, "d", "The Indian Ocean tsunami", "The Ghan made its first passenger trip to Darwin this year."],
+[2004, "s", "Facebook is launched", "It started at Harvard."],
+[2004, "a", "The Ghan makes its first passenger trip to Darwin", "The line from Alice Springs was finished in 2003."],
+[2005, "s", "YouTube is launched", "Hurricane Katrina struck New Orleans this year."],
+[2005, "d", "Hurricane Katrina strikes New Orleans", "Floods covered about 80% of the city."],
+[2006, "s", "Pluto is reclassified as a dwarf planet", "The decision was made by astronomers in Prague."],
+[2007, "s", "Apple releases the first iPhone", "It helped make touchscreen phones standard."],
+[2008, "a", "The Prime Minister apologises to the Stolen Generations", "The global financial crisis hit this year."],
+[2008, "p", "The global financial crisis", "Lehman Brothers collapsed in September."],
+[2008, "p", "Barack Obama is elected US president", "He was the first African American president."],
+[2009, "d", "The Black Saturday bushfires in Victoria", "Bitcoin was also launched this year."],
+[2009, "s", "Bitcoin is launched", "Its creator used the name Satoshi Nakamoto."],
+[2010, "a", "Julia Gillard becomes Australia's first female prime minister", "The Deepwater Horizon oil spill happened this year."],
+[2010, "d", "The Deepwater Horizon oil spill", "It was the largest marine oil spill in history."],
+[2011, "d", "An earthquake and tsunami cause the Fukushima nuclear disaster", "The Arab Spring began this year."],
+[2011, "w", "US forces kill Osama bin Laden", "He was found in Pakistan."],
+[2011, "p", "The Arab Spring uprisings begin", "They started in Tunisia."],
+[2011, "p", "South Sudan becomes independent", "It is the world's newest country."],
+[2012, "s", "The Higgs boson is discovered", "The Curiosity rover landed on Mars this year."],
+[2012, "x", "The Curiosity rover lands on Mars", "It landed in Gale Crater."],
+[2013, "c", "Pope Francis is elected", "He was the first pope from the Americas."],
+[2014, "w", "Russia annexes Crimea", "It took the peninsula from Ukraine."],
+[2015, "p", "The Paris climate agreement is adopted", "New Horizons flew past Pluto this year."],
+[2015, "x", "New Horizons flies past Pluto", "It sent back the first close images."],
+[2016, "p", "The UK votes to leave the European Union", "The result was 52% to 48%."],
+[2017, "a", "Australia legalises same-sex marriage", "A national postal survey came first."],
+[2019, "s", "Astronomers release the first image of a black hole", "It showed the black hole in galaxy M87."],
+[2020, "d", "The WHO declares COVID-19 a pandemic", "The declaration came on 11 March."],
+[2021, "s", "The James Webb Space Telescope is launched", "The Taliban retook Kabul this year."],
+[2021, "w", "The Taliban retake Kabul", "US forces withdrew from Afghanistan."],
+[2022, "w", "Russia launches a full-scale invasion of Ukraine", "Queen Elizabeth II died this year."],
+[2022, "p", "Queen Elizabeth II dies", "Charles III became king."],
+[2022, "s", "ChatGPT is released", "It brought AI chatbots into wide use."],
+[2023, "a", "Australians vote no in the Indigenous Voice referendum", "It failed in every state."]
+].map(([y,t,e,n])=>({y,t,e,n}));
+const TOPIC = {all:"All topics", w:"Wars", p:"Politics", s:"Science & invention", x:"Exploration", c:"Culture & religion", d:"Disasters", a:"Australia"};
+
+const ERA = {
+  all: ()=>true,
+  ancient: y=>y<1000,
+  early: y=>y>=1000&&y<1800,
+  c19: y=>y>=1800&&y<1900,
+  modern: y=>y>=1900
+};
+const ROUND = 10;
+const fmt = y => y<0 ? `${-y} BC` : (y<1000 ? `AD ${y}` : `${y}`);
+const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+
+let S = {mode:"mix", era:"all", topic:"all", len:10, qs:[], i:0, score:0, streak:0, results:[], answered:false};
+const $ = id => document.getElementById(id);
+const store = { get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}} };
+
+function bestKey(){return `yby-best-${S.mode}-${S.era}-${S.topic}`}
+function showBest(){const b=store.get(bestKey()); $("best").textContent = b===null ? "–" : (b.includes("/")?b:`${b}/10`);}
+
+function yearOptions(y){
+  const spread = y<0?120 : y<1000?60 : y<1800?30 : y<1900?12 : 8;
+  const set = new Set([y]);
+  let guard=0;
+  while(set.size<4 && guard++<200){
+    let d = Math.ceil(Math.random()*spread) * (Math.random()<.5?-1:1);
+    const c = y+d;
+    if(c===0 || c>2026) continue;
+    if((y<0)!==(c<0) && Math.abs(y)<spread) { /* allow crossing BC/AD only rarely */ if(Math.random()<.7) continue; }
+    set.add(c);
+  }
+  return shuffle([...set]);
+}
+function eventOptions(ev, pool){
+  const others = shuffle(EVENTS.filter(x=>x.y!==ev.y));
+  // prefer distractors from the same period so the choice isn't obvious
+  const near = others.filter(x=>Math.abs(x.y-ev.y) < (ev.y<1000?800:ev.y<1800?300:80));
+  const picks = [];
+  for(const x of [...near, ...others]){ if(!picks.includes(x) && !picks.some(p=>p.y===x.y)) picks.push(x); if(picks.length===3) break; }
+  return shuffle([ev, ...picks]);
+}
+
+function filtered(){return EVENTS.filter(e=>ERA[S.era](e.y) && (S.topic==="all" || e.t===S.topic));}
+function newRound(){
+  const all = filtered();
+  $("count").textContent = `${all.length} event${all.length===1?"":"s"} in this selection · ${EVENTS.length} in total`;
+  S.i=0; S.score=0; S.streak=0; S.results=[]; S.answered=false;
+  $("score").textContent=0; $("streak").textContent=0; showBest();
+  if(all.length<4){
+    S.qs=[]; S.len=0; $("rail").innerHTML="";
+    $("card").innerHTML=`<p class="kicker">Not enough events</p><p class="era">Only ${all.length} event${all.length===1?"":"s"} match this period and topic. Pick a wider period or another topic.</p>`;
+    return;
+  }
+  const pool = shuffle(all.slice()).slice(0,ROUND);
+  S.len = pool.length;
+  S.qs = pool.map(ev=>{
+    const type = S.mode==="mix" ? (Math.random()<.5?"when":"what") : S.mode;
+    return type==="when" ? {type, ev, opts:yearOptions(ev.y)} : {type, ev, opts:eventOptions(ev)};
+  });
+  drawRail(); drawQuestion();
+}
+
+function drawRail(){
+  const r=$("rail"); r.innerHTML=""; r.style.setProperty("--n",S.len);
+  for(let k=0;k<S.len;k++){
+    const t=document.createElement("span"); t.className="tick";
+    if(k<S.results.length) t.classList.add(S.results[k].ok?"ok":"no");
+    else if(k===S.i) t.classList.add("now");
+    r.appendChild(t);
+  }
+}
+
+function drawQuestion(){
+  const q=S.qs[S.i], c=$("card");
+  c.innerHTML="";
+  const k=document.createElement("p"); k.className="kicker";
+  k.textContent=`Question ${S.i+1} of ${S.len} · ${q.type==="when"?"When did this happen?":"What happened this year?"}`;
+  const h=document.createElement("h2");
+  if(q.type==="when"){ h.className="q"; h.textContent=q.ev.e; }
+  else { h.className="q year"; h.textContent=fmt(q.ev.y); }
+  const grid=document.createElement("div"); grid.className="answers"+(q.type==="what"?" events":"");
+  q.opts.forEach((o,idx)=>{
+    const b=document.createElement("button"); b.className="ans"; b.id=`ans-${idx}`;
+    b.textContent = q.type==="when" ? fmt(o) : o.e;
+    b.addEventListener("click",()=>answer(o,b,grid));
+    grid.appendChild(b);
+  });
+  const fb=document.createElement("div"); fb.id="fb";
+  c.append(k,h,grid,fb);
+}
+
+function answer(o,btn,grid){
+  if(S.answered) return; S.answered=true;
+  const q=S.qs[S.i];
+  const ok = q.type==="when" ? o===q.ev.y : o===q.ev;
+  [...grid.children].forEach((b,idx)=>{
+    b.disabled=true;
+    const v=q.opts[idx];
+    const isRight = q.type==="when" ? v===q.ev.y : v===q.ev;
+    if(isRight) b.classList.add("right");
+    else if(b===btn) b.classList.add("wrong");
+    else b.classList.add("dim");
+  });
+  if(ok){S.score++;S.streak++;} else S.streak=0;
+  S.results.push({ok, q, picked:o});
+  $("score").textContent=S.score; $("streak").textContent=S.streak;
+
+  const fb=$("fb"); fb.className="feedback"+(ok?"":" miss");
+  const s=document.createElement("strong");
+  if(ok) s.textContent = S.streak>=3 ? `Correct, ${S.streak} in a row` : "Correct";
+  else if(q.type==="when") s.textContent = `It was ${fmt(q.ev.y)}, ${Math.abs(o-q.ev.y)} years ${o<q.ev.y?"later":"earlier"} than your guess`;
+  else s.textContent = `In ${fmt(q.ev.y)}: ${q.ev.e}`;
+  const p=document.createElement("p");
+  p.textContent = (q.type==="what" && ok) ? q.ev.n : (q.type==="when" ? q.ev.n : `${q.ev.n} (Your pick happened in ${fmt(o.y)}.)`);
+  const nx=document.createElement("button"); nx.className="btn"; nx.id="next";
+  nx.textContent = S.i+1<S.len ? "Next question" : "See results";
+  nx.addEventListener("click",next);
+  fb.append(s,p);
+  $("card").appendChild(nx);
+  nx.focus({preventScroll:true});
+  drawRail();
+}
+
+function next(){
+  S.i++; S.answered=false;
+  if(S.i<S.len){ drawRail(); drawQuestion(); } else finish();
+}
+
+function finish(){
+  drawRail();
+  const raw = store.get(bestKey());
+  const prev = raw===null ? -1 : Number(String(raw).split("/")[0]);
+  const isBest = S.score>prev;
+  if(isBest) store.set(bestKey(), `${S.score}/${S.len}`);
+  showBest();
+  const c=$("card"); c.innerHTML="";
+  const pct=S.score/S.len;
+  const verdict = pct===1?"Perfect round.":pct>=.8?"Excellent knowledge of the timeline.":pct>=.5?"A solid round.":"History is long. Try another round.";
+  c.innerHTML = `<p class="kicker">Round complete${isBest&&prev>=0?" · New best":""}</p>
+    <p class="final">${S.score}<small> / ${S.len}</small></p>
+    <p class="era">${verdict}</p>`;
+  const misses=S.results.filter(r=>!r.ok);
+  if(misses.length){
+    const h=document.createElement("p"); h.className="kicker"; h.textContent="Worth remembering";
+    const ul=document.createElement("ul"); ul.className="review";
+    misses.forEach(r=>{
+      const li=document.createElement("li");
+      const yourPick = r.q.type==="when" ? `You said ${fmt(r.picked)}` : `You picked: ${r.picked.e} (${fmt(r.picked.y)})`;
+      li.innerHTML=`<span class="y">${fmt(r.q.ev.y)}</span><span><span class="t"></span><br><span class="m"></span></span>`;
+      li.querySelector(".t").textContent=r.q.ev.e; li.querySelector(".m").textContent=yourPick;
+      ul.appendChild(li);
+    });
+    c.append(h,ul);
+  }
+  const again=document.createElement("button"); again.className="btn"; again.id="again"; again.textContent="Play again";
+  again.addEventListener("click",newRound); c.appendChild(again);
+}
+
+function setPressed(attr,val){document.querySelectorAll(`[data-${attr}]`).forEach(b=>b.setAttribute("aria-pressed", String(b.dataset[attr]===val)));}
+document.querySelectorAll("[data-mode]").forEach(b=>b.addEventListener("click",()=>{S.mode=b.dataset.mode;setPressed("mode",S.mode);store.set("yby-mode",S.mode);newRound();}));
+document.querySelectorAll("[data-era]").forEach(b=>b.addEventListener("click",()=>{S.era=b.dataset.era;setPressed("era",S.era);store.set("yby-era",S.era);newRound();}));
+
+document.querySelectorAll("[data-topic]").forEach(b=>b.addEventListener("click",()=>{S.topic=b.dataset.topic;setPressed("topic",S.topic);store.set("yby-topic",S.topic);newRound();}));
+S.mode = store.get("yby-mode") || "mix";
+S.topic = store.get("yby-topic") || "all";
+if(!TOPIC[S.topic]) S.topic="all";
+S.era = store.get("yby-era") || "all";
+if(!ERA[S.era]) S.era="all";
+setPressed("mode",S.mode); setPressed("era",S.era); setPressed("topic",S.topic);
+newRound();
+</script>
+</body>
+</html>
