@@ -38,7 +38,7 @@ h1{font-family:var(--serif);font-size:52px;margin:0;line-height:1}
   box-shadow:0 0 0 1px rgba(255,255,255,.14),0 3px 10px rgba(0,0,0,.4);flex:none;vertical-align:middle}
 .flagfb{font-family:system-ui,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji";line-height:1;flex:none}
 #prompt .flagimg,#prompt .flagfb{margin-right:12px}
-#prompt .inl{display:flex;align-items:center;gap:10px}
+#prompt .inl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}#prompt .arr{color:var(--dim)}
 #prompt .inl .flagimg{margin-right:0}
 .card .flagwrap{flex:none;min-width:58px;display:flex;justify-content:center}
 .diff{display:flex;gap:8px;margin-bottom:8px}
@@ -659,8 +659,18 @@ const US_STATES=[["Alabama","AL","Montgomery","South","East South Central"],["Al
 ["South Carolina","SC","Columbia","South","South Atlantic"],["South Dakota","SD","Pierre","Midwest","West North Central"],["Tennessee","TN","Nashville","South","East South Central"],["Texas","TX","Austin","South","West South Central"],
 ["Utah","UT","Salt Lake City","West","Mountain"],["Vermont","VT","Montpelier","Northeast","New England"],["Virginia","VA","Richmond","South","South Atlantic"],["Washington","WA","Olympia","West","Pacific"],
 ["West Virginia","WV","Charleston","South","South Atlantic"],["Wisconsin","WI","Madison","Midwest","East North Central"],["Wyoming","WY","Cheyenne","West","Mountain"]];
-const STATE_BY_NAME=Object.fromEntries(US_STATES.map(r=>[r[0],r]));
-US_STATES.forEach(r=>{ CAPITALS["US-"+r[1]]=r[2]; });
+// name as Natural Earth spells it, code, capital, region group, finer group
+const CAN_ROWS=[["Alberta","AB","Edmonton","Prairies","Prairies"],["British Columbia","BC","Victoria","West Coast","West Coast"],["Manitoba","MB","Winnipeg","Prairies","Prairies"],
+["New Brunswick","NB","Fredericton","Atlantic","Maritimes"],["Newfoundland and Labrador","NL","St. John's","Atlantic","Newfoundland and Labrador"],["Northwest Territories","NT","Yellowknife","North","Territories"],
+["Nova Scotia","NS","Halifax","Atlantic","Maritimes"],["Nunavut","NU","Iqaluit","North","Territories"],["Ontario","ON","Toronto","Central","Central"],["Prince Edward Island","PE","Charlottetown","Atlantic","Maritimes"],
+["Québec","QC","Quebec City","Central","Central"],["Saskatchewan","SK","Regina","Prairies","Prairies"],["Yukon","YT","Whitehorse","North","Territories"]];
+const AUS_ROWS=[["Australian Capital Territory","ACT","Canberra","East","East"],["New South Wales","NSW","Sydney","East","East"],["Northern Territory","NT","Darwin","West & North","North"],
+["Queensland","QLD","Brisbane","East","East"],["South Australia","SA","Adelaide","South","South"],["Tasmania","TAS","Hobart","South","South"],["Victoria","VIC","Melbourne","South","South"],["Western Australia","WA","Perth","West & North","West"]];
+const GBR_ROWS=[["East Midlands","EM",null,"Midlands","England"],["East of England","EE",null,"Southern England","England"],["London","LO",null,"Southern England","England"],["North East","NE",null,"Northern England","England"],
+["North West","NW",null,"Northern England","England"],["Northern Ireland","NI",null,"Northern Ireland","Northern Ireland"],["Scotland","SC",null,"Scotland","Scotland"],["South East","SE",null,"Southern England","England"],
+["South West","SW",null,"Southern England","England"],["Wales","WA",null,"Wales","Wales"],["West Midlands","WM",null,"Midlands","England"],["Yorkshire and the Humber","YH",null,"Northern England","England"]];
+const PACK_ROWS={USA:US_STATES,CAN:CAN_ROWS,AUS:AUS_ROWS,GBR:GBR_ROWS}, PACK_PREFIX={USA:"US-",CAN:"CA-",AUS:"AU-",GBR:"GB-"};
+const PACK_BY_NAME={}; for(const k in PACK_ROWS){ PACK_BY_NAME[k]=Object.fromEntries(PACK_ROWS[k].map(r=>[r[0],r])); PACK_ROWS[k].forEach(r=>{ if(r[2]) CAPITALS[PACK_PREFIX[k]+r[1]]=r[2]; }); }
 const NAMES = {"Dem. Rep. Congo": "DR Congo", "Central African Rep.": "Central African Republic", "Bosnia and Herz.": "Bosnia and Herzegovina", "S. Sudan": "South Sudan", "Eq. Guinea": "Equatorial Guinea", "eSwatini": "Eswatini", "Dominican Rep.": "Dominican Republic", "Solomon Is.": "Solomon Islands", "Falkland Is.": "Falkland Islands", "N. Cyprus": "Northern Cyprus", "Macedonia": "North Macedonia", "W. Sahara": "Western Sahara", "Fr. S. Antarctic Lands": "French Southern Lands", "Czech Rep.": "Czechia", "Timor-Leste": "Timor-Leste", "Antigua and Barb.": "Antigua and Barbuda", "St. Kitts and Nevis": "Saint Kitts and Nevis", "St. Vin. and Gren.": "Saint Vincent and the Grenadines", "Marshall Is.": "Marshall Islands", "Vatican": "Vatican City", "São Tomé and Principe": "São Tomé and Príncipe", "Dem. Rep. Korea": "North Korea", "Korea": "South Korea", "Lao PDR": "Laos", "Congo": "Republic of the Congo", "Cabo Verde": "Cape Verde", "Faeroe Is.": "Faroe Islands", "Fr. Polynesia": "French Polynesia", "Cayman Is.": "Cayman Islands", "Turks and Caicos Is.": "Turks and Caicos", "U.S. Virgin Is.": "US Virgin Islands", "N. Mariana Is.": "Northern Mariana Islands", "Br. Indian Ocean Ter.": "British Indian Ocean Territory", "Micronesia": "Micronesia", "Saint Lucia": "Saint Lucia"};
 const ISO_BY_NAME = {"France":"FR","Norway":"NO","Kosovo":"XK"};
 /* 50m has all the microstates (Monaco, Malta, Singapore, Maldives, Pacific islands...). 110m is a lighter fallback. */
@@ -671,7 +681,7 @@ const SOURCES = [
   "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_110m_admin_0_countries.geojson"
 ];
 /* Map colours: only the regions you are playing are coloured, everything else fades back. */
-const CONT_COL={"Northeast":"#3F7FD0","Midwest":"#6FA84A","South":"#CB8057","West":"#7C66CF","Europe":"#3F7FD0","Asia":"#7C66CF","Africa":"#CB8057","North America":"#2AA0AE","South America":"#6FA84A","Oceania":"#C65A9C"};
+const CONT_COL={"Northeast":"#3F7FD0","Midwest":"#6FA84A","South":"#CB8057","West":"#7C66CF","Prairies":"#6FA84A","West Coast":"#7C66CF","Atlantic":"#3F7FD0","Central":"#CB8057","North":"#2AA0AE","East":"#CB8057","West & North":"#7C66CF","Midlands":"#6FA84A","Southern England":"#CB8057","Northern England":"#3F7FD0","Scotland":"#2AA0AE","Wales":"#C65A9C","Northern Ireland":"#7C66CF","Europe":"#3F7FD0","Asia":"#7C66CF","Africa":"#CB8057","North America":"#2AA0AE","South America":"#6FA84A","Oceania":"#C65A9C"};
 const ONE_COL="#2C93B8"; let DIM_COL="#1D3141";
 const PALETTES={
   FOCUS:{label:"Focus",desc:"Your selected regions glow in their own colour and the rest fades into the background. With the whole world selected, each continent gets one colour."},
@@ -736,6 +746,7 @@ const MODES = {
   CAPMAP:["Capital to map","See a capital, then tap its country"],
   SHAPE:["Outlines","Name the country from its shape alone"],
   NEIGH:["Neighbours","Who shares a border with whom?"],
+  PATH:["Border path","Link two places by crossing borders"],
   CONT:["Continents","Beginner: which continent is it in?"],
   LIVES:["Lives","Endless questions, a few lives"],
   STREAK:["Streak run","One wrong answer ends the run"],
@@ -749,13 +760,13 @@ const MODES = {
   TF:["True or false","Quickfire facts about countries"],
   LANDMARKS:["Landmarks","Famous sites: name the country, then find them"]
 };
-const MODE_GROUPS=[["Flags",["FLAG","FLAGMAP"]],["Locate",["FIND","NAME","SHAPE","CAPMAP"]],["Quiz",["CAPITAL","CAPREV","CONT","NEIGH","ODD","NUMBERS","TF","MIX"]],["Places",["PEAKS","RIVERS","LAKES","LANDMARKS"]],["Challenges",["LIVES","STREAK","SPRINT"]]];
+const MODE_GROUPS=[["Flags",["FLAG","FLAGMAP"]],["Locate",["FIND","NAME","SHAPE","CAPMAP"]],["Quiz",["CAPITAL","CAPREV","CONT","NEIGH","PATH","ODD","NUMBERS","TF","MIX"]],["Places",["PEAKS","RIVERS","LAKES","LANDMARKS"]],["Challenges",["LIVES","STREAK","SPRINT"]]];
 const CHALLENGES=new Set(["LIVES","STREAK","SPRINT"]);
 const KIND_SETS={MIX:["FIND","NAME","CAPITAL","FLAG"],LIVES:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],STREAK:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],SPRINT:["NAME","FLAG","CAPITAL","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],NUMBERS:["BIGGER","BIGGER","POPBAND"],TF:["TF"]};
 const CONT_LABELS=["Africa","Asia","Europe","North America","South America","Oceania"];
 const LIVES_OPTS=[3,5,10], SPRINT_OPTS=[30,60,120], HL_KINDS=["NAME","CAPITAL","CONT","NEIGH","SHAPE","PEAKNAME","RIVERNAME","RIVERFLOW","RIVERTHRU","LAKENAME","POPBAND","LMNAME","LMCOUNTRY"];
-const NO_REC=new Set(["ODD","TF","BIGGER","POPBAND"]);       // these don't prove you know where a country is, so they stay off Your map
-const pairQ=q=>q.kind==="PEAKHIGH"||q.kind==="BIGGER";
+const NO_REC=new Set(["ODD","TF","BIGGER","POPBAND","PATH"]);       // these don't prove you know where a country is, so they stay off Your map
+const pairQ=q=>q.kind==="PEAKHIGH"||q.kind==="BIGGER"||q.kind==="PATH";
 /* ---- mountains: a curated list, so this mode works offline and needs no extra data ---- */
 const PEAKS_RAW=[
  ["Mount Everest",8849,27.9881,86.9250,"Asia","Himalayas","Nepal and China"],
@@ -1047,13 +1058,44 @@ const US_REGIONS={
   SOUTH:{label:"South",key:"South",box:[-107,24.5,-75,40]},
   WEST:{label:"West",key:"West",box:[-168,18.5,-102,71],wbox:[-168,18.5,-102,71]}
 };
+const CAN_REGIONS={
+  ALL:{label:"All",key:null,box:null},
+  ATLANTIC:{label:"Atlantic",key:"Atlantic",box:[-68,43,-52,60.5]},
+  CENTRAL:{label:"Central",key:"Central",box:[-95.5,41.5,-57,62.5]},
+  PRAIRIES:{label:"Prairies",key:"Prairies",box:[-110.5,48.9,-88,60]},
+  WESTCOAST:{label:"West Coast",key:"West Coast",box:[-139,48,-114,60]},
+  NORTH:{label:"North",key:"North",box:[-141,60,-60,76]}
+};
+const AUS_REGIONS={
+  ALL:{label:"All",key:null,box:null},
+  EAST:{label:"East",key:"East",box:[141,-38,154,-10]},
+  SOUTH:{label:"South",key:"South",box:[129,-44,150,-26]},
+  WESTNORTH:{label:"West & North",key:"West & North",box:[112,-35,138,-10.5]}
+};
+const GBR_REGIONS={
+  ALL:{label:"All",key:null,box:null},
+  SCOTLAND:{label:"Scotland",key:"Scotland",box:[-8,54.6,-0.7,60.9]},
+  NORTHERN_ENG:{label:"Northern England",key:"Northern England",box:[-3.7,52.9,0,55.9]},
+  MIDLANDS:{label:"Midlands",key:"Midlands",box:[-3.3,51.6,0.4,53.6]},
+  SOUTHERN_ENG:{label:"Southern England",key:"Southern England",box:[-5.8,49.8,1.8,52.9]},
+  WALES:{label:"Wales",key:"Wales",box:[-5.4,51.3,-2.6,53.5]},
+  NIRELAND:{label:"Northern Ireland",key:"Northern Ireland",box:[-8.3,54,-5.4,55.4]}
+};
+const NB_MODES=["FIND","NAME","SHAPE","CAPMAP","CAPITAL","CAPREV","NEIGH","PATH","ODD","MIX","LIVES","STREAK","SPRINT"];
 const PACKS={
   WORLD:{label:"World",blurb:"Every country",unit:"country",units:"countries",where:"World",box:null,modes:null},
   USA:{label:"United States",blurb:"The 50 states and DC",unit:"state",units:"states",where:"United States",box:[-168,19,-65,71],
-       modes:["FIND","NAME","SHAPE","CAPMAP","CAPITAL","CAPREV","NEIGH","ODD","MIX","LIVES","STREAK","SPRINT"],regions:US_REGIONS}
+       modes:NB_MODES,regions:US_REGIONS,admin:/^United States/i,min:40,
+       src:["ne_110m_admin_1_states_provinces","ne_50m_admin_1_states_provinces"]},
+  CAN:{label:"Canada",blurb:"10 provinces and 3 territories",unit:"province",units:"provinces and territories",where:"Canada",box:[-141,41,-52,76],
+       modes:NB_MODES,regions:CAN_REGIONS,admin:/^Canada/i,min:12,src:["ne_50m_admin_1_states_provinces"]},
+  AUS:{label:"Australia",blurb:"The 6 states and 2 territories",unit:"state",units:"states and territories",where:"Australia",box:[112,-44,154,-10],
+       modes:NB_MODES,regions:AUS_REGIONS,admin:/^Australia/i,min:8,src:["ne_50m_admin_1_states_provinces"]},
+  GBR:{label:"United Kingdom",blurb:"The 12 regions of the UK",unit:"region",units:"regions",where:"United Kingdom",box:[-8.8,49.7,2,60.9],
+       modes:NB_MODES.filter(m=>!/^CAP/.test(m)),regions:GBR_REGIONS,admin:/^United Kingdom/i,min:12,own:"meridian-uk.json"}
 };
 let pack="WORLD";
-const worlds={WORLD:null,USA:null};
+const worlds={WORLD:null,USA:null,CAN:null,AUS:null,GBR:null};
 const UNITS=()=>PACKS[pack].units, UNIT=()=>PACKS[pack].unit;
 const inPack=m=>!PACKS[pack].modes||PACKS[pack].modes.includes(m);
 const PACK_BAD=new Set(["FLAG","FLAGMAP","CONT","BIGGER","POPBAND","TF"]);   // kinds that need data a state doesnt have
@@ -1084,6 +1126,7 @@ const ICONS={
   shape:'<path d="M4 14.500l2.500-7.500 6-3 6.500 4.500-1.500 8.500-7.500 3.500z"/>',
   landmark:'<path d="M3.500 9.500L12 4l8.500 5.500"/><path d="M5.500 10.500v7M9.800 10.500v7M14.200 10.500v7M18.500 10.500v7"/><path d="M3.500 20.500h17"/>',
   globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c3.200 3 3.200 15 0 18M12 3c-3.200 3-3.200 15 0 18"/>',
+  route:'<circle cx="6" cy="18" r="2.500"/><circle cx="18" cy="6" r="2.500"/><path d="M8.500 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.500"/>',
   link:'<path d="M10 14a4 4 0 0 0 5.700 0l3-3a4 4 0 0 0-5.700-5.700l-1 1"/><path d="M14 10a4 4 0 0 0-5.700 0l-3 3a4 4 0 0 0 5.700 5.700l1-1"/>',
   target:'<circle cx="12" cy="12" r="8.500"/><circle cx="12" cy="12" r="4.200"/><circle cx="12" cy="12" r=".9" fill="currentColor"/>',
   shuffle:'<path d="M3.500 7.500h3.500c5 0 5 9 10 9h3"/><path d="M3.500 16.500h3.500c1.800 0 3-.8 4-2M13 9c1-1 2.200-1.500 4-1.500h3"/><path d="M17.500 4.500l3 3-3 3M17.500 13.500l3 3-3 3"/>',
@@ -1223,7 +1266,7 @@ class Country {
     this.gcx=(this.mainPoly.gb.l+this.mainPoly.gb.r)/2; this.gcy=(this.mainPoly.gb.t+this.mainPoly.gb.b)/2;   // geographic centre, for "nearby" wrong answers
     this.area=polys.reduce((s,p)=>s+p.area,0);
     this.hv=hash(iso);
-    this.valid=/^([A-Z]{2}|US-[A-Z]{2})$/.test(iso);
+    this.valid=/^([A-Z]{2}|[A-Z]{2}-[A-Z]{2,3})$/.test(iso);
     this.flag=this.valid&&iso.length===2?flagOf(iso):"";
     this.capital=CAPITALS[iso]||null;
     this.rebuild();
@@ -1293,6 +1336,7 @@ class World {
 }
 
 function parseWorld(json,states=false){
+  const PK=states?PACKS[states]:null, byName=states?PACK_BY_NAME[states]:null;
   const out=[];
   const first=(p,...keys)=>{ for(const k of keys){ const v=p[k]; if(v!=null && String(v).trim() && v!=="-99") return String(v); } return null; };
   const toRing=r=>{ const a=new Float32Array(r.length*2); for(let i=0;i<r.length;i++){ a[2*i]=r[i][0]; a[2*i+1]=r[i][1]; } return densify(a); };
@@ -1300,8 +1344,8 @@ function parseWorld(json,states=false){
   for(const f of json.features||[]){
     const p=f.properties||{}, g=f.geometry; if(!g) continue;
     const raw=first(p,"NAME","name","ADMIN","admin"); if(!raw || raw==="Antarctica") continue;
-    const st=states?STATE_BY_NAME[raw]:null; if(states&&(!st||(first(p,"iso_a2","ISO_A2","admin","ADMIN")&&!/^(US|United States)/i.test(first(p,"iso_a2","ISO_A2")||first(p,"admin","ADMIN"))))) continue;
-    const iso=st?"US-"+st[1]:(first(p,"ISO_A2_EH","ISO_A2","ISO3166-1-Alpha-2","iso_a2")||ISO_BY_NAME[raw]||"--").toUpperCase();
+    const st=states?byName[raw]:null; if(states&&(!st||(first(p,"admin","ADMIN")&&!PK.admin.test(first(p,"admin","ADMIN"))))) continue;
+    const iso=st?PACK_PREFIX[states]+st[1]:(first(p,"ISO_A2_EH","ISO_A2","ISO3166-1-Alpha-2","iso_a2")||ISO_BY_NAME[raw]||"--").toUpperCase();
     let polys=[];
     if(g.type==="Polygon") polys=[toPoly(g.coordinates)];
     else if(g.type==="MultiPolygon") polys=g.coordinates.map(toPoly);
@@ -1315,9 +1359,9 @@ function parseWorld(json,states=false){
     if(ALWAYS_SOVEREIGN.includes(raw)||ALWAYS_SOVEREIGN.includes(adm)) sov=true;
     if(polys.length) out.push(new Country(iso,NAMES[raw]||raw,polys,facts,sov));
   }
-  if(!out.length) throw new Error(states?"No states found":"No countries found");
-  if(states&&out.length<40) throw new Error("Too few states");
-  const w=new World(out); w._pid=PROJ.id; if(states) w.isStates=true; return w;
+  if(!out.length) throw new Error(states?"No regions found":"No countries found");
+  if(states&&out.length<PK.min) throw new Error("Too few regions");
+  const w=new World(out); w._pid=PROJ.id; if(states) w.isStates=states; return w;
 }
 
 /* ============================== map view ============================== */
@@ -1831,11 +1875,12 @@ function feasible(kind,c){
   if(kind==="SHAPE") return bigEnough(c);
   if(kind==="CONT") return CONT_LABELS.includes(c.facts.continent);
   if(kind==="NEIGH") return nbQuiz(c).length>=1;
+  if(kind==="PATH"){ for(const v of pathBfs(c).dist.values()) if(v>=2) return true; return false; }
   return true;
 }
 function buildQuestions(mode,diff,ks,count,avoid,opts){
   const {all,pool:p0}=buildPool(diff,ks,opts&&opts.theme); let pool=p0;
-  const kinds=KIND_SETS[mode], used=new Set(avoid||[]), out=[];
+  const kinds=KIND_SETS[mode], used=new Set(avoid||[]), out=[]; pathDiff=diff;
   const modeKind=kinds?null:mode;
   const n=count==="ALL"?pool.length:Math.min(count,pool.length);
   for(let i=0;i<n;i++){
@@ -1881,6 +1926,24 @@ function makeOdd(pool,all,used){
   }
   return null;
 }
+/* Border path: get from one country to another by tapping countries that border each other */
+let pathDiff="MEDIUM";
+function pathBfs(src){
+  if(world._pbk!==world.quiz.length){ world._pb=new Map(); world._pbk=world.quiz.length; }
+  let r=world._pb.get(src.iso); if(r) return r;
+  const byIso=new Map(world.quiz.map(c=>[c.iso,c])), dist=new Map([[src.iso,0]]), prev=new Map(), qu=[src.iso];
+  while(qu.length){ const a=qu.shift(); for(const b of nbOf(byIso.get(a))){ if(!byIso.has(b)||dist.has(b)) continue; dist.set(b,dist.get(a)+1); prev.set(b,a); qu.push(b); } }
+  r={dist,prev,byIso}; world._pb.set(src.iso,r); return r;
+}
+function makePath(pool,t){
+  const {dist,prev,byIso}=pathBfs(t), [lo,hi]=({EASY:[2,2],MEDIUM:[2,3],HARD:[3,6]})[pathDiff]||[2,3];
+  let ends=pool.filter(c=>c!==t&&dist.get(c.iso)>=lo&&dist.get(c.iso)<=hi);
+  if(!ends.length) ends=pool.filter(c=>c!==t&&dist.get(c.iso)>=2);
+  if(!ends.length) ends=world.quiz.filter(c=>c!==t&&dist.get(c.iso)>=2);
+  if(!ends.length) return null;
+  const e=pick(ends), path=[]; for(let i=e.iso;i!==undefined;i=prev.get(i)) path.unshift(i);
+  return {kind:"PATH",target:t,other:e,prompt:`Link ${t.name} to ${e.name} through bordering countries.`,choices:[],answer:path.map(i=>byIso.get(i).name).join(" → "),path,par:path.length-1,chain:[t.iso]};
+}
 function makeNeighbours(near,t){
   const nbs=nbQuiz(t), nbIso=nbOf(t), far=world.quiz.filter(c=>c!==t&&!nbIso.has(c.iso));
   const closest=list=>list.slice().sort((a,b)=>Math.hypot(a.gcx-t.gcx,a.gcy-t.gcy)-Math.hypot(b.gcx-t.gcx,b.gcy-t.gcy));
@@ -1894,7 +1957,7 @@ function makeNeighbours(near,t){
 }
 function makeQuestion(pool,all,kind,t){
   const q=makeQuestionCore(pool,all,kind,t);
-  if(q&&pack!=="WORLD"){ const fix=x=>String(x).replace(/\bcountries\b/g,"states").replace(/\bcountry\b/g,"state").replace(/\bCountries\b/g,"States").replace(/\bCountry\b/g,"State");
+  if(q&&pack!=="WORLD"){ const U=UNIT(), UU=UNITS(), cap=x=>x[0].toUpperCase()+x.slice(1), fix=x=>String(x).replace(/\bcountries\b/g,UU).replace(/\bcountry\b/g,U).replace(/\bCountries\b/g,cap(UU)).replace(/\bCountry\b/g,cap(U));
     if(q.prompt) q.prompt=fix(q.prompt); if(q.why) q.why=fix(q.why); }
   return q;
 }
@@ -1910,6 +1973,7 @@ function makeQuestionCore(pool,all,kind,t){
   if(kind==="SHAPE") return {kind,target:t,prompt:"Which country has this outline?",choices:shuffle([...near.map(c=>c.name),t.name]),answer:t.name};
   if(kind==="CONT") return {kind,target:t,prompt:`Which continent is ${t.name} in?`,choices:CONT_LABELS.slice(),answer:t.facts.continent};
   if(kind==="NEIGH") return makeNeighbours(near,t);
+  if(kind==="PATH") return makePath(pool,t);
   if(kind==="CAPREV") return {kind,target:t,prompt:`${t.capital} is the capital of which country?`,choices:shuffle([...near.map(c=>c.name),t.name]),answer:t.name};
   if(kind==="BIGGER") return makeBigger(pool,all,t);
   if(kind==="POPBAND") return makeBand(t);
@@ -2143,12 +2207,13 @@ function launch(mode,qs,ks,practice,extra){
   game.qs.slice(0,15).forEach(q=>{ if(q.peak||q.river||q.lake||q.lm) return; const im=new Image(); im.src=flagUrl(q.target); });   // warm the flag cache
   show("play"); beginQuestion();
 }
-const focusPad=(q,reveal)=>q.kind==="BIGGER"?1.6:q.lake?1.6:q.river&&q.kind!=="RIVERTHRU"?1.5:q.kind==="PEAKHIGH"?1.6:q.kind==="ODD"?1.5:q.kind==="SHAPE"?(reveal?5:1.7):q.kind==="CONT"?8:q.kind==="NEIGH"?(reveal?6:7):4;
+const focusPad=(q,reveal)=>q.kind==="PATH"?1.9:q.kind==="BIGGER"?1.6:q.lake?1.6:q.river&&q.kind!=="RIVERTHRU"?1.5:q.kind==="PEAKHIGH"?1.6:q.kind==="ODD"?1.5:q.kind==="SHAPE"?(reveal?5:1.7):q.kind==="CONT"?8:q.kind==="NEIGH"?(reveal?6:7):4;
 /* keep the player's view when everything the question is about is already on screen (outlines always frame their shape) */
-const stay=(q,list,reveal)=>q.kind!=="SHAPE"&&list.every(t=>t&&gameMap.inView(t));
+const stay=(q,list,reveal)=>q.kind!=="SHAPE"&&q.kind!=="PATH"&&list.every(t=>t&&gameMap.inView(t));
 function beginQuestion(){
   const q=game.qs[game.i], showT=HL_KINDS.includes(q.kind);
-  const now=performance.now(), limit=q.kind==="FIND"?FIND_LIMIT:CHOICE_LIMIT;
+  const now=performance.now(), limit=q.kind==="PATH"?FIND_LIMIT*2:q.kind==="FIND"?FIND_LIMIT:CHOICE_LIMIT;
+  if(q.kind==="PATH") q.chain=[q.target.iso];
   Object.assign(game,{attempts:0,locked:false,picked:null,ok:false,pts:0,speed:0,timedOut:false,
     marks:showT?{[q.target.iso]:PAL.amber}:pairQ(q)?{[q.target.iso]:PAL.amber,[q.other.iso]:PAL.amber}:{},limit:game.sprint?game.sprintS:limit,qStart:now,deadline:game.sprint?game.sprintEnd:now+limit*1000,pausedAt:0});
   gameMap.solo=q.kind==="SHAPE"?q.target.iso:null;
@@ -2205,6 +2270,7 @@ function lock(ok,pts,q,wrongHit,speed=0,timedOut=false){ if(game) game.lockedAt=
     if(g.mode==="STREAK") g.over=true;
     if(g.sprint){ g.sprintEnd-=3000; g.deadline=g.sprintEnd; }                  // a miss costs 3 seconds
   }
+  if(q.kind==="PATH") g.marks=pathMarks(q,true,ok);
   gameMap.solo=null; gameMap.setMarks(g.marks); if(!stay(q,q.kind==="ODD"?[q.target,...q.groupC]:pairQ(q)?[q.target,q.other]:q.kind==="RIVERTHRU"?[q.target,q.riverObj]:[q.target],true)) gameMap.run(q.kind==="ODD"?[q.target,...q.groupC]:pairQ(q)?[q.target,q.other]:q.kind==="RIVERTHRU"?[q.target,q.riverObj]:q.target,false,focusPad(q,true)); gameMap.setPulses([{iso:q.target.iso,color:ok?PAL.ok:PAL.amber}]);
   buzz(ok?15:[40,40,40]); renderPlay();
   if(g.sprint){ const id=gameId, idx=g.i; setTimeout(()=>{ if(id===gameId&&game===g&&g.locked&&g.i===idx&&!$("play").classList.contains("hidden")) nextQuestion(); },ok?450:900); }
@@ -2216,7 +2282,7 @@ function answerChoice(label){
 function tapAdvance(){ if(game&&game.locked&&!game.sprint&&performance.now()-(game.lockedAt||0)>350) nextQuestion(); }   // tap anywhere to continue
 function tapMap(c){
   if(game&&game.locked) return tapAdvance();
-  if(!game) return; const q=game.qs[game.i]; if(q.kind!=="FIND") return;
+  if(!game) return; const q=game.qs[game.i]; if(q.kind==="PATH") return pathTap(c,q); if(q.kind!=="FIND") return;
   if(game.elim&&game.done[c.iso]){ toast("Already done. Pick one that's still coloured."); return; }
   if(c.iso===q.target.iso){ const sp=speedBonus(); lock(true,(game.attempts===0?100+bonus(game):50)+sp,q,null,sp); return; }
   game.attempts++; buzz([40,40,40]);
@@ -2225,6 +2291,25 @@ function tapMap(c){
   gameMap.setPulses([{iso:q.target.iso,color:PAL.sel,hint:true}]);      // wrong once: ring the neighbourhood
   renderPlay();
   const idx=game.i,id=gameId; setTimeout(()=>{ if(id===gameId&&game&&!game.locked&&game.i===idx){ game.marks={}; gameMap.setMarks({}); } },700);
+}
+const pathMarks=(q,final,ok)=>{ const m={};
+  if(final&&!ok) for(const i of q.path) m[i]=PAL.nb;
+  q.chain.forEach(i=>{ m[i]=final?(ok?PAL.ok:PAL.bad):PAL.sel; });
+  m[q.target.iso]=final&&ok?PAL.ok:PAL.amber; m[q.other.iso]=final&&ok?PAL.ok:PAL.amber; return m; };
+function pathTap(c,q){
+  const chain=q.chain, last=chain[chain.length-1];
+  if(c.iso===q.target.iso) return;
+  if(c.iso===last){ chain.pop(); game.marks=pathMarks(q); gameMap.setMarks(game.marks); renderPlay(); return; }                        // tap your last pick to undo it
+  if(chain.includes(c.iso)){ toast(`${c.name} is already on your route.`); return; }
+  const lc=world.countries.find(x=>x.iso===last);
+  if(!nbOf(lc).has(c.iso)){ buzz([40,40,40]); toast(`${c.name} doesn't border ${lc.name}.`); return; }
+  chain.push(c.iso);
+  if(c.iso===q.other.iso){
+    const steps=chain.length-1, extra=steps-q.par, ok=extra<=1;
+    const pts=extra<=0?100+bonus(game)+speedBonus():Math.max(30,100-25*extra);
+    q.steps=steps; lock(ok,ok?pts:0,q,null,0); return; }
+  if(chain.length-1>=q.par+4){ q.steps=chain.length-1; lock(false,0,q,null,0); return; }                                            // wandered too far
+  game.marks=pathMarks(q); gameMap.setMarks(game.marks); renderPlay();
 }
 function nextQuestion(){
   if(!game||!game.locked) return;
@@ -2308,7 +2393,7 @@ function show(id){
 }
 function showTab(tab){ if(tab==="home") renderHome(); else if(tab==="study") renderStudy(); else if(tab==="stats") renderStats(); else if(tab==="settings") renderSettings(); show(tab); }
 
-const settingsSummary=()=>`${smart?"Smart review · ":""}${elim?"Eliminate · ":""}${borderless?"No borders · ":""}${timed?"Timed":"Untimed"} · ${pack!=="WORLD"?"US states":territories?"with territories":"sovereign states"} · ${PROJECTIONS[settings.proj].label} map`;
+const settingsSummary=()=>`${smart?"Smart review · ":""}${elim?"Eliminate · ":""}${borderless?"No borders · ":""}${timed?"Timed":"Untimed"} · ${pack!=="WORLD"?PACKS[pack].label:territories?"with territories":"sovereign states"} · ${PROJECTIONS[settings.proj].label} map`;
 function renderSettings(){
   $("projChips").innerHTML=Object.entries(PROJECTIONS).map(([k,p])=>`<button data-p="${k}" class="${k===settings.proj?"sel":""}">${p.label}</button>`).join("");
   $("projDesc").textContent=PROJECTIONS[settings.proj].desc+(PROJ.wrap?" Wraps at the date line.":" Doesn't wrap, so use Flat or Miller for Oceania.");
@@ -2377,7 +2462,7 @@ const CARD_ICON={pack:["map","locate"],where:["globe","locate"],diff:["target","
 const cardsHtml=cards=>cards.map(([k,l,v,s,ic])=>{ const [i0,cat]=ic?[ic,"quiz"]:(CARD_ICON[k]||["sliders","quiz"]);
   const c=k==="mode"?"cat-"+catOf(curMode):"cat-"+cat;
   return `<button class="ocard" data-card="${k}" data-msg="${esc(s)}"><span class="oi chipic ${c}">${ico(i0,19)}</span><span class="ot"><span class="v">${esc(v)}</span><span class="s"><b class="k">${l}</b> · ${esc(s)}</span></span></button>`; }).join("");
-const MODE_ICON={FLAG:"flag",FLAGMAP:"pin",CAPMAP:"landmark",FIND:"search",NAME:"tag",SHAPE:"shape",CAPITAL:"landmark",CONT:"globe",NEIGH:"link",ODD:"target",MIX:"shuffle",LIVES:"heart",STREAK:"flame",SPRINT:"timer",PEAKS:"mountain",RIVERS:"river",LAKES:"droplet",CAPREV:"swap",NUMBERS:"scale",TF:"question",LANDMARKS:"monument"};
+const MODE_ICON={FLAG:"flag",FLAGMAP:"pin",CAPMAP:"landmark",FIND:"search",NAME:"tag",SHAPE:"shape",CAPITAL:"landmark",CONT:"globe",NEIGH:"link",PATH:"route",ODD:"target",MIX:"shuffle",LIVES:"heart",STREAK:"flame",SPRINT:"timer",PEAKS:"mountain",RIVERS:"river",LAKES:"droplet",CAPREV:"swap",NUMBERS:"scale",TF:"question",LANDMARKS:"monument"};
 const CAT_OF={Flags:"flags",Locate:"locate",Quiz:"quiz",Places:"physical",Challenges:"chal"};
 const catOf=k=>{ const g=MODE_GROUPS.find(([,ks])=>ks.includes(k)); return g?CAT_OF[g[0]]:"quiz"; };
 const refreshSetup=()=>{ renderHome(); renderStudy(); };
@@ -2454,6 +2539,10 @@ function sheetClick(e){
   refreshSetup();
 }
 
+function pathCard(q){
+  const nm=i=>esc(world.countries.find(c=>c.iso===i).name), mine=q.chain.map(nm).join(" › ");
+  return `<div class="nbline">Your route: ${mine}${q.chain[q.chain.length-1]===q.other.iso?"":" (unfinished)"}.<br>Shortest: ${q.path.map(nm).join(" › ")} (${q.par} step${q.par===1?"":"s"}).</div>`;
+}
 function neighbourNote(q){
   if(q.kind==="ODD"||q.kind==="TF") return `<div class="nbline">${esc(q.why)}</div>`;
   if(q.kind!=="NEIGH") return "";
@@ -2467,6 +2556,7 @@ function renderPlay(){
   $("score").textContent=g.score; $("streak").textContent=g.streak>=2?`${g.streak} in a row`:"";
   let p;
   if(q.kind==="FLAG") p=`${flagImg(q.target,40)}<span>${esc(q.prompt)}</span>`;
+  else if(q.kind==="PATH") p=`<div><small>Cross borders from</small><div class="big inl" style="font-size:21px;gap:6px 8px">${flagImg(q.target,20)}<span>${esc(q.target.name)}</span><span class="arr">→</span>${flagImg(q.other,20)}<span>${esc(q.other.name)}</span></div></div>`;
   else if(q.kind==="FIND"&&q.capOnly) p=`<div><small>Tap the ${UNIT()} whose capital is</small><div class="big inl">${esc(q.target.capital)}</div></div>`;
   else if(q.kind==="FIND"&&q.flagOnly) p=`${flagImg(q.target,40)}<span>Tap the country with this flag</span>`;
   else if(q.kind==="CONT") p=`${flagImg(q.target,32)}<span>${esc(q.prompt)}</span>`;
@@ -2477,14 +2567,16 @@ function renderPlay(){
   else p=esc(q.prompt);
   $("prompt").innerHTML=p; $("prompt").classList.toggle("long",!p.includes("<")&&q.prompt.length>46);
   let txt="",col="var(--dim)";
-  if(g.locked&&g.ok){ txt=`✓ +${g.pts}`+(g.speed?` (speed +${g.speed})`:""); col="var(--ok)"; }
+  if(g.locked&&g.ok){ txt=`✓ +${g.pts}`+(g.speed?` (speed +${g.speed})`:"")+(q.kind==="PATH"?` · ${q.steps} step${q.steps===1?"":"s"}${q.steps>q.par?`, shortest was ${q.par}`:", the shortest"}`:""); col="var(--ok)"; }
+  else if(q.kind==="PATH"&&!g.locked){ const n=q.chain.length-1; txt=n?`${n} step${n===1?"":"s"} · ${q.chain.slice(1).map(i=>world.countries.find(c=>c.iso===i).name).join(" › ")}`:"Tap a neighbour to start"; col="var(--ink)"; }
+  else if(g.locked&&q.kind==="PATH"){ txt=`✕ ${q.steps&&q.steps>q.par+3?"Too far. ":""}Shortest: ${q.answer}`; col="var(--amber)"; }
   else if(g.locked){ txt="✕ "+(g.timedOut?"Time's up. ":"")+`It was ${q.answer}`+(g.mode==="LIVES"?(g.lives>0?` · ${g.lives} li${g.lives===1?"fe":"ves"} left`:" · no lives left"):""); col="var(--amber)"; }
   else if(g.attempts===1){ txt="✕ Not quite. One more try."; col="var(--bad)"; }
-  $("status").innerHTML=`<span style="color:${col}">${esc(txt)}</span>`+(g.locked&&!g.sprint?`<button id="nextBtn" class="nx">${last?"See results":"Next"}</button>`:"");
+  $("status").innerHTML=`<span style="color:${col}">${esc(txt)}</span>`+(g.locked&&!g.sprint?`<button id="nextBtn" class="nx">${last?"See results":"Next"}</button>`:q.kind==="PATH"&&!g.locked?`<button id="giveUp" class="nx">Give up</button>`:"");
   $("choices").classList.toggle("c6",!g.locked&&q.choices.length===6);
-  $("choices").innerHTML=g.locked ? (g.sprint?"":(q.kind==="BIGGER"?numCard(q):q.lm?landmarkCard(q):q.peak?peakCard(q):q.river?riverCard(q):q.lake?lakeCard(q):countryCard(q.target))+neighbourNote(q)) :
+  $("choices").innerHTML=g.locked ? (g.sprint?"":(q.kind==="BIGGER"?numCard(q):q.lm?landmarkCard(q):q.peak?peakCard(q):q.river?riverCard(q):q.lake?lakeCard(q):q.kind==="PATH"?pathCard(q):countryCard(q.target))+neighbourNote(q)) :
     q.choices.map((c,i)=>`<button data-i="${i}">${q.icons&&q.icons[c]?`<span class="flagfb">${q.icons[c]}</span> `:""}${esc(c)}</button>`).join("");
-  $("hint").textContent=q.choices.length||g.locked?"":q.lm?"Tap the diamond for that site. Zoom in to tell close ones apart.":q.lake?"Tap the lake. Zoom in for the small ones.":q.peak?"Tap the triangle for that peak. Zoom in to tell close ones apart.":(settings.globe?"Tap the globe. Drag to spin it, pinch to zoom.":"Tap the map. Pinch or scroll to zoom, drag to pan (it wraps around).")+(g.elim?" Grey countries are done.":"");
+  $("hint").textContent=q.choices.length||g.locked?"":q.lm?"Tap the diamond for that site. Zoom in to tell close ones apart.":q.kind==="PATH"?"Tap countries that border each other to build a chain. Tap your last pick to undo it.":q.lake?"Tap the lake. Zoom in for the small ones.":q.peak?"Tap the triangle for that peak. Zoom in to tell close ones apart.":(settings.globe?"Tap the globe. Drag to spin it, pinch to zoom.":"Tap the map. Pinch or scroll to zoom, drag to pan"+(pack==="WORLD"?" (it wraps around).":"."))+(g.elim?" Grey "+UNITS()+" are done.":"");
 }
 
 /* ---- study mode: flashcards ---- */
@@ -2655,25 +2747,25 @@ async function shareResult(){
   }catch(e){ if(e&&e.name==="AbortError") return; try{ await navigator.clipboard.writeText(text); toast("Result copied"); }catch(_){ toast("Couldn't share on this device"); } }
 }
 
-const US_SOURCES=[
-  "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_110m_admin_1_states_provinces.geojson",
-  "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_1_states_provinces.geojson",
-  "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/ne_50m_admin_1_states_provinces.geojson",
-  "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_1_states_provinces.geojson"];
-async function ensureUS(){
-  if(worlds.USA) return worlds.USA;
-  const cached=await MapCache.get("usstates");
-  if(cached&&cached.text){ try{ return worlds.USA=parseWorld(JSON.parse(cached.text),true); }catch(e){ await MapCache.del("usstates"); } }
-  for(const url of US_SOURCES){
-    try{ const r=await fetch(url); if(!r.ok) continue; const text=await r.text(); const w=parseWorld(JSON.parse(text),true);
-      MapCache.set({text,res:/50m/.test(url)?"50m":"110m",t:Date.now(),bytes:text.length},"usstates"); return worlds.USA=w; }catch(e){}
+const NE_HOSTS=["https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@master/geojson/","https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/"];
+const packUrls=P=>P.own?[P.own,"https://cdn.jsdelivr.net/gh/XipeTotec/XipeTotec.github.io@main/"+P.own]:P.src.flatMap(f=>NE_HOSTS.map(h=>h+f+".geojson"));
+const packKey=name=>name==="USA"?"usstates":"pack_"+name;
+const slimPack=(json,P)=>({type:"FeatureCollection",features:(json.features||[]).filter(f=>{ const p=f.properties||{}, a=p.admin||p.ADMIN; return !a||P.admin.test(a); })});   // keep only this pack's shapes in the offline copy
+async function ensurePack(name){
+  if(worlds[name]) return worlds[name];
+  const P=PACKS[name], key=packKey(name);
+  const cached=await MapCache.get(key);
+  if(cached&&cached.text){ try{ return worlds[name]=parseWorld(JSON.parse(cached.text),name); }catch(e){ await MapCache.del(key); } }
+  for(const url of packUrls(P)){
+    try{ const r=await fetch(url); if(!r.ok) continue; const json=slimPack(await r.json(),P), w=parseWorld(json,name), text=JSON.stringify(json);
+      MapCache.set({text,res:/110m/.test(url)?"110m":"50m",t:Date.now(),bytes:text.length},key); return worlds[name]=w; }catch(e){}
   }
   throw new Error("fetch failed");
 }
 let packBusy=false;
 async function switchPack(name,quiet){
   if(name===pack||packBusy||!PACKS[name]) return; packBusy=true;
-  try{ let w=worlds[name]; if(!w){ if(!quiet) toast("Loading the map…"); w=await ensureUS(); } activatePack(name,w); }
+  try{ let w=worlds[name]; if(!w){ if(!quiet) toast("Loading the map…"); w=await ensurePack(name); } activatePack(name,w); }
   catch(e){ store.setRaw("meridian_pack","WORLD"); toast("Couldn't load that map. Check your connection and try again."); }
   finally{ packBusy=false; }
 }
@@ -2700,12 +2792,12 @@ function init(w){
   const prev=new MapView($("prevMap")); prev.setWorld(w);
   const eu={}; w.quizSov.filter(c=>c.facts.continent==="Europe").forEach(c=>eu[c.iso]=PAL.amber); prev.setMarks(eu);
   renderHome(); show("home");
-  if(store.getRaw("meridian_pack")==="USA") switchPack("USA",true);
+  { const sp=store.getRaw("meridian_pack"); if(sp&&sp!=="WORLD"&&PACKS[sp]) switchPack(sp,true); }
 }
 
 $("terrBtn").addEventListener("click",()=>{ territories=!territories; store.setRaw("meridian_terr",territories?"1":"0"); world.setTerritories(territories); renderHome(); renderSettings(); });
 $("choices").addEventListener("click",e=>{ const b=e.target.closest("button[data-i]"); if(b&&game) answerChoice(game.qs[game.i].choices[+b.dataset.i]); });
-$("status").addEventListener("click",e=>{ if(e.target.id==="nextBtn") nextQuestion(); });
+$("status").addEventListener("click",e=>{ if(e.target.id==="nextBtn") nextQuestion(); else if(e.target.id==="giveUp"&&game&&!game.locked){ const q=game.qs[game.i]; q.steps=q.chain.length-1; lock(false,0,q,null,0); } });
 $("play").addEventListener("click",e=>{ if(e.target.closest("button,a,input,.toggle,#gameMap,.tbarwrap")) return; tapAdvance(); });   // the answer card and empty space also continue
 function quitRound(){ stopTimer(); gameId++; game=null; gameMap.setPulses([]); show("home"); }
 $("quit").addEventListener("click",()=>{ const g=game; if(g&&g.results.length&&$("result").classList.contains("hidden")) openSheet("leave"); else quitRound(); });
@@ -2746,7 +2838,7 @@ $("studySize").addEventListener("click",e=>{ const b=e.target.closest("[data-ss]
 $("studyGo").addEventListener("click",startStudy);
 $("studyPanel").addEventListener("click",studyClick);
 $("studyQuit").addEventListener("click",()=>{ sess=null; if(studyMap){ studyMap.setPulses([]); } showTab("study"); });
-$("offClear").addEventListener("click",async()=>{ await MapCache.del(); await MapCache.del("rivers"); await MapCache.del("lakes"); await MapCache.del("usstates"); if(riverInfo) riverInfo.saved=false; if(lakeInfo) lakeInfo.saved=false; if(world&&world.source) world.source.saved=false; renderOffline(); toast("Saved map removed"); });
+$("offClear").addEventListener("click",async()=>{ await MapCache.del(); await MapCache.del("rivers"); await MapCache.del("lakes"); await MapCache.del("usstates"); for(const k of ["CAN","AUS","GBR"]) await MapCache.del(packKey(k)); if(riverInfo) riverInfo.saved=false; if(lakeInfo) lakeInfo.saved=false; if(world&&world.source) world.source.saved=false; renderOffline(); toast("Saved map removed"); });
 $("projChips").addEventListener("click",e=>{ const b=e.target.closest("button[data-p]"); if(b) setProjection(b.dataset.p); });
 $("gridBtn").addEventListener("click",()=>{ settings.grid=!settings.grid; store.setRaw("meridian_grid",settings.grid?"1":"0"); MAPS.forEach(m=>m.draw()); renderSettings(); });
 $("vibBtn").addEventListener("click",()=>{ settings.vib=!settings.vib; store.setRaw("meridian_vib",settings.vib?"1":"0"); if(settings.vib) buzz(20); renderSettings(); });
