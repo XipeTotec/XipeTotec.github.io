@@ -143,7 +143,8 @@ body.hastabs .screen:not(.center){padding-bottom:calc(56px + env(safe-area-inset
 .achc small{font-size:11.5px;color:var(--dim);line-height:1.3;display:block}
 .achc .cnt{font-style:normal;color:var(--ink-amber);font-weight:700;margin-left:4px}
 .achc .tl{margin-top:2px}
-.achc.t1{border-color:#C98A4B}.achc.t2{border-color:#B8C4CC}.achc.t3{border-color:#F4B942;box-shadow:0 0 0 1px rgba(244,185,66,.25)}.achc.t4{border-color:#8EE5FF;box-shadow:0 0 0 1px rgba(142,229,255,.3)}
+.achc.t1{border-color:#C98A4B}.achc.t2{border-color:#B8C4CC}.achc.t3{border-color:#F4B942;box-shadow:0 0 0 1px rgba(244,185,66,.25)}.achc.t4{border-color:#BBA8FF;box-shadow:0 0 0 1px rgba(190,170,255,.3)}
+.achc.t5{border-color:#8EE5FF;box-shadow:0 0 0 1px rgba(142,229,255,.3)}
 .ach.badge.up{background:var(--amber);color:var(--on-accent)}
 .achc.lock .ai{filter:grayscale(1);opacity:.45}.achc.lock b{color:var(--dim)}
 .achc .pb{height:4px;border-radius:2px;background:var(--panel-hi);margin:5px 0 2px;overflow:hidden}.achc .pb i{display:block;height:100%;background:var(--amber)}
@@ -330,8 +331,9 @@ h1{letter-spacing:-.025em}
 .achc .ai{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:0;background:var(--panel-hi);color:var(--dim)}
 .achc.got .ai{background:linear-gradient(145deg,#F9CC66,#D99A1E);color:#2B1C00;box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
 .achc.t1 .ai{background:linear-gradient(145deg,#E5AD74,#A8672F)}.achc.t2 .ai{background:linear-gradient(145deg,#EEF3F6,#9DAEBA)}
-.achc.t3 .ai{background:linear-gradient(145deg,#FFDC73,#E09B12)}.achc.t4 .ai{background:linear-gradient(145deg,#C4F4FF,#62BEE3)}
-.achc.t1,.achc.t2,.achc.t3,.achc.t4{border-color:var(--hair);box-shadow:none}
+.achc.t3 .ai{background:linear-gradient(145deg,#FFDC73,#E09B12)}.achc.t4 .ai{background:linear-gradient(145deg,#E6DEFF,#8A6FE6)}
+.achc.t5 .ai{background:linear-gradient(145deg,#C4F4FF,#62BEE3)}
+.achc.t1,.achc.t2,.achc.t3,.achc.t4,.achc.t5{border-color:var(--hair);box-shadow:none}
 .achc.lock .ai{filter:none;opacity:1;background:var(--panel-hi);color:var(--dim)}
 .achc .cnt{background:rgba(244,185,66,.16);padding:1px 7px;border-radius:999px;font-size:11.5px;margin-left:6px}
 .ach .ic{vertical-align:-2px;color:var(--ink-amber)}.ach.badge.up .ic{color:var(--on-accent)}
@@ -436,7 +438,7 @@ h1{font-size:40px}
 .achgrid{display:block;background:var(--panel);border:1px solid var(--hair);border-radius:16px;overflow:hidden;margin-bottom:12px}
 .achc{background:none;background-image:none;border:0;border-bottom:1px solid var(--hair);border-radius:0;padding:10px 12px;gap:11px}
 .achc:last-child{border-bottom:0}
-.achc.got,.achc.t1,.achc.t2,.achc.t3,.achc.t4{border-color:var(--hair);box-shadow:none}
+.achc.got,.achc.t1,.achc.t2,.achc.t3,.achc.t4,.achc.t5{border-color:var(--hair);box-shadow:none}
 .achc .ai{width:34px;height:34px}
 .achc b{font-size:13.5px}.achc small{font-size:12px}
 .achc.lock .tl{display:none}
@@ -524,7 +526,8 @@ h1{font-size:40px}
 .hero p{margin:4px 0 8px;font-size:12.5px;color:var(--dim)}
 .hero .tally{display:flex;flex-wrap:wrap;gap:6px}
 .hero .tally span{font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:999px;color:#241800;box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
-.tally .t1{background:linear-gradient(145deg,#E5AD74,#A8672F)}.tally .t2{background:linear-gradient(145deg,#F2F6F8,#9DAEBA)}.tally .t3{background:linear-gradient(145deg,#FFE07F,#E09B12)}.tally .t4{background:linear-gradient(145deg,#D6F8FF,#62BEE3)}
+.tally .t1{background:linear-gradient(145deg,#E5AD74,#A8672F)}.tally .t2{background:linear-gradient(145deg,#F2F6F8,#9DAEBA)}.tally .t3{background:linear-gradient(145deg,#FFE07F,#E09B12)}.tally .t4{background:linear-gradient(145deg,#EAE3FF,#8A6FE6)}.tally .t5{background:linear-gradient(145deg,#D6F8FF,#62BEE3)}
+
 .tally .off{opacity:.35;filter:grayscale(.6)}
 .hero .ring{position:relative;width:84px;height:84px;border-radius:50%;flex:none;display:grid;place-items:center;
   background:conic-gradient(#F9CC66 calc(var(--p)*1%),rgba(255,255,255,.08) 0);box-shadow:0 0 22px rgba(244,185,66,.35)}
@@ -536,13 +539,15 @@ h1{font-size:40px}
 .achc:last-child{border-bottom:1px solid var(--hair)}
 .achc .ai{position:relative;overflow:hidden;width:48px;height:48px;border-radius:50%}
 .achc.got .ai{box-shadow:inset 0 2px 0 rgba(255,255,255,.55),inset 0 -3px 5px rgba(100,60,0,.35),0 4px 14px rgba(244,185,66,.35)}
-.achc.got .ai::after,.achc.t3 .ai::after,.achc.t4 .ai::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.75) 50%,transparent 70%);transform:translateX(-130%);animation:sweep 3.2s ease-in-out infinite;animation-delay:calc(var(--i,0)*180ms)}
+.achc.got .ai::after,.achc.t3 .ai::after,.achc.t4 .ai::after,.achc.t5 .ai::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.75) 50%,transparent 70%);transform:translateX(-130%);animation:sweep 3.2s ease-in-out infinite;animation-delay:calc(var(--i,0)*180ms)}
 .achc.got{border-color:rgba(244,185,66,.5);background:linear-gradient(135deg,rgba(244,185,66,.14),transparent 55%),var(--panel)}
 .achc.t1{border-color:#C98A4B;background:linear-gradient(135deg,rgba(201,138,75,.2),transparent 55%),var(--panel)}
 .achc.t2{border-color:#B8C4CC;background:linear-gradient(135deg,rgba(184,196,204,.2),transparent 55%),var(--panel)}
 .achc.t3{border-color:#F4B942;background:linear-gradient(135deg,rgba(244,185,66,.26),transparent 55%),var(--panel);box-shadow:0 0 18px rgba(244,185,66,.22)}
-.achc.t4{border-color:#8EE5FF;background:linear-gradient(135deg,rgba(142,229,255,.26),transparent 55%),var(--panel);box-shadow:0 0 22px rgba(142,229,255,.3);animation:cardin .5s cubic-bezier(.2,.8,.2,1) both,pulse4 2.8s ease-in-out infinite}
-.achc.t4 .ai{box-shadow:inset 0 2px 0 rgba(255,255,255,.7),0 0 18px rgba(142,229,255,.65)}
+.achc.t4{border-color:#BBA8FF;background:linear-gradient(135deg,rgba(190,170,255,.26),transparent 55%),var(--panel);box-shadow:0 0 22px rgba(190,170,255,.3);animation:cardin .5s cubic-bezier(.2,.8,.2,1) both,pulse4 2.8s ease-in-out infinite}
+.achc.t5{border-color:#8EE5FF;background:linear-gradient(135deg,rgba(142,229,255,.26),transparent 55%),var(--panel);box-shadow:0 0 22px rgba(142,229,255,.3);animation:cardin .5s cubic-bezier(.2,.8,.2,1) both,pulse5 2.8s ease-in-out infinite}
+.achc.t4 .ai{box-shadow:inset 0 2px 0 rgba(255,255,255,.7),0 0 18px rgba(190,170,255,.65)}
+.achc.t5 .ai{box-shadow:inset 0 2px 0 rgba(255,255,255,.7),0 0 18px rgba(142,229,255,.65)}
 .achc.t3 .ai{box-shadow:inset 0 2px 0 rgba(255,255,255,.6),0 0 16px rgba(244,185,66,.6)}
 .achc.lock{opacity:.8;background:var(--panel);border-style:dashed}
 .achc.lock .ai{background:var(--panel-hi);color:var(--dim);box-shadow:none}
@@ -556,7 +561,8 @@ h1{font-size:40px}
 @keyframes glow{0%,100%{box-shadow:0 0 0 4px rgba(244,185,66,.18),0 8px 26px rgba(244,185,66,.4)}50%{box-shadow:0 0 0 7px rgba(244,185,66,.12),0 8px 36px rgba(244,185,66,.7)}}
 @keyframes heroin{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
 @keyframes cardin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-@keyframes pulse4{0%,100%{box-shadow:0 0 18px rgba(142,229,255,.25)}50%{box-shadow:0 0 30px rgba(142,229,255,.55)}}
+@keyframes pulse5{0%,100%{box-shadow:0 0 18px rgba(142,229,255,.25)}50%{box-shadow:0 0 30px rgba(142,229,255,.55)}}
+@keyframes pulse4{0%,100%{box-shadow:0 0 18px rgba(190,170,255,.25)}50%{box-shadow:0 0 30px rgba(190,170,255,.55)}}
 @keyframes barshine{from{background-position:0 0}to{background-position:-200% 0}}
 @media (min-width:900px){.achgrid{grid-template-columns:1fr 1fr}}
 @media (prefers-reduced-motion:reduce){.hero,.hero::after,.hero .big,.achc,.achc .ai::after,.achc .pb i{animation:none!important}}
@@ -2237,11 +2243,12 @@ const BADGES=[
   ["practice","refresh","Back to basics","Finish a practice round",g=>!!g.practice],
   ["deck","bookcheck","Deck cleared","Finish a whole flashcard deck",()=>false]
 ];
-/* a bronze is 5 badges, a silver is 5 bronzes, a gold is 5 silvers, a platinum is 5 golds. Every further bronze's worth lifts the level: Silver I, Silver II ... */
-const TIERS=[[625,"Platinum","t4"],[125,"Gold","t3"],[25,"Silver","t2"],[5,"Bronze","t1"]];
+/* Each tier has five steps (the tier itself, then I to IV), and each step is five of the step before it: bronze steps are 5 badges, silver steps 25, gold 125, platinum 625, diamond 3125 */
+const TIER_DEFS=[["Bronze","t1",5],["Silver","t2",25],["Gold","t3",125],["Platinum","t4",625],["Diamond","t5",3125]];
+const TIERS=(()=>{ let at=5; return TIER_DEFS.map(([name,cls,step])=>{ const row=[at,name,cls,step]; at+=step*5; return row; }).reverse(); })();
 const roman=n=>{ let r=""; for(const [v,s] of [[100,"C"],[90,"XC"],[50,"L"],[40,"XL"],[10,"X"],[9,"IX"],[5,"V"],[4,"IV"],[1,"I"]]) while(n>=v){ r+=s; n-=v; } return r; };
-const tierOf=n=>{ const t=TIERS.find(([m])=>n>=m); return t?[t[0],t[1],t[2],t[1]+" "+roman(Math.floor((n-t[0])/5)+1)]:null; };
-const nextTier=n=>{ const m=(Math.floor(n/5)+1)*5; return [m,tierOf(m)[3]]; };
+const tierOf=n=>{ const t=TIERS.find(([m])=>n>=m); if(!t) return null; const k=Math.floor((n-t[0])/t[3]); return [t[0],t[1],t[2],t[1]+(k?" "+roman(k):""),t[0]+(k+1)*t[3],t[3]]; };
+const nextTier=n=>{ const t=tierOf(n); const m=t?t[4]:5; return [m,tierOf(m)[3]]; };
 function grantBadge(id){ const b=badges[id]||(badges[id]={n:0,last:0}); b.n++; b.last=Date.now(); store.setRaw(BADGE_KEY,JSON.stringify(badges)); return b.n; }
 function awardBadges(g,total,ms){
   const out=[];
@@ -2778,14 +2785,14 @@ function renderAch(){
   const sorted=[...list.filter(a=>achDone[a.id]),...list.filter(a=>!achDone[a.id]).sort((x,y)=>y.prog/y.target-x.prog/x.target)];
   const bcard=def=>{ const [id,icon,title,desc]=def, n=(badges[id]||{n:0}).n, tr=tierOf(n), nt=nextTier(n);
     return `<div class="achc ${n?"got":"lock"} ${tr?tr[2]:""}"><span class="ai">${ico(icon,20)}</span><div><b>${esc(title)}${n?` <em class="cnt">×${n}</em>`:""}</b><small>${esc(desc)}</small>`
-      +(n?`<small class="tl">${tr?tr[3]+" · ":""}${n} / ${nt[0]} to ${nt[1]}</small><div class="pb"><i style="width:${(n%5)*20}%"></i></div>`:`<small class="tl">Not earned yet</small>`)+`</div></div>`; };
+      +(n?`<small class="tl">${tr?tr[3]+" · ":""}${n} / ${nt[0]} to ${nt[1]}</small><div class="pb"><i style="width:${Math.round((n-(tr?tr[4]-tr[5]:0))/(nt[0]-(tr?tr[4]-tr[5]:0))*100)}%"></i></div>`:`<small class="tl">Not earned yet</small>`)+`</div></div>`; };
   const bsorted=[...BADGES].sort((a,b)=>((badges[b[0]]||{n:0}).n>0)-((badges[a[0]]||{n:0}).n>0)||(badges[b[0]]||{n:0}).n-(badges[a[0]]||{n:0}).n);
   const bTotal=Object.values(badges).reduce((s,b)=>s+b.n,0);
   const tiers=Object.fromEntries(TIERS.map(([,,k])=>[k,0])); for(const [id] of BADGES){ const t=tierOf((badges[id]||{n:0}).n); if(t) tiers[t[2]]++; }
   const kinds=BADGES.filter(([id])=>(badges[id]||{n:0}).n>0).length, pctA=list.length?Math.round(got/list.length*100):0;
   const nextA=sorted.find(a=>!achDone[a.id]);
   let ci=0; const num=h=>h.replace(/<div class="achc /g,()=>`<div style="--i:${Math.min(ci++,16)}" class="achc `);
-  $("badgeBody").innerHTML=`<div class="hero"><span class="big">${ico("medal",34)}</span><div><h3>${bTotal} badge${bTotal===1?"":"s"} earned</h3><p>${kinds} of ${BADGES.length} kinds collected. Earn them again to climb the tiers.</p><div class="tally">${TIERS.slice().reverse().map(([,n,k])=>`<span class="${k}${tiers[k]?"":" off"}">${n} ${tiers[k]}</span>`).join("")}</div></div></div><p class="note">5 badges make a Bronze, 5 Bronzes a Silver, 5 Silvers a Gold, 5 Golds a Platinum. Each extra Bronze lifts the level: Silver I, Silver II and so on.</p><div class="achgrid">${num(bsorted.map(bcard).join(""))}</div>`;
+  $("badgeBody").innerHTML=`<div class="hero"><span class="big">${ico("medal",34)}</span><div><h3>${bTotal} badge${bTotal===1?"":"s"} earned</h3><p>${kinds} of ${BADGES.length} kinds collected. Earn them again to climb the tiers.</p><div class="tally">${TIERS.slice().reverse().map(([,n,k])=>`<span class="${k}${tiers[k]?"":" off"}">${n} ${tiers[k]}</span>`).join("")}</div></div></div><p class="note">Five of a badge is a Bronze. Every five more is Bronze I, II, III, IV, then Silver. Silver steps are 25 each, Gold 125, Platinum 625, then Diamond.</p><div class="achgrid">${num(bsorted.map(bcard).join(""))}</div>`;
   ci=0;
   $("achBody").innerHTML=`<div class="hero"><span class="ring" style="--p:${pctA}"><b>${got}<small>/${list.length}</small></b></span><div><h3>${pctA}% unlocked</h3><p>${nextA?`Next up: <b>${esc(nextA.title)}</b>, ${Math.min(nextA.prog,nextA.target)} of ${nextA.target}.`:"Every milestone unlocked. Legend."}</p></div></div><p class="note">One-time milestones. The closest ones to finishing come first.</p><div class="achgrid">${num(sorted.map(card).join(""))}</div>`;
   $("ptBadges").innerHTML=`Badges <em>${bTotal}</em>`; $("ptAch").innerHTML=`Achievements <em>${got}/${list.length}</em>`;
