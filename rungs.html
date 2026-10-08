@@ -4,206 +4,261 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Rungs: a word ladder game. Change one letter at a time to climb from word to word.">
-<meta name="theme-color" content="#e9eef3" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#111921" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0d0a23">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Rungs">
 <meta property="og:title" content="Rungs">
 <meta property="og:description" content="Change one letter at a time to climb from word to word. Daily ladders, levels, Sprint, Par or Bust and Marathon modes in 4, 5 and 6 letters.">
 <title>Rungs Word Ladder</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@500;600;700&display=swap">
 <style>
-/* Layout: one-screen app with stacked screens (home, levels, badges, game). The game is a ladder: two rails, each word a rung. Keyboard pinned to the bottom. */
+/* Layout: arcade cabinet. Neon ladder on a midnight grid; chunky 3D tiles and keys. Home = logo, Daily button, one list of modes. Mode details live in a bottom sheet. */
 :root{
-  --bg:#e9eef3; --panel:#f7f9fb; --panel-2:#dfe6ed; --ink:#17212b; --muted:#5d6b78; --rail:#b9c5d0;
-  --tile:#ffffff; --tile-edge:#c9d3dc; --accent:#e0a526; --accent-ink:#2a1d00;
-  --match:#2f8f6b; --match-ink:#ffffff; --bad:#c2453b; --key:#d7dfe6; --key-ink:#17212b; --scrim:rgba(233,238,243,.72);
-  --display:"Bricolage Grotesque", "Arial Rounded MT Bold", system-ui, sans-serif;
-  --body:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --tile-size:clamp(40px, 13vw, 56px);
+  --bg:#0d0a23; --bg-2:#151036; --panel:#1c1647; --panel-hi:#28205f; --edge:#3a2f86; --deep:#09061a;
+  --ink:#f5f2ff; --muted:#a69ed4;
+  --yellow:#ffd23f; --yellow-d:#b88a00; --pink:#ff4f9a; --pink-d:#a51d5a; --cyan:#3ee3ff; --cyan-d:#0b86a8;
+  --green:#3df5a0; --green-d:#0f9a5e; --violet:#9b7bff; --violet-d:#5a3fc4; --red:#ff5d6c;
+  --on-bright:#1a0f00;
+  --display:"Bungee","Arial Black",Impact,system-ui,sans-serif;
+  --body:"Chakra Petch",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#111921; --panel:#18232d; --panel-2:#22303c; --ink:#e8eef3; --muted:#93a3b1; --rail:#33424f;
-  --tile:#1f2c38; --tile-edge:#34465a; --accent:#f0b83a; --accent-ink:#2a1d00;
-  --match:#3fae86; --match-ink:#08140f; --bad:#ef6a5f; --key:#2a3946; --key-ink:#e8eef3; --scrim:rgba(17,25,33,.72); color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#111921; --panel:#18232d; --panel-2:#22303c; --ink:#e8eef3; --muted:#93a3b1; --rail:#33424f;
-  --tile:#1f2c38; --tile-edge:#34465a; --accent:#f0b83a; --accent-ink:#2a1d00;
-  --match:#3fae86; --match-ink:#08140f; --bad:#ef6a5f; --key:#2a3946; --key-ink:#e8eef3; --scrim:rgba(17,25,33,.72); color-scheme:dark}
 [hidden]{display:none!important}
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-weight:500;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;
+  background-image:radial-gradient(ellipse 80% 45% at 50% -5%,rgba(155,123,255,.32),transparent 70%),
+    linear-gradient(rgba(62,227,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(62,227,255,.05) 1px,transparent 1px);
+  background-size:100% 100%,28px 28px,28px 28px;background-attachment:fixed}
 button{font:inherit;color:inherit}
-button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button:focus-visible,a:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
 .screen{height:100%;display:flex;flex-direction:column;max-width:480px;margin:0 auto;padding-inline:16px}
 
-/* shared */
-.topbar{display:flex;align-items:center;gap:8px;padding-block:12px 6px}
+/* chunky buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:14px;cursor:pointer;font:400 1rem var(--display);letter-spacing:.02em;padding:14px 20px;
+  background:var(--yellow);color:var(--on-bright);box-shadow:0 5px 0 var(--yellow-d);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--yellow-d)}
+.btn.block{display:flex;width:100%}
+.btn.ghost{background:var(--panel-hi);color:var(--ink);box-shadow:0 5px 0 var(--deep)}
+.btn.ghost:active{box-shadow:0 1px 0 var(--deep)}
+.icon-btn{position:relative;width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:12px;background:var(--panel);box-shadow:0 4px 0 var(--deep);cursor:pointer;color:var(--ink);transition:transform .08s,box-shadow .08s}
+.icon-btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--deep)}
+.icon-btn svg{width:22px;height:22px}
+.icon-btn .count{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--pink);color:#fff;font:400 .62rem/20px var(--display);text-align:center}
+.icon-btn:disabled{opacity:.35;cursor:default}
+.eyebrow{font:600 .72rem var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-variant-numeric:tabular-nums}
+.stars{letter-spacing:.06em;color:var(--yellow);text-shadow:0 0 10px rgba(255,210,63,.5)}
+.stars .off{color:var(--edge);text-shadow:none}
+
+/* ---------- HOME ---------- */
+#home{overflow-y:auto}
+.hometop{display:flex;justify-content:flex-end;gap:10px;padding-block:14px 0}
+.marquee{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:8px 22px}
+.logo{margin:0;font:400 clamp(3.2rem,17vw,4.6rem)/.85 var(--display);letter-spacing:-.01em;
+  background:linear-gradient(180deg,var(--yellow) 10%,var(--pink) 95%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 4px 0 var(--pink-d)) drop-shadow(0 0 24px rgba(255,79,154,.35))}
+.tag{margin:12px 0 0;color:var(--muted);font-size:1rem;line-height:1.35;max-width:20ch}
+.neonlad{position:relative;flex:none;width:92px;height:112px}
+.neonlad i{position:absolute;top:0;bottom:0;width:5px;border-radius:3px;background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
+.neonlad i:first-child{left:6px}.neonlad i:nth-child(2){right:6px}
+.neonlad b{position:absolute;left:6px;right:6px;height:4px;border-radius:2px;background:var(--cyan);box-shadow:0 0 10px var(--cyan);opacity:.85}
+.neonlad span{position:absolute;left:50%;width:30px;height:30px;margin-left:-15px;border-radius:8px;display:grid;place-items:center;font:400 1rem var(--display);
+  background:var(--yellow);color:var(--on-bright);box-shadow:0 4px 0 var(--yellow-d);animation:climb 3.2s cubic-bezier(.6,0,.3,1) infinite}
+@keyframes climb{0%,12%{top:78px}30%,42%{top:44px}60%,72%{top:10px}90%,100%{top:78px}}
+
+.daily{position:relative;display:block;width:100%;text-align:left;border:0;cursor:pointer;border-radius:22px;padding:3px;
+  background:linear-gradient(120deg,var(--pink),var(--yellow),var(--cyan));box-shadow:0 7px 0 var(--pink-d),0 0 40px rgba(255,79,154,.25);transition:transform .1s,box-shadow .1s}
+.daily:active{transform:translateY(5px);box-shadow:0 2px 0 var(--pink-d)}
+.daily-in{display:flex;align-items:center;gap:14px;border-radius:19px;background:var(--bg-2);padding:18px}
+.daily-in .txt{flex:1;min-width:0}
+.daily-in .eyebrow{color:var(--yellow)}
+.daily-in b{display:block;font:400 1.55rem/1.05 var(--display);margin:4px 0 6px}
+.daily-in small{display:block;color:var(--muted);font-size:.95rem}
+.daily-go{flex:none;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:var(--yellow);color:var(--on-bright);box-shadow:0 5px 0 var(--yellow-d);font:400 .82rem var(--display)}
+.daily-go svg{width:28px;height:28px}
+.daily-go.ok{background:var(--green);box-shadow:0 5px 0 var(--green-d)}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;background:rgba(255,79,154,.16);color:var(--pink);font:700 .78rem var(--body)}
+.chip svg{width:13px;height:13px}
+
+.sec{display:flex;align-items:baseline;justify-content:space-between;margin:28px 2px 12px}
+.sec h2{margin:0;font:400 1rem var(--display);letter-spacing:.04em}
+.modes{display:flex;flex-direction:column;gap:12px}
+.mrow{--c:var(--cyan);--cd:var(--cyan-d);display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:0;cursor:pointer;background:var(--panel);border-radius:18px;padding:12px 14px;box-shadow:0 5px 0 var(--deep);transition:transform .08s,box-shadow .08s}
+.mrow:active{transform:translateY(4px);box-shadow:0 1px 0 var(--deep)}
+.mrow .ico{flex:none;width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:var(--c);color:var(--on-bright);box-shadow:0 4px 0 var(--cd),0 0 18px color-mix(in srgb,var(--c) 35%,transparent)}
+.mrow .ico svg{width:24px;height:24px}
+.mrow .txt{flex:1;min-width:0}
+.mrow b{display:block;font:400 1.05rem var(--display);letter-spacing:.02em}
+.mrow small{display:block;color:var(--muted);font-size:.9rem;margin-top:2px}
+.mrow .chev{flex:none;color:var(--muted);font:400 1.1rem var(--display)}
+.homefoot{display:flex;justify-content:center;padding-block:22px calc(26px + env(safe-area-inset-bottom,0px))}
+.linkbtn{border:0;background:none;color:var(--muted);font:600 .95rem var(--body);text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:6px}
+
+/* ---------- SUB SCREENS ---------- */
+.topbar{display:flex;align-items:center;gap:10px;padding-block:14px 8px}
 .topbar .grow{flex:1;min-width:0}
 .topbar .eyebrow{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ibtn{border:1px solid var(--tile-edge);background:var(--panel);color:var(--ink);border-radius:10px;height:38px;min-width:38px;padding:0 11px;font:700 .84rem var(--body);cursor:pointer}
-.ibtn:disabled{opacity:.4;cursor:default}
-.ibtn.back{padding:0;font-size:1.15rem}
-.eyebrow{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-variant-numeric:tabular-nums}
-.h2{font-family:var(--display);font-weight:800;font-size:1.2rem;margin:0;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.stars{letter-spacing:.08em;color:var(--accent);font-size:.95rem}
-.stars .off{color:var(--rail)}
-.seg{display:flex;background:var(--panel-2);border-radius:12px;padding:3px;gap:3px}
-.seg button{flex:1;border:0;background:none;border-radius:9px;padding:8px 6px;font:800 .9rem var(--display);cursor:pointer;color:var(--muted)}
-.seg button[aria-checked="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
-
-/* home */
-#home{overflow-y:auto}
-.hero{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:20px 16px}
-.hero h1{font-family:var(--display);font-weight:800;font-size:clamp(2.6rem,12vw,3.4rem);letter-spacing:-.035em;margin:0;line-height:.9}
-.hero p{margin:10px 0 0;color:var(--muted);line-height:1.4;max-width:22ch}
-.mini{position:relative;display:flex;flex-direction:column;gap:5px;padding:0 12px;flex:none}
-.mini::before,.mini::after{content:"";position:absolute;top:-6px;bottom:-6px;width:4px;border-radius:2px;background:var(--rail)}
-.mini::before{left:0}.mini::after{right:0}
-.mini .r,.ex .r{display:flex;gap:3px}
-.mini span{width:20px;height:20px;display:grid;place-items:center;border-radius:5px;background:var(--tile);border:1px solid var(--tile-edge);font:800 .7rem var(--display);text-transform:uppercase}
-.mini span.c,.ex span.c{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.mini .r:last-child span,.ex .r:last-child span{background:var(--match);border-color:var(--match);color:var(--match-ink)}
-.daily{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--panel);border:2px solid var(--accent);border-radius:16px;padding:16px;cursor:pointer;transition:transform .12s}
-.daily:active,.mcard:active{transform:scale(.985)}
-.daily .txt{flex:1;min-width:0}
-.daily b{display:block;font-family:var(--display);font-size:1.25rem;font-weight:800}
-.daily small{display:block;color:var(--muted);margin-top:3px;font-size:.88rem;line-height:1.35}
-.go{flex:none;font:800 .85rem var(--display);padding:8px 14px;border-radius:999px;background:var(--accent);color:var(--accent-ink)}
-.go.ok{background:var(--match);color:var(--match-ink)}
-.lenrow{display:flex;align-items:center;gap:12px;margin:18px 0 10px}
-.lenrow .eyebrow{flex:none}
-.lenrow .seg{flex:1}
-.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.mcard{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;background:var(--panel);border:1px solid var(--tile-edge);border-radius:16px;padding:14px;cursor:pointer;min-width:0;transition:transform .12s}
-.mcard .ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--panel-2);color:var(--ink)}
-.mcard .ico svg{width:20px;height:20px}
-.mcard b{font-family:var(--display);font-size:1.08rem;font-weight:800}
-.mcard small{color:var(--muted);font-size:.8rem;line-height:1.3}
-.mcard .best{font-size:.76rem;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;margin-top:auto}
-.settings{margin-top:12px}
-.toggle{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;padding:12px 4px;cursor:pointer;border-bottom:1px solid var(--tile-edge)}
-.toggle .txt{flex:1}.toggle b{display:block;font-size:.98rem}.toggle small{color:var(--muted);font-size:.82rem}
-.sw{flex:none;width:44px;height:26px;border-radius:13px;background:var(--rail);position:relative;transition:background .2s}
-.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
-.toggle[aria-checked="true"] .sw{background:var(--match)}
-.toggle[aria-checked="true"] .sw::after{transform:translateX(18px)}
-.links{display:flex;gap:8px;padding-block:14px calc(20px + env(safe-area-inset-bottom,0px))}
-.links .ibtn{flex:1;height:44px}
-.links .ibtn b{color:var(--accent)}
-
-/* levels */
+.title{margin:2px 0 0;font:400 1.15rem/1.1 var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #levels,#badges{overflow:hidden}
-.scroll{flex:1;min-height:0;overflow-y:auto;padding-block:8px calc(20px + env(safe-area-inset-bottom,0px))}
-.lv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;align-content:start}
-.lv{aspect-ratio:1;max-width:100%;border:1px solid var(--tile-edge);background:var(--panel);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;padding:4px}
-.lv b{font:800 1.25rem var(--display);font-variant-numeric:tabular-nums}
-.lv .stars{font-size:.7rem}
-.lv.next{border:2px solid var(--accent)}
-.lv:disabled{opacity:.38;cursor:default}
-.lv-band{grid-column:1/-1;font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding-top:8px}
+.scroll{flex:1;min-height:0;overflow-y:auto;padding-block:10px calc(24px + env(safe-area-inset-bottom,0px))}
+.seg{display:flex;gap:6px;background:var(--deep);border-radius:14px;padding:5px}
+.seg button{flex:1;border:0;border-radius:10px;padding:10px 6px;background:none;color:var(--muted);font:400 .85rem var(--display);cursor:pointer}
+.seg button[aria-checked="true"]{background:var(--cyan);color:var(--on-bright);box-shadow:0 3px 0 var(--cyan-d)}
+.lv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-content:start}
+.lv{aspect-ratio:1;max-width:100%;border:0;background:var(--panel-hi);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding:4px;box-shadow:0 5px 0 var(--deep);transition:transform .08s,box-shadow .08s}
+.lv:active{transform:translateY(4px);box-shadow:0 1px 0 var(--deep)}
+.lv b{font:400 1.35rem var(--display);font-variant-numeric:tabular-nums}
+.lv .stars{font-size:.72rem}
+.lv.done{background:var(--panel)}
+.lv.next{background:var(--yellow);color:var(--on-bright);box-shadow:0 5px 0 var(--yellow-d),0 0 20px rgba(255,210,63,.35)}
+.lv:disabled{opacity:.3;cursor:default;box-shadow:none;transform:none}
+.lv-band{grid-column:1/-1;margin-top:10px}
 
-/* badges */
-.bsum{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--tile-edge);border-radius:14px;padding:12px 14px;margin-bottom:12px}
-.bsum b{font:800 1.6rem var(--display);font-variant-numeric:tabular-nums}
-.bar{height:8px;border-radius:4px;background:var(--panel-2);overflow:hidden;flex:1}
-.bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
-.bgroup{font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:14px 2px 8px}
-.blist{display:flex;flex-direction:column;gap:8px}
-.badge{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--tile-edge);border-radius:14px;padding:10px 12px}
-.medal{flex:none;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--panel-2);color:var(--muted);border:2px dashed var(--rail)}
-.medal svg{width:22px;height:22px}
-.badge.got .medal{background:var(--accent);color:var(--accent-ink);border:2px solid var(--accent);box-shadow:inset 0 0 0 3px var(--panel)}
-.badge .txt{flex:1;min-width:0}
-.badge b{display:block;font-family:var(--display);font-weight:800;font-size:1rem}
-.badge small{display:block;color:var(--muted);font-size:.84rem;line-height:1.3}
-.badge .prog{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums}
-.badge:not(.got){opacity:.92}
-.badge.got small{color:var(--ink)}
+.bsum{display:flex;align-items:center;gap:14px;background:var(--panel);border-radius:18px;padding:14px 16px;margin-bottom:6px;box-shadow:0 5px 0 var(--deep)}
+.bsum b{font:400 2rem var(--display);color:var(--yellow)}
+.bar{height:10px;border-radius:5px;background:var(--deep);overflow:hidden;flex:1}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--pink),var(--yellow));border-radius:5px}
+.bgroup{margin:20px 2px 10px}
+.bgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.badge{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;background:var(--panel);border:0;border-radius:16px;padding:14px 8px 12px;cursor:pointer;min-width:0;box-shadow:0 4px 0 var(--deep)}
+.medal{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:var(--deep);color:var(--edge);border:2px dashed var(--edge)}
+.medal svg{width:26px;height:26px}
+.badge.got .medal{background:radial-gradient(circle at 35% 30%,#fff3b8,var(--yellow) 45%,#e09a00);color:var(--on-bright);border:0;box-shadow:0 0 0 3px var(--bg-2),0 0 0 5px var(--yellow),0 0 20px rgba(255,210,63,.45)}
+.badge b{font:700 .84rem/1.15 var(--body)}
+.badge:not(.got) b{color:var(--muted)}
+.badge .mini-bar{width:70%;height:5px;border-radius:3px;background:var(--deep);overflow:hidden}
+.badge .mini-bar i{display:block;height:100%;background:var(--cyan)}
 
-/* game */
-.status{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.9rem;color:var(--muted);padding-block:2px 6px;font-variant-numeric:tabular-nums;min-height:28px}
-.status b{color:var(--ink)}
-.lives{display:inline-flex;gap:2px;vertical-align:-2px}
-.lives svg{width:16px;height:16px;color:var(--bad)}
-.lives svg.lost{color:var(--rail)}
-.linkish{border:0;background:none;color:var(--muted);text-decoration:underline;cursor:pointer;padding:0;font-size:.9rem}
-.clock.low{color:var(--bad)}
+/* ---------- GAME ---------- */
+.hud{display:flex;gap:8px;padding-block:2px 8px}
+.hud .gamebar-btn{flex:none;height:40px}
+.hud .pill{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:40px;border-radius:12px;background:var(--panel);font:700 .92rem var(--body);font-variant-numeric:tabular-nums;color:var(--muted);padding:0 8px;white-space:nowrap}
+.hud .pill b{color:var(--ink);font:400 1rem var(--display)}
+.hud .pill.clock b{color:var(--cyan)}
+.hud .pill.clock.low b{color:var(--red);animation:blink .6s steps(2) infinite}
+@keyframes blink{50%{opacity:.35}}
+.hud .pill.over b{color:var(--red)}
+.lives{display:inline-flex;gap:3px}
+.lives svg{width:18px;height:18px;color:var(--pink);filter:drop-shadow(0 0 4px var(--pink))}
+.lives svg.lost{color:var(--edge);filter:none}
 .ladder-wrap{flex:1;min-height:0;overflow-y:auto;position:relative;scroll-behavior:smooth}
-.ladder{--n:4;--gapx:6px;position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;padding-block:8px 16px;min-height:100%}
-.ladder::before,.ladder::after{content:"";position:absolute;top:0;bottom:0;width:5px;border-radius:3px;background:var(--rail)}
+.ladder{--n:4;--gapx:7px;position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;padding-block:10px 18px;min-height:100%}
+.ladder::before,.ladder::after{content:"";position:absolute;top:0;bottom:0;width:5px;border-radius:3px;background:var(--cyan);box-shadow:0 0 12px var(--cyan);opacity:.75}
 .ladder::before{left:calc(50% - (var(--ts)*var(--n)/2 + var(--gapx)*(var(--n) - 1)/2 + 20px))}
 .ladder::after{right:calc(50% - (var(--ts)*var(--n)/2 + var(--gapx)*(var(--n) - 1)/2 + 20px))}
 .row{position:relative;display:flex;gap:var(--gapx);z-index:1}
-.row::before{content:"";position:absolute;left:-20px;right:-20px;top:50%;height:3px;background:var(--rail);z-index:-1}
-.tile{width:var(--ts);height:var(--ts);display:grid;place-items:center;background:var(--tile);border:2px solid var(--tile-edge);border-radius:10px;font:800 calc(var(--ts)*.5) var(--display);text-transform:uppercase;color:var(--ink);transition:transform .15s, background .2s, border-color .2s;padding:0}
-.row.done .tile{border-color:transparent;box-shadow:0 1px 0 var(--tile-edge)}
-.tile.on{background:var(--match);border-color:var(--match);color:var(--match-ink)}
-.tile.changed{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.row.goal .tile{background:transparent;border-style:dashed;color:var(--muted)}
-.row.goal .tile.on{background:var(--match);border:2px solid var(--match);color:var(--match-ink)}
-.row.cur .tile{cursor:pointer;border-color:var(--ink)}
-.row.cur .tile.sel{transform:translateY(-4px);border-color:var(--accent);box-shadow:0 0 0 3px var(--accent)}
-.gap{color:var(--muted);font-size:.8rem;letter-spacing:.05em;z-index:1;background:var(--bg);padding:2px 8px}
-.gap.over{color:var(--bad)}
+.row::before{content:"";position:absolute;left:-20px;right:-20px;top:50%;height:4px;margin-top:-2px;border-radius:2px;background:var(--cyan);box-shadow:0 0 8px var(--cyan);opacity:.55;z-index:-1}
+.tile{width:var(--ts);height:var(--ts);display:grid;place-items:center;border:0;border-radius:12px;background:var(--panel-hi);color:var(--ink);font:400 calc(var(--ts)*.48) var(--display);text-transform:uppercase;box-shadow:0 5px 0 var(--deep);padding:0;transition:transform .15s}
+.tile.on{background:var(--green);color:var(--on-bright);box-shadow:0 5px 0 var(--green-d)}
+.tile.changed{background:var(--yellow);color:var(--on-bright);box-shadow:0 5px 0 var(--yellow-d)}
+.row.done .tile{opacity:.92}
+.row.cur .tile{cursor:pointer;background:#3b2f92;box-shadow:0 5px 0 var(--violet-d),inset 0 0 0 2px var(--violet)}
+.row.cur .tile.on{background:var(--green);box-shadow:0 5px 0 var(--green-d)}
+.row.cur .tile.changed{background:var(--yellow);box-shadow:0 5px 0 var(--yellow-d)}
+.row.cur .tile.sel{transform:translateY(-6px);box-shadow:0 11px 0 var(--pink-d),inset 0 0 0 3px var(--pink),0 0 22px rgba(255,79,154,.6)}
+.row.goal .tile{background:transparent;color:var(--cyan);box-shadow:inset 0 0 0 2px var(--cyan),0 0 14px rgba(62,227,255,.25);text-shadow:0 0 10px var(--cyan)}
+.row.goal .tile.on{background:var(--green);color:var(--on-bright);box-shadow:0 5px 0 var(--green-d);text-shadow:none}
+.gap{z-index:1;font:600 .82rem var(--body);letter-spacing:.06em;color:var(--muted);background:var(--bg);padding:3px 10px;border-radius:999px}
+.gap.over{color:var(--red)}
+.flip{animation:flip .35s ease-out}
+@keyframes flip{0%{transform:rotateX(90deg) scale(.9)}100%{transform:none}}
 .shake{animation:shake .32s}
-@keyframes shake{20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
-.pop{animation:pop .25s}
-@keyframes pop{50%{transform:scale(1.12)}}
-.flashwin .tile{animation:win .5s}
-@keyframes win{40%{transform:translateY(-8px)}}
-.hint-line{font-size:.84rem;color:var(--muted);text-align:center;min-height:1.25em;padding-block:2px}
-.kb{display:flex;flex-direction:column;gap:7px;padding-block:8px calc(12px + env(safe-area-inset-bottom,0px))}
+@keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.flashwin .tile{animation:hop .5s calc(var(--i,0)*60ms) both}
+@keyframes hop{40%{transform:translateY(-12px)}}
+.hint-line{font:600 .88rem var(--body);color:var(--yellow);text-align:center;min-height:1.3em;padding-block:2px}
+.kb{display:flex;flex-direction:column;gap:9px;padding-block:8px calc(14px + env(safe-area-inset-bottom,0px))}
 .kr{display:flex;gap:5px;justify-content:center}
-.key{flex:1;max-width:42px;height:50px;border:0;border-radius:8px;background:var(--key);color:var(--key-ink);font:700 1.05rem var(--display);text-transform:uppercase;cursor:pointer;touch-action:manipulation;transition:transform .08s;padding:0}
-.key:active{transform:scale(.92)}
-.key.wide{max-width:none;flex:1.5;font:700 .95rem var(--body)}
+.key{flex:1;max-width:42px;height:50px;border:0;border-radius:10px;background:var(--panel-hi);color:var(--ink);font:400 1rem var(--display);text-transform:uppercase;cursor:pointer;touch-action:manipulation;box-shadow:0 4px 0 var(--deep);transition:transform .06s,box-shadow .06s;padding:0}
+.key:active{transform:translateY(3px);box-shadow:0 1px 0 var(--deep);background:var(--violet)}
+.key.wide{max-width:none;flex:1.5;background:var(--panel);color:var(--cyan)}
+.gamebar-btn{height:44px;padding:0 14px;border:0;border-radius:12px;background:var(--panel);color:var(--ink);font:400 .78rem var(--display);box-shadow:0 4px 0 var(--deep);cursor:pointer;transition:transform .08s,box-shadow .08s}
+.gamebar-btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--deep)}
+.gamebar-btn:disabled{opacity:.35;cursor:default}
+.gamebar-btn.hint{background:var(--cyan);color:var(--on-bright);box-shadow:0 4px 0 var(--cyan-d)}
+.skip{border:0;background:none;color:var(--muted);font:600 .85rem var(--body);text-decoration:underline;cursor:pointer;padding:0 4px}
+.skip:disabled{opacity:.35}
 
-/* overlays */
-.toasts{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 214px);flex-direction:column-reverse;display:flex;align-items:center;gap:6px;z-index:40;pointer-events:none;padding-inline:16px}
-.toast{background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-weight:700;font-size:.9rem;text-align:center;animation:tin .2s;max-width:100%}
-.toast.badge-t{background:var(--accent);color:var(--accent-ink);border-radius:14px;display:flex;align-items:center;gap:10px;text-align:left}
-.toast.badge-t svg{width:22px;height:22px;flex:none}
-.toast.badge-t small{display:block;font-weight:400;font-size:.8rem}
-@keyframes tin{from{opacity:0;transform:translateY(-6px)}}
-.modal{position:fixed;inset:0;display:grid;place-items:center;background:var(--scrim);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);z-index:20;padding:16px;overflow-y:auto}
-.card{background:var(--panel);border:1px solid var(--tile-edge);border-radius:18px;padding:22px 20px;max-width:360px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.18);animation:pop .3s}
-.card h2{font-family:var(--display);font-size:1.6rem;margin:0 0 4px;text-wrap:balance;text-align:center}
-.card .stars{display:block;text-align:center;font-size:1.6rem;margin-bottom:12px}
+/* ---------- OVERLAYS ---------- */
+.toasts{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 222px);display:flex;flex-direction:column-reverse;align-items:center;gap:6px;z-index:40;pointer-events:none;padding-inline:16px}
+.toast{background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:12px;font:700 .92rem var(--body);text-align:center;animation:tin .2s;max-width:100%;box-shadow:0 4px 0 rgba(0,0,0,.4)}
+.toast.badge-t{background:var(--yellow);color:var(--on-bright);display:flex;align-items:center;gap:10px;text-align:left;box-shadow:0 4px 0 var(--yellow-d),0 0 30px rgba(255,210,63,.5)}
+.toast.badge-t svg{width:24px;height:24px;flex:none}
+.toast.badge-t small{display:block;font-weight:500;font-size:.8rem}
+.toast.good{background:var(--green);color:var(--on-bright)}
+.toast.bad{background:var(--red);color:#fff}
+@keyframes tin{from{opacity:0;transform:translateY(8px) scale(.95)}}
+.modal{position:fixed;inset:0;display:grid;place-items:center;background:rgba(6,4,18,.78);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);z-index:20;padding:16px;overflow-y:auto}
+.card{position:relative;background:var(--bg-2);border-radius:24px;padding:24px 20px 20px;max-width:370px;width:100%;box-shadow:0 0 0 2px var(--edge),0 24px 60px rgba(0,0,0,.6);animation:zoom .3s cubic-bezier(.3,1.5,.6,1)}
+@keyframes zoom{from{transform:scale(.85);opacity:0}}
+.card h2{margin:0 0 6px;text-align:center;font:400 2rem/1 var(--display);text-wrap:balance;
+  background:linear-gradient(180deg,var(--yellow),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 0 var(--pink-d))}
+.card .stars{display:block;text-align:center;font-size:2.2rem;margin:6px 0 14px}
+.card .stars span.s{display:inline-block;animation:starin .4s cubic-bezier(.3,1.6,.6,1) both}
+@keyframes starin{from{transform:scale(0) rotate(-40deg)}}
 .card p{color:var(--muted);margin:0 0 14px;line-height:1.45}
-.card .sub{text-align:center;color:var(--muted);margin:0 0 14px}
 .nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;text-align:center}
-.nums div{background:var(--bg);border-radius:10px;padding:8px 4px}
-.nums b{display:block;font:800 1.3rem var(--display);font-variant-numeric:tabular-nums}
-.nums span{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.nums div{background:var(--panel);border-radius:12px;padding:10px 4px}
+.nums b{display:block;font:400 1.35rem var(--display);font-variant-numeric:tabular-nums}
+.nums span{font:600 .68rem var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .route{margin-bottom:12px}
-.route .eyebrow{margin-bottom:4px}
-.route div:last-child{font:700 .92rem var(--display);letter-spacing:.05em;text-transform:uppercase;line-height:1.55;overflow-wrap:anywhere}
+.route .eyebrow{margin-bottom:5px}
+.route div:last-child{font:400 .82rem/1.7 var(--display);letter-spacing:.04em;overflow-wrap:anywhere}
 .newbadges{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
-.newbadges div{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:10px;padding:8px 10px;font-weight:700;font-size:.9rem}
-.newbadges .medal{width:32px;height:32px;background:var(--accent);color:var(--accent-ink);border:0}
-.newbadges .medal svg{width:16px;height:16px}
-.big{display:block;width:100%;border:0;border-radius:12px;background:var(--accent);color:var(--accent-ink);font:800 1rem var(--display);padding:13px 22px;cursor:pointer}
-.row-btns{display:flex;gap:8px;margin-top:8px}
-.row-btns button{flex:1;border:1px solid var(--tile-edge);background:var(--bg);border-radius:12px;padding:11px 8px;font:700 .9rem var(--body);cursor:pointer}
-.share-fallback{width:100%;margin-top:8px;font:.85rem/1.4 ui-monospace,Menlo,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--tile-edge);border-radius:8px;padding:8px;resize:none}
+.newbadges div{display:flex;align-items:center;gap:10px;background:var(--panel);border-radius:12px;padding:8px 10px;font-weight:700}
+.newbadges .medal{width:34px;height:34px;background:var(--yellow);color:var(--on-bright);border:0}
+.newbadges .medal svg{width:17px;height:17px}
+.row-btns{display:flex;gap:8px;margin-top:12px}
+.row-btns .btn{flex:1;padding:12px 6px;font-size:.78rem}
+.share-fallback{width:100%;margin-top:10px;font:.85rem/1.4 ui-monospace,Menlo,monospace;background:var(--deep);color:var(--ink);border:0;border-radius:10px;padding:10px;resize:none}
 .how ol{margin:0 0 14px;padding-left:1.2em;line-height:1.5}
 .how li{margin-bottom:6px}
-.ex{display:flex;flex-direction:column;align-items:center;gap:4px;margin:4px 0 16px}
-.ex span{width:26px;height:26px;display:grid;place-items:center;border-radius:6px;background:var(--tile);border:1px solid var(--tile-edge);font:800 .85rem var(--display);text-transform:uppercase}
-.modes-how{margin:0 0 14px;display:flex;flex-direction:column;gap:8px}
-.modes-how div{font-size:.9rem;line-height:1.4}
-.modes-how b{font-family:var(--display)}
-.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
-.stat-grid div{background:var(--bg);border-radius:10px;padding:10px}
-.stat-grid b{display:block;font:800 1.5rem var(--display);font-variant-numeric:tabular-nums}
-.stat-grid span{font-size:.78rem;color:var(--muted)}
-.countdown{position:fixed;inset:0;display:grid;place-items:center;z-index:25;background:var(--scrim);font:800 6rem var(--display);color:var(--ink)}
+.ex{display:flex;flex-direction:column;align-items:center;gap:6px;margin:6px 0 18px}
+.ex .r{display:flex;gap:4px}
+.ex span{width:30px;height:30px;display:grid;place-items:center;border-radius:8px;background:var(--panel-hi);font:400 .9rem var(--display);box-shadow:0 3px 0 var(--deep)}
+.ex span.c{background:var(--yellow);color:var(--on-bright);box-shadow:0 3px 0 var(--yellow-d)}
+.ex .r:last-child span{background:var(--green);color:var(--on-bright);box-shadow:0 3px 0 var(--green-d)}
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px}
+.stat-grid div{background:var(--panel);border-radius:12px;padding:12px}
+.stat-grid b{display:block;font:400 1.4rem var(--display);color:var(--yellow);font-variant-numeric:tabular-nums}
+.stat-grid span{font-size:.82rem;color:var(--muted)}
+.toggle{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--panel);border:0;border-radius:14px;padding:14px;cursor:pointer;margin-bottom:12px}
+.toggle .txt{flex:1}.toggle b{display:block;font:400 .95rem var(--display)}.toggle small{color:var(--muted);font-size:.86rem}
+.sw{flex:none;width:50px;height:30px;border-radius:15px;background:var(--deep);position:relative;transition:background .2s;box-shadow:inset 0 0 0 2px var(--edge)}
+.sw::after{content:"";position:absolute;top:4px;left:4px;width:22px;height:22px;border-radius:50%;background:var(--muted);transition:transform .2s,background .2s}
+.toggle[aria-checked="true"] .sw{background:var(--green);box-shadow:none}
+.toggle[aria-checked="true"] .sw::after{transform:translateX(20px);background:#fff}
+.badge-detail{text-align:center}
+.badge-detail .medal{margin:0 auto 12px;width:84px;height:84px}
+.badge-detail .medal svg{width:38px;height:38px}
+.badge-detail h3{margin:0 0 6px;font:400 1.25rem var(--display)}
+.badge-detail .bar{margin:12px 0 6px}
+
+/* bottom sheet */
+.sheet-wrap{position:fixed;inset:0;z-index:22;background:rgba(6,4,18,.7);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:480px;background:var(--bg-2);border-radius:26px 26px 0 0;padding:12px 18px calc(22px + env(safe-area-inset-bottom,0px));box-shadow:0 -2px 0 var(--edge);animation:up .28s cubic-bezier(.2,1.2,.4,1)}
+@keyframes up{from{transform:translateY(100%)}}
+.sheet .grab{width:44px;height:5px;border-radius:3px;background:var(--edge);margin:0 auto 14px}
+.sheet-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.sheet-head .ico{flex:none;width:56px;height:56px;border-radius:16px;display:grid;place-items:center;color:var(--on-bright)}
+.sheet-head .ico svg{width:28px;height:28px}
+.sheet-head h3{margin:0;font:400 1.4rem var(--display)}
+.sheet-head p{margin:3px 0 0;color:var(--muted);line-height:1.35}
+.lenpick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 18px}
+.lenpick button{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;border-radius:16px;background:var(--panel);padding:14px 6px 12px;cursor:pointer;box-shadow:0 5px 0 var(--deep);transition:transform .08s,box-shadow .08s}
+.lenpick button b{font:400 2rem/1 var(--display)}
+.lenpick button span{font:600 .74rem var(--body);color:var(--muted);text-align:center;line-height:1.25}
+.lenpick button[aria-checked="true"]{background:var(--cyan);color:var(--on-bright);box-shadow:0 5px 0 var(--cyan-d),0 0 20px rgba(62,227,255,.35)}
+.lenpick button[aria-checked="true"] span{color:var(--on-bright)}
+
+.countdown{position:fixed;inset:0;display:grid;place-items:center;z-index:25;background:rgba(6,4,18,.75);font:400 7rem var(--display);color:var(--yellow);text-shadow:0 6px 0 var(--yellow-d),0 0 40px rgba(255,210,63,.6)}
+.countdown span{animation:zoom .5s}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:30}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
-@media (max-height:660px){.key{height:44px}.hero{padding-block:14px 12px}}
+@media (max-height:680px){.key{height:44px}.kb{gap:7px}.marquee{padding-block:4px 14px}.neonlad{transform:scale(.8)}}
 </style>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);height:100%}</style>
 </head>
@@ -212,50 +267,41 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
 <!-- HOME -->
 <section class="screen" id="home">
-  <div class="hero">
+  <div class="hometop">
+    <button class="icon-btn" id="openBadges" type="button" aria-label="Badges"><svg viewBox="0 0 24 24"><path d="M7 3h10v5a5 5 0 0 1-10 0zM7 5H3v2a4 4 0 0 0 4 4M17 5h4v2a4 4 0 0 1-4 4M12 13v4M8 21h8M9 17h6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="count" id="badgeCount">0</span></button>
+    <button class="icon-btn" id="openStats" type="button" aria-label="Stats"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V4M19 20v-6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button>
+    <button class="icon-btn" id="openSettings" type="button" aria-label="Settings"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="7" r="2.4" stroke="currentColor" stroke-width="2.2" fill="none"/><circle cx="10" cy="17" r="2.4" stroke="currentColor" stroke-width="2.2" fill="none"/></svg></button>
+  </div>
+  <div class="marquee">
     <div>
-      <h1>Rungs</h1>
-      <p>Change one letter at a time to climb from word to word.</p>
+      <h1 class="logo">RUNGS</h1>
+      <p class="tag">Change one letter at a time. Climb to the goal word.</p>
     </div>
-    <div class="mini" aria-hidden="true">
-      <div class="r"><span>c</span><span>o</span><span>l</span><span>d</span></div>
-      <div class="r"><span>c</span><span>o</span><span class="c">r</span><span>d</span></div>
-      <div class="r"><span class="c">w</span><span>o</span><span>r</span><span>d</span></div>
-      <div class="r"><span>w</span><span class="c">a</span><span>r</span><span>d</span></div>
-      <div class="r"><span>w</span><span>a</span><span>r</span><span>m</span></div>
-    </div>
+    <div class="neonlad" aria-hidden="true"><i></i><i></i><b style="top:20px"></b><b style="top:54px"></b><b style="top:88px"></b><span>R</span></div>
   </div>
+
   <button class="daily" id="goDaily" type="button">
-    <div class="txt"><b>Daily Climb</b><small id="dailySub">A new four-letter ladder every day</small></div>
-    <span class="go" id="dailyGo">Play</span>
-  </button>
-  <div class="lenrow">
-    <span class="eyebrow">Word length</span>
-    <div class="seg" role="radiogroup" aria-label="Word length" id="lenSeg">
-      <button type="button" role="radio" data-len="4">4</button>
-      <button type="button" role="radio" data-len="5">5</button>
-      <button type="button" role="radio" data-len="6">6</button>
+    <div class="daily-in">
+      <div class="txt">
+        <div class="eyebrow" id="dailyNum">Daily #8</div>
+        <b>Daily Climb</b>
+        <small id="dailySub">One four-letter ladder. Same for everyone.</small>
+      </div>
+      <span class="daily-go" id="dailyGo"><svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg></span>
     </div>
-  </div>
-  <div class="mgrid" id="mgrid"></div>
-  <div class="settings">
-    <button class="toggle" id="hardToggle" type="button" role="switch" aria-checked="false">
-      <div class="txt"><b>Hard mode</b><small>No green tiles showing letters already in place</small></div>
-      <span class="sw"></span>
-    </button>
-  </div>
-  <div class="links">
-    <button class="ibtn" id="openBadges" type="button">Badges <b id="badgeCount">0</b></button>
-    <button class="ibtn" id="openStats" type="button">Stats</button>
-    <button class="ibtn" id="openHow" type="button">How to play</button>
-  </div>
+  </button>
+
+  <div class="sec"><h2>More ways to play</h2></div>
+  <div class="modes" id="modeList"></div>
+
+  <div class="homefoot"><button class="linkbtn" id="openHow" type="button">How to play</button></div>
 </section>
 
 <!-- LEVELS -->
 <section class="screen" id="levels" hidden>
   <div class="topbar">
-    <button class="ibtn back" type="button" data-home aria-label="Back to home">←</button>
-    <div class="grow"><div class="eyebrow" id="lvStars">0 of 144 stars</div><div class="h2">Levels</div></div>
+    <button class="icon-btn" type="button" data-home aria-label="Back to home"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="grow"><div class="eyebrow" id="lvStars">0 of 144 stars</div><div class="title">Levels</div></div>
   </div>
   <div class="seg" role="radiogroup" aria-label="Level word length" id="lvSeg">
     <button type="button" role="radio" data-len="4">4 letters</button>
@@ -268,8 +314,8 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 <!-- BADGES -->
 <section class="screen" id="badges" hidden>
   <div class="topbar">
-    <button class="ibtn back" type="button" data-home aria-label="Back to home">←</button>
-    <div class="grow"><div class="eyebrow">Collection</div><div class="h2">Badges</div></div>
+    <button class="icon-btn" type="button" data-home aria-label="Back to home"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="grow"><div class="eyebrow">Trophy room</div><div class="title">Badges</div></div>
   </div>
   <div class="scroll" id="badgeList"></div>
 </section>
@@ -277,14 +323,15 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 <!-- GAME -->
 <section class="screen" id="game" hidden>
   <div class="topbar">
-    <button class="ibtn back" type="button" id="gameBack" aria-label="Back">←</button>
-    <div class="grow"><div class="eyebrow" id="gMode">Daily</div><div class="h2" id="gTitle">COLD → WARM</div></div>
-    <button class="ibtn" id="undo" type="button">Undo</button>
-    <button class="ibtn" id="hint" type="button">Hint</button>
+    <button class="icon-btn" type="button" id="gameBack" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="grow"><div class="eyebrow" id="gMode">Daily</div><div class="title" id="gTitle">COLD → WARM</div></div>
+    <button class="skip" id="reveal" type="button">Give up</button>
   </div>
-  <div class="status">
-    <span id="statusLeft">Steps <b id="steps">0</b> · Par <b id="par">0</b></span>
-    <span><b class="clock" id="clock">0:00</b> · <button class="linkish" id="reveal" type="button">Give up</button></span>
+  <div class="hud" id="hud">
+    <div class="pill" id="pillSteps">Steps <b id="steps">0</b>/<b id="par">0</b></div>
+    <div class="pill clock" id="pillClock"><b id="clock">0:00</b></div>
+    <button class="gamebar-btn" id="undo" type="button">Undo</button>
+    <button class="gamebar-btn hint" id="hint" type="button">Hint</button>
   </div>
   <div class="ladder-wrap" id="wrap"><div class="ladder" id="ladder"></div></div>
   <div class="hint-line" id="hintline"></div>
@@ -292,21 +339,33 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 </section>
 
 <div class="toasts" id="toasts" aria-live="polite"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<!-- MODE SHEET -->
+<div class="sheet-wrap" id="sheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shTitle">
+    <div class="grab"></div>
+    <div class="sheet-head"><span class="ico" id="shIco"></span><div><h3 id="shTitle">Sprint</h3><p id="shDesc"></p></div></div>
+    <div class="eyebrow">Word length</div>
+    <div class="lenpick" role="radiogroup" aria-label="Word length" id="shLens"></div>
+    <button class="btn block" id="shGo" type="button">Start</button>
+  </div>
+</div>
 
 <!-- RESULT -->
 <div class="modal" id="result" hidden>
   <div class="card" role="dialog" aria-modal="true" aria-labelledby="rTitle">
-    <h2 id="rTitle">Perfect climb</h2>
+    <h2 id="rTitle">Perfect!</h2>
     <span class="stars" id="rStars"></span>
     <div class="nums" id="rNums"></div>
     <div id="rRoutes"></div>
     <p id="rNote" hidden></p>
     <div class="newbadges" id="rBadges" hidden></div>
-    <button class="big" id="rMain" type="button">Next</button>
+    <button class="btn block" id="rMain" type="button">Next</button>
     <div class="row-btns">
-      <button type="button" id="rShare">Share</button>
-      <button type="button" id="rAlt">Try again</button>
-      <button type="button" id="rHome">Home</button>
+      <button class="btn ghost" type="button" id="rShare">Share</button>
+      <button class="btn ghost" type="button" id="rAlt">Retry</button>
+      <button class="btn ghost" type="button" id="rHome">Home</button>
     </div>
     <textarea class="share-fallback" id="rShareText" rows="7" readonly hidden aria-label="Result to copy"></textarea>
   </div>
@@ -325,33 +384,50 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
     </div>
     <ol>
       <li>Get from the start word to the goal word.</li>
-      <li>Each step, change exactly one letter. Tap the letter, then tap its replacement. Every step must be a real word.</li>
+      <li>Each step, change one letter. Tap the letter, then tap its replacement. Every step must be a real word.</li>
       <li>Par is the fewest steps possible. Hit par with no hints for three stars.</li>
       <li>Green tiles already match the goal. Hard mode hides them.</li>
     </ol>
-    <div class="modes-how">
-      <div><b>Daily Climb.</b> One four-letter ladder a day, the same for everyone.</div>
-      <div><b>Levels.</b> Hand-picked ladders for 4, 5 and 6 letters. Clear one to unlock the next.</div>
-      <div><b>Endless.</b> Random ladders, one after another. Giving up ends your run.</div>
-      <div><b>Sprint.</b> Three minutes. Climb as many short ladders as you can. Hints cost 10 seconds, skips cost 15.</div>
-      <div><b>Par or Bust.</b> Three lives. Each ladder finished over par, or skipped, costs a life. No hints.</div>
-      <div><b>Marathon.</b> Long ladders of 7 steps or more.</div>
-    </div>
+    <p><b>Sprint</b>: 3 minutes, as many ladders as you can. <b>Par or Bust</b>: 3 lives, over par costs one. <b>Marathon</b>: long ladders of 7+ steps.</p>
     <p>On a keyboard, type to replace the selected letter, use the arrow keys to move, and press Backspace to undo.</p>
-    <button class="big" type="button" data-close>Got it</button>
+    <button class="btn block" type="button" data-close>Let's climb</button>
   </div>
 </div>
 
 <!-- STATS -->
 <div class="modal" id="stats" hidden>
   <div class="card" role="dialog" aria-modal="true" aria-labelledby="statsTitle">
-    <h2 id="statsTitle">Your stats</h2>
+    <h2 id="statsTitle">Stats</h2>
     <div class="stat-grid" id="statGrid"></div>
-    <button class="big" type="button" data-close>Close</button>
+    <button class="btn block" type="button" data-close>Close</button>
   </div>
 </div>
 
-<div class="countdown" id="countdown" hidden aria-live="assertive">3</div>
+<!-- SETTINGS -->
+<div class="modal" id="settings" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <h2 id="setTitle">Settings</h2>
+    <button class="toggle" id="hardToggle" type="button" role="switch" aria-checked="false">
+      <div class="txt"><b>Hard mode</b><small>Hide the green tiles that show letters already in place</small></div>
+      <span class="sw"></span>
+    </button>
+    <button class="toggle" id="fxToggle" type="button" role="switch" aria-checked="true">
+      <div class="txt"><b>Effects</b><small>Confetti and vibration</small></div>
+      <span class="sw"></span>
+    </button>
+    <button class="btn block" type="button" data-close>Done</button>
+  </div>
+</div>
+
+<!-- BADGE DETAIL -->
+<div class="modal" id="badgeModal" hidden>
+  <div class="card badge-detail" role="dialog" aria-modal="true" aria-labelledby="bdTitle">
+    <div id="bdBody"></div>
+    <button class="btn block" type="button" data-close>Close</button>
+  </div>
+</div>
+
+<div class="countdown" id="countdown" hidden aria-live="assertive"><span>3</span></div>
 
 <script>
 "use strict";
@@ -387,7 +463,7 @@ const svg=(k,cls)=>`<svg viewBox="0 0 24 24" aria-hidden="true"${cls?` class="${
 
 /* ---------- storage ---------- */
 function freshState(){return{
-  settings:{hard:false,len:4},daily:{},levels:{4:{},5:{},6:{}},sessions:{},badges:{},
+  settings:{hard:false,len:4,fx:true},daily:{},levels:{4:{},5:{},6:{}},sessions:{},badges:{},
   stats:{solved:0,perfect:0,perfRun:0,bestPerfRun:0,noHint:0,hardSolved:0,streak:0,maxStreak:0,lastDaily:null,dailyCount:0,
     byLen:{4:0,5:0,6:0},run:{4:0,5:0,6:0},bestRun:{4:0,5:0,6:0},sprintBest:{4:0,5:0,6:0},bustBest:{4:0,5:0,6:0},
     marathons:0,fastest:0,steps:0,nightSolved:0,comebacks:0,hintsUsed:0},
@@ -444,19 +520,19 @@ function liveStreak(){const k=todayKey();return S.stats.lastDaily===k||S.stats.l
 
 /* ---------- modes ---------- */
 const MODES={
-  levels:{name:"Levels",icon:"grid",desc:"Hand-picked ladders that unlock in order"},
-  endless:{name:"Endless",icon:"loop",desc:"Random ladders, back to back",range:[3,6]},
-  sprint:{name:"Sprint",icon:"timer",desc:"3 minutes. Climb as many as you can",range:[3,4]},
-  bust:{name:"Par or Bust",icon:"heart",desc:"3 lives. Over par costs one",range:[3,5]},
-  marathon:{name:"Marathon",icon:"mountain",desc:"Long ladders of 7+ steps",range:[7,10]}
+  levels:{name:"Levels",icon:"grid",c:"violet",desc:"Hand-picked ladders that unlock in order",long:"112 hand-picked ladders. Clear one to unlock the next, and go back for three stars."},
+  endless:{name:"Endless",icon:"loop",c:"cyan",desc:"Random ladders, back to back",long:"Random ladders, one after another. Giving up ends your run.",range:[3,6]},
+  sprint:{name:"Sprint",icon:"timer",c:"yellow",desc:"3 minutes on the clock",long:"Three minutes. Climb as many short ladders as you can. Hints cost 10 seconds, skips cost 15.",range:[3,4]},
+  bust:{name:"Par or Bust",icon:"heart",c:"pink",desc:"3 lives, no hints",long:"Three lives and no hints. Finishing over par, or skipping, costs a life.",range:[3,5]},
+  marathon:{name:"Marathon",icon:"mountain",c:"green",desc:"Long climbs of 7+ steps",long:"Long ladders of 7 to 10 steps. Pace yourself.",range:[7,10]}
 };
 function modeBest(m,n){
   const st=S.stats;
-  if(m==="levels"){const got=Object.values(S.levels[n]).reduce((a,l)=>a+(l.stars||0),0);return`${Object.keys(S.levels[n]).length}/${LEVELS[n].length} cleared · ${got}★`}
-  if(m==="endless")return st.run[n]?`Run ${st.run[n]} · best ${st.bestRun[n]}`:`Best run ${st.bestRun[n]}`;
-  if(m==="sprint")return`Best ${st.sprintBest[n]} ladders`;
-  if(m==="bust")return`Best ${st.bustBest[n]} ladders`;
-  if(m==="marathon")return`${st.marathons} finished`;
+  if(m==="levels"){const got=Object.values(S.levels[n]).reduce((a,l)=>a+(l.stars||0),0);return`${Object.keys(S.levels[n]).length}/${LEVELS[n].length} cleared<br>${got}★`}
+  if(m==="endless")return st.run[n]?`Run ${st.run[n]}<br>best ${st.bestRun[n]}`:`Best run<br>${st.bestRun[n]}`;
+  if(m==="sprint")return`Best<br>${st.sprintBest[n]}`;
+  if(m==="bust")return`Best<br>${st.bustBest[n]}`;
+  if(m==="marathon")return`${n} letters`;
 }
 
 /* ---------- badges ---------- */
@@ -507,45 +583,66 @@ function checkBadges(){
 function badgeToast(b){toast(`${svg(b.icon)}<span>Badge unlocked: ${b.name}<small>${b.desc}</small></span>`,"badge-t",3200)}
 function renderBadges(){
   const got=BADGES.filter(b=>S.badges[b.id]).length;
-  let h=`<div class="bsum"><b>${got}</b><div style="flex:1;min-width:0"><div class="eyebrow">of ${BADGES.length} badges</div><div class="bar" style="margin-top:6px"><i style="width:${Math.round(got/BADGES.length*100)}%"></i></div></div></div>`;
+  let h=`<div class="bsum"><b>${got}</b><div style="flex:1;min-width:0"><div class="eyebrow">of ${BADGES.length} unlocked</div><div class="bar" style="margin-top:8px"><i style="width:${Math.round(got/BADGES.length*100)}%"></i></div></div></div>`;
   let g="";
-  for(const b of BADGES){
-    if(b.g!==g){if(g)h+="</div>";g=b.g;h+=`<div class="bgroup">${g}</div><div class="blist">`}
+  BADGES.forEach((b,i)=>{
+    if(b.g!==g){if(g)h+="</div>";g=b.g;h+=`<div class="bgroup eyebrow">${g}</div><div class="bgrid">`}
     const has=!!S.badges[b.id],v=Math.min(b.v(),b.t);
-    h+=`<div class="badge${has?" got":""}"><div class="medal">${svg(b.icon)}</div><div class="txt"><b>${b.name}</b><small>${b.desc}</small>${has?`<div class="prog">Earned ${new Date(S.badges[b.id]).toLocaleDateString()}</div>`:b.t>1?`<div class="prog"><div class="bar"><i style="width:${Math.round(v/b.t*100)}%"></i></div>${v}/${b.t}</div>`:""}</div></div>`
-  }
-  h+="</div>";$("badgeList").innerHTML=h
+    h+=`<button type="button" class="badge${has?" got":""}" data-b="${i}" aria-label="${b.name}${has?", unlocked":", locked"}"><span class="medal">${svg(b.icon)}</span><b>${b.name}</b>${!has&&b.t>1?`<span class="mini-bar"><i style="width:${Math.round(v/b.t*100)}%"></i></span>`:""}</button>`
+  });
+  h+="</div>";$("badgeList").innerHTML=h;
+  $("badgeList").querySelectorAll("[data-b]").forEach(el=>el.onclick=()=>{
+    const b=BADGES[+el.dataset.b],has=!!S.badges[b.id],v=Math.min(b.v(),b.t);
+    $("bdBody").innerHTML=`<div class="badge ${has?"got":""}" style="background:none;box-shadow:none;padding:0"><span class="medal">${svg(b.icon)}</span></div><h3>${b.name}</h3><p>${b.desc}</p>`+
+      (has?`<p class="eyebrow">Unlocked ${new Date(S.badges[b.id]).toLocaleDateString()}</p>`:b.t>1?`<div class="bar"><i style="width:${Math.round(v/b.t*100)}%"></i></div><p class="eyebrow">${v} / ${b.t}</p>`:`<p class="eyebrow">Locked</p>`);
+    $("badgeModal").hidden=false
+  })
 }
 
 /* ---------- toasts ---------- */
 function toast(html,cls,ms){const t=document.createElement("div");t.className="toast"+(cls?" "+cls:"");t.innerHTML=html;$("toasts").appendChild(t);while($("toasts").children.length>3)$("toasts").firstChild.remove();setTimeout(()=>t.remove(),ms||1500)}
-function buzz(p){try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
+function buzz(p){if(!S.settings.fx)return;try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
+/* confetti */
+function confetti(power){
+  if(!S.settings.fx||matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  const cv=$("fx"),ctx=cv.getContext("2d"),dpr=window.devicePixelRatio||1;
+  cv.width=innerWidth*dpr;cv.height=innerHeight*dpr;ctx.scale(dpr,dpr);
+  const cols=["#ffd23f","#ff4f9a","#3ee3ff","#3df5a0","#9b7bff"];const n=power||90;const P=[];
+  for(let i=0;i<n;i++){const a=-Math.PI/2+(Math.random()-.5)*1.6;const v=6+Math.random()*9;
+    P.push({x:innerWidth/2+(Math.random()-.5)*80,y:innerHeight*.62,vx:Math.cos(a)*v,vy:Math.sin(a)*v,w:6+Math.random()*6,h:8+Math.random()*8,r:Math.random()*6,vr:(Math.random()-.5)*.4,c:cols[i%cols.length]})}
+  let t0=performance.now();
+  (function step(t){const dt=Math.min(2,(t-t0)/16.7);t0=t;ctx.clearRect(0,0,innerWidth,innerHeight);let alive=0;
+    for(const p of P){p.vy+=.32*dt;p.vx*=.99;p.x+=p.vx*dt;p.y+=p.vy*dt;p.r+=p.vr*dt;if(p.y<innerHeight+30){alive++;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.c;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);ctx.restore()}}
+    if(alive)requestAnimationFrame(step);else ctx.clearRect(0,0,innerWidth,innerHeight)})(t0)
+}
 
 /* ---------- screens ---------- */
-function show(id){for(const s of["home","levels","badges","game"])$(s).hidden=s!==id;if(id!=="game")stopClock();if(id==="home")renderHome();if(id==="levels")renderLevels();if(id==="badges")renderBadges()}
+function show(id){for(const s of["home","levels","badges","game"])$(s).hidden=s!==id;if(id!=="game")$("toasts").innerHTML="";if(id!=="game")stopClock();if(id==="home")renderHome();if(id==="levels")renderLevels();if(id==="badges")renderBadges()}
 document.querySelectorAll("[data-home]").forEach(b=>b.onclick=()=>show("home"));
 document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>b.closest(".modal").hidden=true);
 document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m&&m.id!=="result")m.hidden=true}));
+$("sheet").addEventListener("click",e=>{if(e.target===$("sheet"))$("sheet").hidden=true});
 function starStr(n){return"★".repeat(n)+`<span class="off">${"★".repeat(3-n)}</span>`}
+function starAnim(n){let h="";for(let i=0;i<3;i++)h+=`<span class="s${i<n?"":" off"}" style="animation-delay:${200+i*180}ms">★</span>`;return h}
 function fmt(ms){const s=Math.max(0,Math.floor(ms/1000));return Math.floor(s/60)+":"+pad(s%60)}
 function setSeg(seg,n){seg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-checked",String(+b.dataset.len===n)))}
 
 function renderHome(){
-  const k=todayKey(),d=S.daily[k],n=dayNum(k);
-  if(d&&d.done){$("dailyGo").textContent=d.gaveUp?"Seen":"Done";$("dailyGo").classList.toggle("ok",!d.gaveUp);
-    $("dailySub").innerHTML=d.gaveUp?`#${n} · Revealed. A new ladder arrives tomorrow`:`#${n} · ${d.ladder.length-1} steps · <span class="stars">${starStr(d.stars)}</span>`}
-  else{$("dailyGo").textContent=d?"Resume":"Play";$("dailyGo").classList.remove("ok");const s=liveStreak();$("dailySub").textContent=`#${n} · `+(s?`Streak ${s}. Keep it going`:"A new four-letter ladder every day")}
-  const L=S.settings.len;setSeg($("lenSeg"),L);
-  $("mgrid").innerHTML=Object.entries(MODES).map(([id,m])=>`<button class="mcard" type="button" data-mode="${id}"><span class="ico">${svg(m.icon)}</span><b>${m.name}</b><small>${m.desc}</small><span class="best">${modeBest(id,L)}</span></button>`).join("")+
-    `<button class="mcard" type="button" data-open="badges"><span class="ico">${svg("trophy")}</span><b>Badges</b><small>Earn them across every mode</small><span class="best">${BADGES.filter(b=>S.badges[b.id]).length} of ${BADGES.length}</span></button>`;
-  $("mgrid").querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>openMode(b.dataset.mode));
-  $("mgrid").querySelector("[data-open]").onclick=()=>show("badges");
-  $("hardToggle").setAttribute("aria-checked",S.settings.hard);
+  const k=todayKey(),d=S.daily[k],n=dayNum(k),s=liveStreak();
+  $("dailyNum").innerHTML=`Daily #${n}`+(s?` &nbsp;<span class="chip">${svg("flame")}${s} day streak</span>`:"");
+  const play='<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg>',tick='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  if(d&&d.done){$("dailyGo").innerHTML=d.gaveUp?"SEEN":tick;$("dailyGo").classList.toggle("ok",!d.gaveUp);
+    $("dailySub").innerHTML=d.gaveUp?"Revealed. New ladder tomorrow.":`${d.ladder.length-1} steps · <span class="stars">${starStr(d.stars)}</span> · back tomorrow`}
+  else{$("dailyGo").innerHTML=play;$("dailyGo").classList.remove("ok");$("dailySub").textContent=d?"In progress. Pick up where you left off.":"One four-letter ladder. Same for everyone."}
+  $("modeList").innerHTML=Object.entries(MODES).map(([id,m])=>`<button class="mrow" type="button" data-mode="${id}" style="--c:var(--${m.c});--cd:var(--${m.c}-d)"><span class="ico">${svg(m.icon)}</span><span class="txt"><b>${m.name}</b><small>${m.desc}</small></span><span class="chev" aria-hidden="true">›</span></button>`).join("");
+  $("modeList").querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>openMode(b.dataset.mode));
   $("badgeCount").textContent=BADGES.filter(b=>S.badges[b.id]).length
 }
-$("lenSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{S.settings.len=+b.dataset.len;lvLen=S.settings.len;save();renderHome()});
 $("goDaily").onclick=()=>{const k=todayKey(),d=S.daily[k];startGame({mode:"daily",key:k});if(d&&d.done)showResult()};
-$("hardToggle").onclick=()=>{S.settings.hard=!S.settings.hard;save();renderHome()};
+function paintSettings(){$("hardToggle").setAttribute("aria-checked",S.settings.hard);$("fxToggle").setAttribute("aria-checked",S.settings.fx!==false)}
+$("hardToggle").onclick=()=>{S.settings.hard=!S.settings.hard;save();paintSettings()};
+$("fxToggle").onclick=()=>{S.settings.fx=S.settings.fx===false;save();paintSettings()};
+$("openSettings").onclick=()=>{paintSettings();$("settings").hidden=false};
 $("openHow").onclick=()=>{$("how").hidden=false};
 $("openBadges").onclick=()=>show("badges");
 $("openStats").onclick=()=>{
@@ -556,7 +653,15 @@ $("openStats").onclick=()=>{
   $("statGrid").innerHTML=items.map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join("");
   $("stats").hidden=false
 };
-function openMode(m){const n=S.settings.len;if(m==="levels"){lvLen=n;show("levels")}else if(m==="sprint"||m==="bust")startRun(m,n);else startGame({mode:m,len:n})}
+let sheetMode=null;
+function openMode(m){sheetMode=m;const M=MODES[m];
+  $("shIco").innerHTML=svg(M.icon);$("shIco").style.background=`var(--${M.c})`;$("shIco").style.boxShadow=`0 5px 0 var(--${M.c}-d)`;
+  $("shTitle").textContent=M.name;$("shDesc").textContent=M.long;
+  $("shGo").textContent=m==="levels"?"Open levels":"Start";paintLens();$("sheet").hidden=false;setTimeout(()=>$("shGo").focus(),50)}
+function paintLens(){const n=S.settings.len;
+  $("shLens").innerHTML=LENS.map(L=>`<button type="button" role="radio" aria-checked="${L===n}" data-len="${L}"><b>${L}</b><span>${modeBest(sheetMode,L)}</span></button>`).join("");
+  $("shLens").querySelectorAll("button").forEach(b=>b.onclick=()=>{S.settings.len=+b.dataset.len;save();paintLens()})}
+$("shGo").onclick=()=>{const m=sheetMode,n=S.settings.len;$("sheet").hidden=true;if(m==="levels"){lvLen=n;show("levels")}else if(m==="sprint"||m==="bust")startRun(m,n);else startGame({mode:m,len:n})};
 
 let lvLen=4;
 $("lvSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{lvLen=+b.dataset.len;renderLevels()});
@@ -564,10 +669,10 @@ function renderLevels(){
   setSeg($("lvSeg"),lvLen);
   const g=$("lvGrid");g.innerHTML="";let nextIdx=-1,band=0;const rec=S.levels[lvLen],set=LEVELS[lvLen];
   set.forEach(([a,b,par],i)=>{
-    if(par!==band){band=par;const h=document.createElement("div");h.className="lv-band";h.textContent=`Par ${par}`+(par===3?" · warm-up":par>=7?" · long climbs":"");g.appendChild(h)}
+    if(par!==band){band=par;const h=document.createElement("div");h.className="lv-band eyebrow";h.textContent=`Par ${par}`+(par===3?" · warm-up":par>=7?" · long climbs":"");g.appendChild(h)}
     const r=rec[i],unlocked=i===0||rec[i-1]||r;
     if(!r&&unlocked&&nextIdx<0)nextIdx=i;
-    const el=document.createElement("button");el.type="button";el.className="lv"+(i===nextIdx?" next":"");el.disabled=!unlocked;
+    const el=document.createElement("button");el.type="button";el.className="lv"+(i===nextIdx?" next":r?" done":"");el.disabled=!unlocked;
     el.innerHTML=`<b>${i+1}</b><span class="stars">${r?starStr(r.stars):""}</span>`;
     el.setAttribute("aria-label",`Level ${i+1}${r?`, ${r.stars} stars`:unlocked?"":", locked"}`);
     el.onclick=()=>startGame({mode:"level",len:lvLen,idx:i});g.appendChild(el)
@@ -602,14 +707,14 @@ function nextRunLadder(first){
   show("game");render(true);
   if(first&&R.mode==="sprint"){countdown(()=>startClock())}else startClock()
 }
-function countdown(done){const c=$("countdown");let n=3;c.textContent=n;c.hidden=false;const t=setInterval(()=>{n--;if(n<=0){clearInterval(t);c.hidden=true;done()}else c.textContent=n},600)}
+function countdown(done){const c=$("countdown");let n=3;c.innerHTML=`<span>${n}</span>`;c.hidden=false;const t=setInterval(()=>{n--;if(n<=0){clearInterval(t);c.hidden=true;done()}else c.innerHTML=`<span>${n}</span>`},650)}
 const cur=()=>G.ladder[G.ladder.length-1];
 function firstDiff(w){for(let i=0;i<w.length;i++)if(w[i]!==G.b[i])return i;return 0}
 function startClock(){stopClock();let last=Date.now();clockT=setInterval(()=>{const now=Date.now(),dt=now-last;last=now;if(document.hidden||!G)return;
   if(R&&R.mode==="sprint"&&!R.over){R.left-=dt;if(!G.done)G.ms+=dt;paintClock();if(R.left<=0)endRun();return}
   if(!G.done){G.ms+=dt;paintClock()}},250)}
 function stopClock(){if(clockT)clearInterval(clockT);clockT=null;if(G&&!R)save()}
-function paintClock(){const c=$("clock");if(R&&R.mode==="sprint"){c.textContent=fmt(R.left+999);c.classList.toggle("low",R.left<20000)}else{c.textContent=fmt(G.ms);c.classList.remove("low")}}
+function paintClock(){const c=$("clock"),p=$("pillClock");if(R&&R.mode==="sprint"){c.textContent=fmt(R.left+999);p.classList.toggle("low",R.left<20000)}else{c.textContent=fmt(G.ms);p.classList.remove("low")}}
 
 function tileRow(word,cls,prev){
   const r=document.createElement("div");r.className="row "+cls;const isCur=cls==="cur";
@@ -630,6 +735,7 @@ function modeLabel(){
   if(G.mode==="sprint")return`Sprint · ${G.len} letters · ${R?R.score:0} climbed`;
   if(G.mode==="bust")return`Par or Bust · ${G.len} letters · ${R?R.score:0} climbed`;
 }
+let lastLen=0;
 function render(scroll){
   const L=$("ladder");L.innerHTML="";L.style.setProperty("--n",G.len);
   // shrink tiles for long words so the row fits the screen
@@ -637,14 +743,15 @@ function render(scroll){
   $("gMode").textContent=modeLabel();
   $("gTitle").textContent=`${G.a.toUpperCase()} → ${G.b.toUpperCase()}`;
   const steps=G.ladder.length-1;
-  if(R&&R.mode==="bust")$("statusLeft").innerHTML=`<span class="lives" aria-label="${R.lives} lives">${[0,1,2].map(i=>svg("heart",i<R.lives?"":"lost")).join("")}</span> · Steps <b>${steps}</b>/<b>${G.par}</b>`;
-  else $("statusLeft").innerHTML=`Steps <b>${steps}</b> · Par <b>${G.par}</b>`;
+  const ps=$("pillSteps");ps.classList.toggle("over",steps>G.par);
+  if(R&&R.mode==="bust")ps.innerHTML=`<span class="lives" aria-label="${R.lives} lives">${[0,1,2].map(i=>svg("heart",i<R.lives?"":"lost")).join("")}</span> <b>${steps}</b>/<b>${G.par}</b>`;
+  else ps.innerHTML=`Steps <b>${steps}</b>/<b>${G.par}</b>`;
   paintClock();
   G.ladder.forEach((w,i)=>{
     const last=i===G.ladder.length-1&&!G.done;
     const row=tileRow(w,last?"cur":"done",i>0?G.ladder[i-1]:null);
-    if(last&&i>0)row.querySelectorAll(".tile.changed").forEach(t=>t.classList.add("pop"));
-    if(G.done&&i===G.ladder.length-1)row.classList.add("flashwin");
+    if(last&&i>0&&G.ladder.length!==lastLen)row.querySelectorAll(".tile.changed").forEach(t=>t.classList.add("flip"));
+    if(G.done&&i===G.ladder.length-1){row.classList.add("flashwin");row.querySelectorAll(".tile").forEach((t,j)=>t.style.setProperty("--i",j))}
     L.appendChild(row)
   });
   if(!G.done){
@@ -660,8 +767,9 @@ function render(scroll){
   }
   const bust=R&&R.mode==="bust";
   $("undo").disabled=G.done||G.ladder.length<2;$("hint").disabled=G.done||bust;$("hint").hidden=bust;
-  $("hint").textContent=R&&R.mode==="sprint"?"Hint −10s":"Hint";
+  $("hint").textContent=R&&R.mode==="sprint"?"Hint −10s":"Hint";$("hint").hidden=!!bust;
   $("reveal").textContent=R?"Skip":"Give up";$("reveal").disabled=G.done;
+  lastLen=G.ladder.length;
   if(scroll)requestAnimationFrame(()=>{const c=L.querySelector(".row.cur")||L.lastElementChild;if(c)c.scrollIntoView({block:"center"})})
 }
 function shake(){const r=document.querySelector(".row.cur");if(!r)return;r.classList.remove("shake");void r.offsetWidth;r.classList.add("shake");buzz([20,40,20])}
@@ -705,17 +813,17 @@ function finish(gaveUp){
     if(!gaveUp){st.run[G.len]++;st.bestRun[G.len]=Math.max(st.bestRun[G.len],st.run[G.len])}else st.run[G.len]=0
   }else if(G.mode==="marathon"){if(!gaveUp)st.marathons++}
   pendingBadges=checkBadges();
-  save();render(true);setTimeout(()=>showResult(),gaveUp?0:450)
+  save();render(true);if(!gaveUp)setTimeout(()=>confetti(G.stars===3?140:80),250);setTimeout(()=>showResult(),gaveUp?0:650)
 }
 function runLadderDone(gaveUp){
   const over=G.ladder.length-1-G.par;
   R.history.push({a:G.a,b:G.b,par:G.par,steps:G.ladder.length-1,gaveUp});
   if(R.mode==="sprint"){
-    if(gaveUp){R.left-=15000;toast("Skipped · −15s")}else{R.score++;toast(`+1 · ${R.score} climbed`)}
+    if(gaveUp){R.left-=15000;toast("Skipped · −15s","bad")}else{R.score++;toast(`+1 · ${R.score} climbed`,"good");confetti(30)}
   }else{
-    if(gaveUp){R.lives--;toast("Skipped · lost a life")}
-    else if(over>0){R.lives--;R.score++;toast(`${over} over par · lost a life`)}
-    else{R.score++;toast(`On par · ${R.score} climbed`)}
+    if(gaveUp){R.lives--;toast("Skipped · lost a life","bad")}
+    else if(over>0){R.lives--;R.score++;toast(`${over} over par · lost a life`,"bad")}
+    else{R.score++;toast(`On par · ${R.score} climbed`,"good");confetti(30)}
   }
   checkBadges().forEach(badgeToast);save();
   render(false);
@@ -729,9 +837,9 @@ function endRun(){
   const prev=st[key][R.len];R.newBest=R.score>prev;if(R.newBest)st[key][R.len]=R.score;
   pendingBadges=checkBadges();save();showRunResult()
 }
-function showRunResult(){
+function showRunResult(){$("toasts").innerHTML="";
   const best=S.stats[R.mode==="sprint"?"sprintBest":"bustBest"][R.len];
-  $("rTitle").textContent=R.mode==="sprint"?"Time's up":"Out of lives";
+  $("rTitle").textContent=R.mode==="sprint"?"Time's up!":"Game over";
   $("rStars").hidden=true;
   $("rNums").innerHTML=`<div><b>${R.score}</b><span>Climbed</span></div><div><b>${best}</b><span>Best</span></div><div><b>${R.len}</b><span>Letters</span></div>`;
   const last=G&&!G.done?shortest(G.a,G.b):null;
@@ -749,10 +857,10 @@ function paintBadges(){
   else nb.hidden=true;
   pendingBadges=[]
 }
-function showResult(){
+function showResult(){$("toasts").innerHTML="";
   const steps=G.ladder.length-1,best=shortest(G.a,G.b);
-  $("rTitle").textContent=G.gaveUp?"Here's a way up":G.stars===3?"Perfect climb":steps<=G.par?"Solved":"You made it";
-  $("rStars").innerHTML=G.gaveUp?"":starStr(G.stars);$("rStars").hidden=G.gaveUp;
+  $("rTitle").textContent=G.gaveUp?"Here's the way":G.stars===3?"Perfect!":steps<=G.par?"Cleared!":"Made it!";
+  $("rStars").innerHTML=G.gaveUp?"":starAnim(G.stars);$("rStars").hidden=G.gaveUp;
   $("rNums").innerHTML=`<div><b>${G.gaveUp?"–":steps}</b><span>Steps</span></div><div><b>${G.par}</b><span>Par</span></div><div><b>${fmt(G.ms)}</b><span>Time</span></div>`;
   const yours=G.ladder.map(w=>w.toUpperCase()).join(" → ");
   const showBest=G.gaveUp||steps>G.par;
@@ -767,7 +875,7 @@ function showResult(){
   if(g.mode==="daily"){main.textContent="Back to home";main.onclick=()=>{$("result").hidden=true;show("home")};alt.hidden=true}
   else if(g.mode==="level"){const nx=g.idx+1,set=LEVELS[g.len];main.textContent=g.gaveUp?"Try again":nx<set.length?`Level ${nx+1}`:"All levels";
     main.onclick=()=>{$("result").hidden=true;if(g.gaveUp)startGame({mode:"level",len:g.len,idx:g.idx},true);else if(nx<set.length)startGame({mode:"level",len:g.len,idx:nx},true);else{lvLen=g.len;show("levels")}};
-    alt.hidden=false;alt.textContent=g.gaveUp?"Levels":"Try again";alt.onclick=()=>{$("result").hidden=true;if(g.gaveUp){lvLen=g.len;show("levels")}else startGame({mode:"level",len:g.len,idx:g.idx},true)}}
+    alt.hidden=false;alt.textContent=g.gaveUp?"Levels":"Retry";alt.onclick=()=>{$("result").hidden=true;if(g.gaveUp){lvLen=g.len;show("levels")}else startGame({mode:"level",len:g.len,idx:g.idx},true)}}
   else{main.textContent=g.mode==="marathon"?"Next marathon":"Next ladder";main.onclick=()=>{$("result").hidden=true;startGame({mode:g.mode,len:g.len},true)};alt.hidden=true}
   $("rShare").hidden=g.gaveUp;
   $("result").hidden=false;setTimeout(()=>main.focus(),50)
@@ -821,7 +929,7 @@ $("gameBack").onclick=()=>{
 function move(dx){if(!G||G.done)return;G.sel=(G.sel+dx+G.len)%G.len;render()}
 document.addEventListener("keydown",e=>{
   if(e.metaKey||e.ctrlKey||e.altKey)return;
-  const open=[...document.querySelectorAll(".modal")].find(m=>!m.hidden);
+  const open=[...document.querySelectorAll(".modal,.sheet-wrap")].find(m=>!m.hidden);
   if(open){if(e.key==="Escape"&&open.id!=="result")open.hidden=true;return}
   if($("game").hidden)return;
   if(/^[a-z]$/i.test(e.key)){play(e.key.toLowerCase());e.preventDefault()}
@@ -843,6 +951,5 @@ try{if(!localStorage.getItem("rungs-seen")){localStorage.setItem("rungs-seen","1
 show("home");
 if(quiet.length)setTimeout(()=>toast(`${quiet.length} ${quiet.length===1?"badge":"badges"} earned from your earlier climbs`),600);
 </script>
-
 </body>
 </html>
