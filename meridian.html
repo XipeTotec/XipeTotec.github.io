@@ -280,6 +280,7 @@ button:focus:not(:focus-visible){outline:none}
 #pauseOv>div{text-align:center;display:grid;gap:12px;justify-items:center}
 #pauseOv h3{margin:0;font-family:var(--serif);font-size:30px}#pauseOv p{margin:0;color:var(--dim)}
 #pauseOv .nx{position:relative;background:var(--amber);color:var(--on-accent);font-weight:700;padding:12px 34px;border-radius:999px;font-size:16px}
+.sk:disabled{opacity:.4}
 .sk{background:var(--panel-hi);color:var(--dim);font-weight:600;padding:6px 14px;border-radius:999px;font-size:13px;margin-left:8px}
 #status .sk{padding:6px 14px}
 .panel.slim{height:calc(112px + env(safe-area-inset-bottom))}
@@ -2401,10 +2402,10 @@ function thawClock(){ if(game&&game.pausedAt){ const d=performance.now()-game.pa
 function pauseGame(){ if(!game||game.paused||$("play").classList.contains("hidden")) return; game.paused=true; freezeClock(); $("pauseOv").classList.remove("hidden"); }
 function resumeGame(){ if(!game||!game.paused) return; game.paused=false; $("pauseOv").classList.add("hidden"); if(!document.hidden) thawClock(); }
 /* skip: put this question back at the end so it comes round again */
-function skipQuestion(){ const g=game; if(!g||g.locked||g.paused) return;
+function skipQuestion(){ const g=game; if(!g||g.locked||g.paused||(g.skipLeft??1)<1) return;
   if(g.endless&&g.i+1>=g.qs.length) extendQuestions();
   if(g.i+1>=g.qs.length) return;
-  const [q]=g.qs.splice(g.i,1); g.qs.push(q); g.skips=(g.skips||0)+1; beginQuestion(); }
+  const [q]=g.qs.splice(g.i,1); g.qs.push(q); g.skips=(g.skips||0)+1; g.skipLeft=0; beginQuestion(); }       // one skip at a time; a correct answer gives it back
 /* pause the clock while the tab is hidden */
 document.addEventListener("visibilitychange",()=>{
   if(!game||!(game.timed||game.sprint)||(game.locked&&!game.sprint)||$("play").classList.contains("hidden")) return;
@@ -2424,7 +2425,7 @@ function lock(ok,pts,q,wrongHit,speed=0,timedOut=false){ if(game) game.lockedAt=
   }
   if(ok){ const kk=q.flagOnly?"FLAGMAP":q.capOnly?"CAPMAP":q.peak?"PEAK":q.lm?"LANDMARK":q.river?"RIVER":q.lake?"LAKE":q.kind; counters.byKind[kk]=(counters.byKind[kk]||0)+1; counters.correct++; saveCounters(); }
   Object.assign(g,{locked:true,ok,pts,speed,timedOut,score:g.score+pts,
-    streak:ok?g.streak+1:0,sk:ok?bumpSk(g.sk,g.streak+1):g.sk,bestStreak:ok?Math.max(g.bestStreak,g.streak+1):g.bestStreak,correct:g.correct+(ok?1:0),
+    skipLeft:ok?1:(g.skipLeft??1),streak:ok?g.streak+1:0,sk:ok?bumpSk(g.sk,g.streak+1):g.sk,bestStreak:ok?Math.max(g.bestStreak,g.streak+1):g.bestStreak,correct:g.correct+(ok?1:0),
     marks:{...(pairQ(q)?{[q.other.iso]:PAL.nb}:{}),...(q.kind==="LMCOUNTRY"?{[q.target.country.iso]:PAL.nb}:{}),...(q.kind==="RIVERTHRU"?{[q.riverObj.iso]:PAL.nb}:{}),...(q.kind==="NEIGH"?Object.fromEntries(q.neighbors.map(i=>[i,PAL.nb])):q.kind==="ODD"?Object.fromEntries(q.group.map(i=>[i,PAL.nb])):{}),...(wrongHit?{[wrongHit]:PAL.bad}:{}),[q.target.iso]:ok?PAL.ok:PAL.amber}});
   if(g.endless&&!ok){
     if(g.maxLives){ g.lives--; if(g.lives<=0) g.over=true; else if(g.lives===1) g.sinceLast=0; }
@@ -2756,7 +2757,7 @@ function renderPlay(){
   else if(g.locked&&q.kind==="PATH"){ txt=`✕ ${q.steps&&q.steps>q.par+3?"Too far. ":""}Shortest: ${q.answer}`; col="var(--amber)"; }
   else if(g.locked){ txt="✕ "+(g.timedOut?"Time's up. ":"")+`It was ${q.answer}`+(g.maxLives?(g.lives>0?` · ${g.lives} li${g.lives===1?"fe":"ves"} left`:" · no lives left"):""); col="var(--amber)"; }
   else if(g.attempts===1){ txt="✕ Not quite. One more try."; col="var(--bad)"; }
-  $("status").innerHTML=`<span style="color:${col}">${esc(txt)}</span>`+(g.locked&&!g.sprint?`<button id="nextBtn" class="nx">${last?"See results":"Next"}</button>`:q.kind==="PATH"&&!g.locked?`<button id="giveUp" class="nx">Give up</button>`:"")+(!g.locked&&(g.endless||g.i+1<g.qs.length)?`<button id="skipBtn" class="sk">Skip</button>`:"");
+  $("status").innerHTML=`<span style="color:${col}">${esc(txt)}</span>`+(g.locked&&!g.sprint?`<button id="nextBtn" class="nx">${last?"See results":"Next"}</button>`:q.kind==="PATH"&&!g.locked?`<button id="giveUp" class="nx">Give up</button>`:"")+(!g.locked&&(g.endless||g.i+1<g.qs.length)?`<button id="skipBtn" class="sk"${(g.skipLeft??1)>0?"":" disabled"}>Skip · ${g.skipLeft??1}</button>`:"");
   document.querySelector(".panel").classList.toggle("slim",!q.choices.length&&q.kind==="FIND"&&!q.lm&&!q.lake&&!q.peak);
   $("choices").classList.toggle("c6",!g.locked&&q.choices.length===6);
   $("choices").innerHTML=g.locked ? (g.sprint?"":(q.kind==="BIGGER"?numCard(q):q.lm?landmarkCard(q):q.peak?peakCard(q):q.river?riverCard(q):q.lake?lakeCard(q):q.kind==="PATH"?pathCard(q):countryCard(q.target))+neighbourNote(q)) :
