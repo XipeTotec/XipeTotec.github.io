@@ -1350,7 +1350,12 @@ class World {
     return best;
   }
   setTerritories(on){ this.quiz=on?this.quizAll:this.quizSov; this.quizSet=new Set(this.quiz); }
-  hit(x,y,tol){
+  hit(x,y,tol,s,dr){
+    if(s){                                              // a tiny place's dot comes first, even where a bigger neighbour's shape sits underneath it
+      let tb=null,td=1e9;
+      for(const c of this.quizAll){ if(!c.valid||!this.quizSet.has(c)) continue; const b=c.main; if(Math.max(b.r-b.l,b.b-b.t)*s>=8) continue;
+        const d=Math.hypot((b.l+b.r)/2-x,(b.t+b.b)/2-y)*s; if(d<=dr+8&&d<td){ td=d; tb=c; } }
+      if(tb) return tb; }
     for(const c of this.countries){
       if(!inBox(c.bounds,x,y)) continue;
       for(const p of c.polys) if(inBox(p.bounds,x,y) && inRing(p.outer,x,y) && !p.holes.some(h=>inRing(h,x,y))) return c;
@@ -1491,6 +1496,7 @@ class MapView {
     const ns=Math.min(Math.max(this.s*k,this.fit),this.fit*MAX_ZOOM), f=ns/this.s;
     this.ox=this.cx(ns,px-(px-this.ox)*f); this.oy=this.cy(ns,py-(py-this.oy)*f); this.s=ns; this.schedule("draw");
   }
+  dotR(s){ return 5+Math.min(7,Math.max(0,Math.log2(s/this.fit)-1)*2.5); }          // dots for tiny places grow as you zoom in, so they stay easy to hit
   inView(t){                                           // is this country / peak already on screen (flat map only)?
     if(this.globe||!this.inited||!t) return false; const s=this.s; let x,y;
     if(t.main){ const b=t.main; x=(b.l+b.r)/2; y=(b.t+b.b)/2; } else if(t.lon!=null&&t.lat!=null){ [x,y]=PROJ.fwd(t.lon,t.lat); } else return false;
@@ -1582,7 +1588,7 @@ class MapView {
         for(const k of this.world.countries){ if(!k.valid||!this.world.quizSet.has(k)||!vis(k)) continue;
           const b=k.main; if(Math.max(b.r-b.l,b.b-b.t)*s>=8) continue;
           const mk=this.marks[k.iso]; if(!mk&&sel&&!inSel(sel,k)&&settings.palette!=="CALM") continue;
-          c.beginPath(); c.arc((b.l+b.r)/2,(b.t+b.b)/2,(mk?7:5)/s,0,6.2832); c.fillStyle=mk||(this.done[k.iso]?(nb?nbDone():PAL.done):toneOf(k,sel,nb)); c.fill();
+          c.beginPath(); c.arc((b.l+b.r)/2,(b.t+b.b)/2,(this.dotR(s)+(mk?2:0))/s,0,6.2832); c.fillStyle=mk||(this.done[k.iso]?(nb?nbDone():PAL.done):toneOf(k,sel,nb)); c.fill();
           c.lineWidth=1.2/s; c.strokeStyle="rgba(255,255,255,.75)"; c.stroke(); } }
       if(this.lakes){ c.strokeStyle=PAL.border; c.lineWidth=1/s;
         for(const lk of this.lakes){ if(this.marks[lk.iso]) continue; c.fillStyle=PAL.lake; c.fill(lk.path(),"evenodd"); c.stroke(lk.path()); }
@@ -1710,7 +1716,7 @@ class MapView {
     const up=e=>{ const wasOne=ptrs.size===1; ptrs.delete(e.pointerId);
       if(wasOne&&moved&&!this.globe&&this._cache){ this._want=""; this.draw(); }      // settle on an exact repaint
       if(wasOne && down && !moved && performance.now()-down.t<500 && this.onTap && this.world){
-        let c; if(this.pickLakes&&this.lakes) c=this.hitLake(down.p[0],down.p[1]); else if(this.pickPeaks&&this.peaks) c=this.hitPeak(down.p[0],down.p[1]); else if(this.globe) c=this.hitGlobe(down.p[0],down.p[1]); else { let [wx,wy]=this.toWorld(down.p[0],down.p[1]); if(PROJ.wrap) wx=((wx%360)+360)%360; c=this.world.hit(wx,wy,(settings.tiny?24:14)/this.s); }
+        let c; if(this.pickLakes&&this.lakes) c=this.hitLake(down.p[0],down.p[1]); else if(this.pickPeaks&&this.peaks) c=this.hitPeak(down.p[0],down.p[1]); else if(this.globe) c=this.hitGlobe(down.p[0],down.p[1]); else { let [wx,wy]=this.toWorld(down.p[0],down.p[1]); if(PROJ.wrap) wx=((wx%360)+360)%360; c=this.world.hit(wx,wy,(settings.tiny?24:14)/this.s,settings.tiny?this.s:0,this.dotR(this.s)); }
         if(c) this.onTap(c); else if(this.onBlank) this.onBlank(); }
       if(ptrs.size===0) down=null; lastDist=0; };
     cv.addEventListener("pointerup",up); cv.addEventListener("pointercancel",e=>{ptrs.delete(e.pointerId);down=null;});
