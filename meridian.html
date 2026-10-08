@@ -721,7 +721,7 @@ function borderlessColour(k){
 }
 function toneOf(k,sel,nb){
   const p=settings.palette;
-  if(nb){ if(p!=="CALM"){ const ai0=activeIsos(); if(ai0&&!ai0.has(k.iso)) return DIM_COL; if(sel&&!inSel(sel,k)) return DIM_COL; } return borderlessColour(k); }
+  if(nb) return borderlessColour(k);                                  // every place the same colour, even outside the chosen region, so the region outline gives nothing away
   if(p==="CALM") return PAL.tones[k.hv%PAL.tones.length];
   const ai=activeIsos(); if(ai&&!ai.has(k.iso)) return DIM_COL;
   if(sel&&!inSel(sel,k)) return DIM_COL;
