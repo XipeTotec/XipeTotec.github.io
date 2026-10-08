@@ -778,7 +778,7 @@ const RUN_FREE=new Set(["PEAKS","RIVERS","LAKES","LANDMARKS"]);   // these use t
 const CHALLENGES=new Set(["LIVES","STREAK","SPRINT"]);
 const KIND_SETS={MIX:["FIND","NAME","CAPITAL","FLAG"],EVERY:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],LIVES:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],STREAK:["FIND","NAME","CAPITAL","FLAG","FLAGMAP","CAPMAP","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],SPRINT:["NAME","FLAG","CAPITAL","SHAPE","NEIGH","ODD","CAPREV","BIGGER","TF"],NUMBERS:["BIGGER","BIGGER","POPBAND"],TF:["TF"]};
 const CONT_LABELS=["Africa","Asia","Europe","North America","South America","Oceania"];
-const LIVES_OPTS=[3,5,10], SPRINT_OPTS=[30,60,120], HL_KINDS=["NAME","CAPITAL","CONT","NEIGH","SHAPE","PEAKNAME","RIVERNAME","RIVERFLOW","RIVERTHRU","LAKENAME","POPBAND","LMNAME","LMCOUNTRY"];
+const LIVES_OPTS=[3,5,10], SPRINT_OPTS=[[30,0],[60,0],[90,0],[120,0],[30,2],[60,3],[90,3],[120,3]], HL_KINDS=["NAME","CAPITAL","CONT","NEIGH","SHAPE","PEAKNAME","RIVERNAME","RIVERFLOW","RIVERTHRU","LAKENAME","POPBAND","LMNAME","LMCOUNTRY"];
 const NO_REC=new Set(["ODD","TF","BIGGER","POPBAND","PATH"]);       // these don't prove you know where a country is, so they stay off Your map
 const pairQ=q=>q.kind==="PEAKHIGH"||q.kind==="BIGGER"||q.kind==="PATH";
 /* ---- mountains: a curated list, so this mode works offline and needs no extra data ---- */
@@ -1193,7 +1193,8 @@ const store = {
   getRaw(k){ try{ return localStorage.getItem(k) }catch(e){ return mem[k]??null } },
   setRaw(k,v){ try{ localStorage.setItem(k,v) }catch(e){ mem[k]=v } }
 };
-let livesN=+store.getRaw("meridian_lives")||3, sprintS=+store.getRaw("meridian_sprint")||60;
+let livesN=+store.getRaw("meridian_lives")||3, sprintS=+store.getRaw("meridian_sprint")||60, sprintInc=+store.getRaw("meridian_sprintinc")||0;
+const clockStr=(a,b)=>b?`${a}+${b}`:String(a);       // chess style: 60+3 is 60 seconds, plus 3 for every correct answer
 let runRule=(r=>["ROUND","LIVES","SUDDEN"].includes(r)?r:"ROUND")(store.getRaw("meridian_run")), sprintOn=store.getRaw("meridian_sprinton")==="1";
 
 /* ============================== projections ============================== */
@@ -2177,7 +2178,7 @@ function startGame(mode){
   if(ri.endless){
     const extra={...base,endless:true,count:10,variant:ri.variant,sudden:runRule==="SUDDEN"};
     if(runRule==="LIVES") Object.assign(extra,{lives:livesN,maxLives:livesN});
-    if(sprintOn) Object.assign(extra,{sprint:true,sprintS,timed:false,limit:sprintS,sprintEnd:performance.now()+sprintS*1000});
+    if(sprintOn) Object.assign(extra,{sprint:true,sprintS,sprintInc,timed:false,limit:sprintS,sprintEnd:performance.now()+sprintS*1000});
     return launch(ri.key,buildQuestions(mode,diff,ks,10,null,opts),ks,false,extra);
   }
   launch(mode,buildQuestions(mode,diff,ks,qCount,null,opts),ks,false,base);
@@ -2252,7 +2253,7 @@ function renderTimer(){
   if(!game||!(game.timed||game.sprint)){ wrap.classList.add("hidden"); tx.textContent=""; return; }
   wrap.classList.remove("hidden");
   const rem=remainingMs(), low=rem<5000;
-  $("tbar").style.transform=`scaleX(${rem/(game.limit*1000)})`; $("tbar").classList.toggle("low",low);
+  $("tbar").style.transform=`scaleX(${Math.min(1,rem/(game.limit*1000))})`; $("tbar").classList.toggle("low",low);
   tx.textContent=Math.ceil(rem/1000)+"s"; tx.classList.toggle("low",low);
 }
 function startTimer(){
@@ -2289,6 +2290,7 @@ function lock(ok,pts,q,wrongHit,speed=0,timedOut=false){ if(game) game.lockedAt=
     if(g.sudden||g.mode==="STREAK") g.over=true;
     if(g.sprint){ g.sprintEnd-=3000; g.deadline=g.sprintEnd; }                  // a miss costs 3 seconds
   }
+  if(g.endless&&ok&&g.sprint&&g.sprintInc){ g.sprintEnd+=g.sprintInc*1000; g.deadline=g.sprintEnd; }      // a correct answer earns time back
   if(q.kind==="PATH") g.marks=pathMarks(q,true,ok);
   gameMap.solo=null; gameMap.setMarks(g.marks); if(!stay(q,q.kind==="ODD"?[q.target,...q.groupC]:pairQ(q)?[q.target,q.other]:q.kind==="RIVERTHRU"?[q.target,q.riverObj]:[q.target],true)) gameMap.run(q.kind==="ODD"?[q.target,...q.groupC]:pairQ(q)?[q.target,q.other]:q.kind==="RIVERTHRU"?[q.target,q.riverObj]:q.target,false,focusPad(q,true)); gameMap.setPulses([{iso:q.target.iso,color:ok?PAL.ok:PAL.amber}]);
   buzz(ok?15:[40,40,40]); renderPlay();
@@ -2362,7 +2364,7 @@ function finish(){
   $("rStreak").textContent=`Longest streak: ${g.bestStreak}`; $("rTileStreak").textContent=g.bestStreak;
   $("rTime").textContent=`Average answer time: ${(avgMs/1000).toFixed(1)} s`; $("rTileTime").textContent=`${(avgMs/1000).toFixed(1)} s`;
   $("rAvg").textContent=g.daily?(g.replay?"Replays don't change your streak":`Daily streak: ${dailyStreak()} day${dailyStreak()===1?"":"s"}`):`Your average over ${h.length} round${h.length===1?"":"s"}: ${avg}`;
-  $("rMode").textContent=g.daily?`Daily challenge, ${g.daily}`:g.practice?`Practice, ${g.qs.length} ${g.label||"weak spots"}`:`${MODES[g.mode][0]}`+(g.theme?`, ${themeLabelOf(g.theme)}`:`, ${DIFFS[g.diff][0]}`+(g.regions.length?`, ${regionLabel(g.regions)}`:""))+(g.endless?(g.maxLives?`, ${g.maxLives} lives`:"")+(g.sudden&&g.mode!=="STREAK"?", sudden death":"")+(g.sprint?`, ${g.sprintS} seconds`:""):g.qs.length!==10?`, ${g.qs.length} questions`:"")+(g.timed?", timed":"")+(g.smart?", smart review":"")+(g.elim?", eliminate":"");
+  $("rMode").textContent=g.daily?`Daily challenge, ${g.daily}`:g.practice?`Practice, ${g.qs.length} ${g.label||"weak spots"}`:`${MODES[g.mode][0]}`+(g.theme?`, ${themeLabelOf(g.theme)}`:`, ${DIFFS[g.diff][0]}`+(g.regions.length?`, ${regionLabel(g.regions)}`:""))+(g.endless?(g.maxLives?`, ${g.maxLives} lives`:"")+(g.sudden&&g.mode!=="STREAK"?", sudden death":"")+(g.sprint?`, ${clockStr(g.sprintS,g.sprintInc)} ${g.sprintInc?"clock":"seconds"}`:""):g.qs.length!==10?`, ${g.qs.length} questions`:"")+(g.timed?", timed":"")+(g.smart?", smart review":"")+(g.elim?", eliminate":"");
   let earned=[];
   if(!g.replay){                                                 // lifetime counters, then see what that unlocked
     counters.rounds++; counters.byMode[g.mode]=1; if(g.theme) counters.themes[g.theme]=1; if(g.practice) counters.practice++; if(g.globe) counters.globe++;
@@ -2446,10 +2448,10 @@ function runInfo(m){
   const endless=!RUN_FREE.has(m)&&(runRule!=="ROUND"||sprintOn);
   if(!endless) return {endless:false,key:m,variant:""};
   const legacy=m==="EVERY"&&!(runRule!=="ROUND"&&sprintOn)?(sprintOn?"SPRINT":runRule==="LIVES"?"LIVES":"STREAK"):m;
-  const parts=[runRule==="LIVES"?"L"+livesN:runRule==="SUDDEN"&&legacy!=="STREAK"?"SD":"",sprintOn?"S"+sprintS:""].filter(Boolean);
+  const parts=[runRule==="LIVES"?"L"+livesN:runRule==="SUDDEN"&&legacy!=="STREAK"?"SD":"",sprintOn?"S"+clockStr(sprintS,sprintInc):""].filter(Boolean);
   return {endless:true,key:legacy,variant:parts.join("+")};
 }
-const runLabel=m=>{ const ri=runInfo(m); if(!ri.endless) return ""; return [runRule==="LIVES"?`${livesN} lives`:runRule==="SUDDEN"?"Sudden death":"",sprintOn?`${sprintS} s sprint`:""].filter(Boolean).join(" · "); };
+const runLabel=m=>{ const ri=runInfo(m); if(!ri.endless) return ""; return [runRule==="LIVES"?`${livesN} lives`:runRule==="SUDDEN"?"Sudden death":"",sprintOn?(sprintInc?`${clockStr(sprintS,sprintInc)} clock`:`${sprintS} s sprint`):""].filter(Boolean).join(" · "); };
 const effTheme=m=>m==="CONT"?"":theme;
 const effRegions=m=>m==="CONT"||theme?[]:regionKeys();
 const bestNow=m=>{ const th=effTheme(m), ri=runInfo(m); return store.get(bestKey(ri.key,th?"HARD":difficulty,th?"T_"+th:effRegions(m).join('+'),ri.endless&&sprintOn?false:timed,ri.endless?10:qCount,territories,elim,ri.variant,smart)); };
@@ -2539,8 +2541,8 @@ function renderSheet(){
     html=(free?`<p class="note">${MODES[curMode][0]} uses its own question list, so lives and the clock aren't available here.</p>`:
         `<p class="grp">Rule</p>`+rule("ROUND","Standard round","A set number of questions, then your score.")+rule("LIVES","Lives","Keep going until you run out of lives.")+rule("SUDDEN","Sudden death","One wrong answer ends the run.")+
         (runRule==="LIVES"?`<p class="grp">Lives</p><div class="chips">${LIVES_OPTS.map(n=>`<button data-lives="${n}" class="${n===livesN?"sel":""}">${n} lives</button>`).join("")}</div>`:"")+
-        `<p class="grp">Clock</p><button class="toggle" data-sprinton="1" role="switch" aria-checked="${sprintOn}" style="background:var(--panel-hi)"><div><b>Sprint clock</b><small>Answer as many as you can before time runs out. Each miss costs 3 seconds.</small></div><span class="sw"></span></button>`+
-        (sprintOn?`<div class="chips" style="margin-top:8px">${SPRINT_OPTS.map(n=>`<button data-sprint="${n}" class="${n===sprintS?"sel":""}">${n} seconds</button>`).join("")}</div>`:""))+
+        `<p class="grp">Clock</p><button class="toggle" data-sprinton="1" role="switch" aria-checked="${sprintOn}" style="background:var(--panel-hi)"><div><b>Clock</b><small>Answer as many as you can before time runs out.</small></div><span class="sw"></span></button>`+
+        (sprintOn?`<div class="chips wrapchips" style="margin-top:8px">${SPRINT_OPTS.map(([a,b])=>`<button data-clock="${a}+${b}" class="${a===sprintS&&b===sprintInc?"sel":""}">${clockStr(a,b)}</button>`).join("")}</div><p class="note">Like chess: 60+3 is 60 seconds to start, plus 3 seconds for every correct answer. Each miss still costs 3 seconds.</p>`:""))+
       ((free||(runRule==="ROUND"&&!sprintOn))?`<p class="grp">Questions<span>${pool} in your selection</span></p><div class="chips">${COUNTS.map(n=>`<button data-n="${n}" class="${n===qCount?"sel":""}">${n==="ALL"?"All":n}</button>`).join("")}</div>`:"")+
       `<button class="done" id="sheetDone">Done</button>`; }
   else if(sheetKind==="count"){ title="Questions per round";
@@ -2556,12 +2558,13 @@ function renderSheet(){
   for(const el of [pn.querySelector(".grab"),pn.querySelector(".sheethead")]){ el.style.touchAction="none"; el.addEventListener("pointerdown",start); el.addEventListener("pointermove",move); el.addEventListener("pointerup",end); el.addEventListener("pointercancel",end); } })();
 function sheetClick(e){
   if(e.target.closest("#sheetScrim,#sheetClose,#sheetDone")) return closeSheet();
-  const o=e.target.closest("[data-pack],[data-mode],[data-d],[data-n],[data-c],[data-elim],[data-smart],[data-terr],[data-nobord],[data-lives],[data-sprint],[data-rule],[data-sprinton],[data-tsel],[data-gostudy],[data-leave]"); if(!o) return; const d=o.dataset;
+  const o=e.target.closest("[data-pack],[data-mode],[data-d],[data-n],[data-c],[data-elim],[data-smart],[data-terr],[data-nobord],[data-lives],[data-sprint],[data-clock],[data-rule],[data-sprinton],[data-tsel],[data-gostudy],[data-leave]"); if(!o) return; const d=o.dataset;
   if(d.leave){ closeSheet(); quitRound(); return; }
   if(d.gostudy){ closeSheet(); showTab("study"); return; }
   if(d.rule){ runRule=d.rule; store.setRaw("meridian_run",runRule); renderSheet(); refreshSetup(); return; }
   if(d.sprinton){ sprintOn=!sprintOn; store.setRaw("meridian_sprinton",sprintOn?"1":"0"); renderSheet(); refreshSetup(); return; }
   if(d.lives){ livesN=+d.lives; store.setRaw("meridian_lives",String(livesN)); renderSheet(); refreshSetup(); return; }
+  if(d.clock){ const [a,b]=d.clock.split("+"); sprintS=+a; sprintInc=+b||0; store.setRaw("meridian_sprint",String(sprintS)); store.setRaw("meridian_sprintinc",String(sprintInc)); renderSheet(); refreshSetup(); return; }
   if(d.sprint){ sprintS=+d.sprint; store.setRaw("meridian_sprint",String(sprintS)); renderSheet(); refreshSetup(); return; }
   if(d.elim){ elim=!elim; store.setRaw("meridian_elim",elim?"1":"0"); renderSheet(); refreshSetup(); return; }          // these two stay open
   if(d.terr){ territories=!territories; store.setRaw("meridian_terr",territories?"1":"0"); world.setTerritories(territories); renderSheet(); refreshSetup(); renderHome(); renderSettings(); return; }
@@ -2606,7 +2609,7 @@ function renderPlay(){
   else p=esc(q.prompt);
   $("prompt").innerHTML=p; $("prompt").classList.toggle("long",!p.includes("<")&&q.prompt.length>46);
   let txt="",col="var(--dim)";
-  if(g.locked&&g.ok){ txt=`✓ +${g.pts}`+(g.speed?` (speed +${g.speed})`:"")+(q.kind==="PATH"?` · ${q.steps} step${q.steps===1?"":"s"}${q.steps>q.par?`, shortest was ${q.par}`:", the shortest"}`:""); col="var(--ok)"; }
+  if(g.locked&&g.ok){ txt=`✓ +${g.pts}`+(g.speed?` (speed +${g.speed})`:"")+(g.sprint&&g.sprintInc?` · +${g.sprintInc} s`:"")+(q.kind==="PATH"?` · ${q.steps} step${q.steps===1?"":"s"}${q.steps>q.par?`, shortest was ${q.par}`:", the shortest"}`:""); col="var(--ok)"; }
   else if(q.kind==="PATH"&&!g.locked){ const n=q.chain.length-1; txt=n?`${n} step${n===1?"":"s"} · ${q.chain.slice(1).map(i=>world.countries.find(c=>c.iso===i).name).join(" › ")}`:"Tap a neighbour to start"; col="var(--ink)"; }
   else if(g.locked&&q.kind==="PATH"){ txt=`✕ ${q.steps&&q.steps>q.par+3?"Too far. ":""}Shortest: ${q.answer}`; col="var(--amber)"; }
   else if(g.locked){ txt="✕ "+(g.timedOut?"Time's up. ":"")+`It was ${q.answer}`+(g.maxLives?(g.lives>0?` · ${g.lives} li${g.lives===1?"fe":"ves"} left`:" · no lives left"):""); col="var(--amber)"; }
