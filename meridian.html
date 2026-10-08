@@ -2265,10 +2265,10 @@ function startTheme(id){                                        // theme of the 
   launch("MIX",buildQuestions("MIX","HARD",[],10,null,{theme:id}),[],false,{theme:id,diff:"HARD",count:10,smart:false});
 }
 function extendQuestions(){
-  const g=game, avoid=new Set(g.qs.slice(-15).map(q=>q.target.iso));
+  const g=game, avoid=new Set((g.elim?g.qs:g.qs.slice(-15)).map(q=>q.target.iso));      // with Eliminate on, never ask for the same place twice
   const opts={theme:g.theme,smart:g.smart};
   let more=buildQuestions(g.mode,g.diff,g.regions,10,avoid,opts);
-  if(!more.length) more=buildQuestions(g.mode,g.diff,g.regions,10,null,opts);
+  if(!more.length&&!g.elim) more=buildQuestions(g.mode,g.diff,g.regions,10,null,opts);
   g.qs.push(...more);
 }
 function startPracticeWith(list,label){
@@ -2371,7 +2371,7 @@ function tapAdvance(){ if(game&&game.locked&&!game.sprint&&performance.now()-(ga
 function tapMap(c){
   if(game&&game.locked) return tapAdvance();
   if(!game) return; const q=game.qs[game.i]; if(q.kind==="PATH") return pathTap(c,q); if(q.kind!=="FIND") return;
-  if(game.elim&&game.done[c.iso]){ toast("Already done. Pick one that's still coloured."); return; }
+  if(game.elim&&game.done[c.iso]&&c.iso!==q.target.iso){ toast("Already done. Pick one that's still coloured."); return; }
   if(c.iso===q.target.iso){ const sp=speedBonus(); lock(true,(game.attempts===0?100+bonus(game):50)+sp,q,null,sp); return; }
   game.attempts++; buzz([40,40,40]);
   if(game.attempts>=2){ lock(false,0,q,c.iso); return; }
@@ -2401,7 +2401,7 @@ function pathTap(c,q){
 }
 function nextQuestion(){
   if(!game||!game.locked) return;
-  if(game.endless){ if(game.over) return finish(); if(game.i+1>=game.qs.length) extendQuestions(); }
+  if(game.endless){ if(game.over) return finish(); if(game.i+1>=game.qs.length){ extendQuestions(); if(game.i+1>=game.qs.length){ game.over=true; return finish(); } } }
   else if(game.i+1>=game.qs.length) return finish();
   game.i++; beginQuestion();
 }
