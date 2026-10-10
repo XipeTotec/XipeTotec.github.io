@@ -151,7 +151,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--cyan);outline-offse
 .ladder::after{right:calc(50% - (var(--ts)*var(--n)/2 + var(--gapx)*(var(--n) - 1)/2 + 20px))}
 .row{position:relative;display:flex;gap:var(--gapx);z-index:1}
 .row::before{content:"";position:absolute;left:-20px;right:-20px;top:50%;height:4px;margin-top:-2px;border-radius:2px;background:var(--cyan);box-shadow:0 0 8px var(--cyan);opacity:.55;z-index:-1}
-.tile{width:var(--ts);height:var(--ts);display:grid;place-items:center;border:0;border-radius:12px;background:var(--panel-hi);color:var(--ink);font:400 calc(var(--ts)*.48) var(--display);text-transform:uppercase;box-shadow:0 5px 0 var(--deep);padding:0;transition:transform .15s}
+.tile{width:var(--ts);height:var(--ts);display:grid;place-items:center;border:0;border-radius:12px;background:var(--panel-hi);color:var(--ink);font:400 calc(var(--ts)*.48) var(--display);text-transform:uppercase;box-shadow:0 5px 0 var(--deep);padding:0;transition:transform .2s cubic-bezier(.3,1.6,.5,1),box-shadow .2s,background-color .2s,color .2s}
 .tile.on{background:var(--green);color:var(--on-bright);box-shadow:0 5px 0 var(--green-d)}
 .tile.changed{background:var(--yellow);color:var(--on-bright);box-shadow:0 5px 0 var(--yellow-d)}
 .row.done .tile{opacity:.92}
@@ -167,7 +167,6 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--cyan);outline-offse
 @keyframes flip{0%{transform:rotateX(90deg) scale(.9)}100%{transform:none}}
 .shake{animation:shake .32s}
 @keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
-.flashwin .tile{animation:hop .5s calc(var(--i,0)*60ms) both}
 @keyframes hop{40%{transform:translateY(-12px)}}
 .hint-line{font:600 .88rem var(--body);color:var(--yellow);text-align:center;min-height:1.3em;padding-block:2px}
 .kb{display:flex;flex-direction:column;gap:9px;padding-block:8px calc(14px + env(safe-area-inset-bottom,0px))}
@@ -254,9 +253,81 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--cyan);outline-offse
 .lenpick button[aria-checked="true"]{background:var(--cyan);color:var(--on-bright);box-shadow:0 5px 0 var(--cyan-d),0 0 20px rgba(62,227,255,.35)}
 .lenpick button[aria-checked="true"] span{color:var(--on-bright)}
 
-.countdown{position:fixed;inset:0;display:grid;place-items:center;z-index:25;background:rgba(6,4,18,.75);font:400 7rem var(--display);color:var(--yellow);text-shadow:0 6px 0 var(--yellow-d),0 0 40px rgba(255,210,63,.6)}
-.countdown span{animation:zoom .5s}
+.countdown{position:fixed;inset:0;display:grid;place-items:center;z-index:25;pointer-events:none;background:rgba(6,4,18,.55);font:400 7rem var(--display);color:var(--yellow);text-shadow:0 6px 0 var(--yellow-d),0 0 40px rgba(255,210,63,.6)}
+.countdown span{animation:cd .6s cubic-bezier(.2,1.4,.5,1) both}
+.countdown span.go{color:var(--green);text-shadow:0 6px 0 var(--green-d),0 0 40px rgba(61,245,160,.6)}
+@keyframes cd{0%{transform:scale(2.2);opacity:0}35%{transform:scale(1);opacity:1}100%{transform:scale(.9);opacity:.9}}
 #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:30}
+
+/* ---------- MOTION ---------- */
+.screen.in-fwd{animation:scrFwd .3s cubic-bezier(.2,.9,.3,1)}
+.screen.in-back{animation:scrBack .3s cubic-bezier(.2,.9,.3,1)}
+@keyframes scrFwd{from{opacity:0;transform:translateX(28px)}}
+@keyframes scrBack{from{opacity:0;transform:translateX(-28px)}}
+/* game opens: start rung drops, goal rises */
+.ladder.intro .row{animation:introDown .45s cubic-bezier(.2,1.2,.4,1) both}
+.ladder.intro .row.goal{animation-name:introUp;animation-delay:.08s}
+.ladder.intro .gap{animation:fade .3s .25s both}
+@keyframes introDown{from{opacity:0;transform:translateY(-36px) scale(.94)}}
+@keyframes introUp{from{opacity:0;transform:translateY(36px) scale(.94)}}
+@keyframes fade{from{opacity:0}}
+/* a new rung slides down out of the one above, then its changed letter flips */
+.row.enter{animation:rowIn .34s cubic-bezier(.2,1.15,.4,1) both}
+.row.enter::before{animation:rung .4s .05s ease-out both}
+.row.enter .tile.flip{animation:flip .4s .14s cubic-bezier(.3,1.4,.6,1) both}
+@keyframes rowIn{from{opacity:0;transform:translateY(calc(var(--ts) * -1 - 12px))}}
+@keyframes rung{from{transform:scaleX(0)}}
+@keyframes flip{0%{transform:rotateX(90deg) scale(.85)}100%{transform:none}}
+.row.leave{animation:rowOut .18s ease-in forwards}
+@keyframes rowOut{to{opacity:0;transform:translateY(calc(var(--ts) * -.7)) scale(.96)}}
+/* the gap label and goal tiles update softly */
+.gap.tick{animation:tick .3s}
+@keyframes tick{40%{transform:scale(1.12)}}
+.row.goal .tile.on.fresh{animation:glow .5s}
+@keyframes glow{40%{transform:scale(1.14)}}
+/* wrong word */
+.tile.bad,.row.cur .tile.bad{background:var(--red);color:#fff;box-shadow:0 5px 0 #a3202d,0 0 22px rgba(255,93,108,.7)}
+.key.bad{background:var(--red)!important;color:#fff}
+.key.press{background:var(--violet);transform:translateY(3px);box-shadow:0 1px 0 var(--deep)}
+/* hint: the right key pulses */
+.key.hintkey{background:var(--cyan);color:var(--on-bright);box-shadow:0 4px 0 var(--cyan-d),0 0 18px rgba(62,227,255,.7);animation:keypulse 1s ease-in-out infinite}
+@keyframes keypulse{50%{box-shadow:0 4px 0 var(--cyan-d),0 0 4px rgba(62,227,255,.2)}}
+/* reaching the goal: a green wave, then the rung hops; the goal row lifts into it */
+.row.won .tile{animation:winflip .5s calc(.22s + var(--i,0)*85ms) both}
+.row.won{animation:rowIn .34s cubic-bezier(.2,1.15,.4,1) both,hop .45s calc(.75s + var(--n)*85ms) cubic-bezier(.3,1.6,.5,1)}
+@keyframes winflip{0%{transform:none;background:#3b2f92;color:var(--ink);box-shadow:0 5px 0 var(--violet-d)}49%{transform:rotateX(90deg);background:#3b2f92;color:var(--ink);box-shadow:0 5px 0 var(--violet-d)}51%{transform:rotateX(90deg);background:var(--green);color:var(--on-bright);box-shadow:0 5px 0 var(--green-d)}100%{transform:none;background:var(--green);color:var(--on-bright);box-shadow:0 5px 0 var(--green-d),0 0 22px rgba(61,245,160,.55)}}
+@keyframes hop{40%{transform:translateY(-12px)}}
+.row.merge{animation:merge .45s .15s ease-in both}
+@keyframes merge{to{opacity:0;transform:translateY(calc(var(--ts) * -1 - 12px)) scale(.9)}}
+/* giving up: the rest of the route plays out as ghost rungs */
+.row.ghost .tile{background:transparent;color:var(--yellow);box-shadow:inset 0 0 0 2px var(--yellow)}
+.row.ghost .tile.changed{background:var(--yellow);color:var(--on-bright);box-shadow:0 5px 0 var(--yellow-d)}
+.row.ghost.last .tile{background:var(--green);color:var(--on-bright);box-shadow:0 5px 0 var(--green-d)}
+.row.ghost::before{background:var(--yellow);box-shadow:0 0 8px var(--yellow)}
+/* runs: ladders swap, hearts break, the clock takes hits */
+.ladder-wrap.swap-out{animation:swapOut .22s ease-in forwards}
+@keyframes swapOut{to{opacity:0;transform:translateY(-40px)}}
+.ladder-wrap.veil{filter:blur(10px);opacity:.35}
+.ladder-wrap{transition:filter .25s,opacity .25s}
+.lives svg.breaking{animation:heartbreak .7s ease-out both}
+@keyframes heartbreak{0%{color:var(--pink);transform:scale(1)}30%{transform:scale(1.6) rotate(-12deg);color:var(--red)}100%{color:var(--edge);filter:none;transform:none}}
+.hud .pill.hit{animation:hit .5s}
+@keyframes hit{30%{background:var(--red);transform:scale(1.08)}}
+.hud .pill.hit b{color:#fff}
+.hud .pill.bump{animation:bump .35s}
+@keyframes bump{40%{transform:scale(1.1);background:var(--panel-hi)}}
+/* popups close as nicely as they open */
+.modal,.sheet-wrap{animation:fade .2s}
+.modal.closing,.sheet-wrap.closing{animation:fadeOut .18s forwards;pointer-events:none}
+.modal.closing .card{animation:zoomOut .18s forwards}
+.sheet-wrap.closing .sheet{animation:down .2s ease-in forwards}
+@keyframes fadeOut{to{opacity:0}}
+@keyframes zoomOut{to{opacity:0;transform:scale(.92)}}
+@keyframes down{to{transform:translateY(100%)}}
+.toast.out{animation:tout .22s forwards}
+@keyframes tout{to{opacity:0;transform:translateY(6px) scale(.96)}}
+.nums b.count{animation:fade .3s}
+.card .next-daily{display:block;text-align:center;margin-top:-4px;margin-bottom:12px;color:var(--cyan);font:600 .9rem var(--body)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 @media (max-height:680px){.key{height:44px}.kb{gap:7px}.marquee{padding-block:4px 14px}.neonlad{transform:scale(.8)}}
 </style>
@@ -424,6 +495,16 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--cyan);outline-offse
   <div class="card badge-detail" role="dialog" aria-modal="true" aria-labelledby="bdTitle">
     <div id="bdBody"></div>
     <button class="btn block" type="button" data-close>Close</button>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div class="modal" id="confirm" hidden>
+  <div class="card" role="alertdialog" aria-modal="true" aria-labelledby="cfTitle" aria-describedby="cfText">
+    <h2 id="cfTitle">Give up?</h2>
+    <p id="cfText" style="text-align:center"></p>
+    <button class="btn block" id="cfNo" type="button">Keep climbing</button>
+    <button class="btn ghost block" id="cfYes" type="button" style="margin-top:12px">Show me the answer</button>
   </div>
 </div>
 
@@ -595,12 +676,12 @@ function renderBadges(){
     const b=BADGES[+el.dataset.b],has=!!S.badges[b.id],v=Math.min(b.v(),b.t);
     $("bdBody").innerHTML=`<div class="badge ${has?"got":""}" style="background:none;box-shadow:none;padding:0"><span class="medal">${svg(b.icon)}</span></div><h3>${b.name}</h3><p>${b.desc}</p>`+
       (has?`<p class="eyebrow">Unlocked ${new Date(S.badges[b.id]).toLocaleDateString()}</p>`:b.t>1?`<div class="bar"><i style="width:${Math.round(v/b.t*100)}%"></i></div><p class="eyebrow">${v} / ${b.t}</p>`:`<p class="eyebrow">Locked</p>`);
-    $("badgeModal").hidden=false
+    openModal($("badgeModal"))
   })
 }
 
 /* ---------- toasts ---------- */
-function toast(html,cls,ms){const t=document.createElement("div");t.className="toast"+(cls?" "+cls:"");t.innerHTML=html;$("toasts").appendChild(t);while($("toasts").children.length>3)$("toasts").firstChild.remove();setTimeout(()=>t.remove(),ms||1500)}
+function toast(html,cls,ms){const t=document.createElement("div");t.className="toast"+(cls?" "+cls:"");t.innerHTML=html;$("toasts").appendChild(t);while($("toasts").children.length>3)$("toasts").firstChild.remove();setTimeout(()=>{t.classList.add("out");setTimeout(()=>t.remove(),230)},ms||1500)}
 function buzz(p){if(!S.settings.fx)return;try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
 /* confetti */
 function confetti(power){
@@ -617,11 +698,38 @@ function confetti(power){
 }
 
 /* ---------- screens ---------- */
-function show(id){for(const s of["home","levels","badges","game"])$(s).hidden=s!==id;if(id!=="game")$("toasts").innerHTML="";if(id!=="game")stopClock();if(id==="home")renderHome();if(id==="levels")renderLevels();if(id==="badges")renderBadges()}
+/* popups open and close with a short animation */
+const isOpen=m=>!m.hidden&&!m.classList.contains("closing");
+function openModal(m){clearTimeout(m._t);m.classList.remove("closing");m.hidden=false}
+function closeModal(m,cb){
+  if(m.hidden){if(cb)cb();return}
+  if(m.classList.contains("closing"))return;
+  m.classList.add("closing");
+  m._t=setTimeout(()=>{m.hidden=true;m.classList.remove("closing");if(cb)cb()},190)
+}
+/* screens slide in: forward when going deeper, back when returning */
+let curScreen="home";
+const DEPTH={home:0,levels:1,badges:1,game:2};
+function show(id){
+  const prev=curScreen;curScreen=id;
+  for(const s of["home","levels","badges","game"]){
+    const el=$(s),was=!el.hidden;el.hidden=s!==id;
+    if(s===id&&!was){el.classList.remove("in-fwd","in-back");void el.offsetWidth;el.classList.add(DEPTH[id]>=DEPTH[prev]?"in-fwd":"in-back")}
+  }
+  if(id!=="game"){$("toasts").innerHTML="";stopClock()}
+  if(id==="home")renderHome();if(id==="levels")renderLevels();if(id==="badges")renderBadges()
+}
+document.querySelectorAll(".screen").forEach(el=>el.addEventListener("animationend",e=>{if(e.target===el)el.classList.remove("in-fwd","in-back")}));
 document.querySelectorAll("[data-home]").forEach(b=>b.onclick=()=>show("home"));
-document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>b.closest(".modal").hidden=true);
-document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m&&m.id!=="result")m.hidden=true}));
-$("sheet").addEventListener("click",e=>{if(e.target===$("sheet"))$("sheet").hidden=true});
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeModal(b.closest(".modal")));
+document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m&&m.id!=="result")closeModal(m)}));
+$("sheet").addEventListener("click",e=>{if(e.target===$("sheet"))closeModal($("sheet"))});
+/* confirm box, used for giving up and for ending a run */
+let cfAction=null;
+function confirmBox(o){$("cfTitle").textContent=o.title;$("cfText").textContent=o.text;$("cfYes").textContent=o.yes;$("cfNo").textContent=o.no;cfAction=o.onYes;openModal($("confirm"));setTimeout(()=>$("cfNo").focus(),60)}
+$("cfNo").onclick=()=>closeModal($("confirm"));
+$("cfYes").onclick=()=>{const f=cfAction;cfAction=null;closeModal($("confirm"),()=>{if(f)f()})};
+function untilTomorrow(){const d=new Date(),m=new Date(d);m.setHours(24,0,0,0);const mins=Math.max(1,Math.ceil((m-d)/60000)),h=Math.floor(mins/60);return h?`${h}h ${mins%60}m`:`${mins}m`}
 function starStr(n){return"★".repeat(n)+`<span class="off">${"★".repeat(3-n)}</span>`}
 function starAnim(n){let h="";for(let i=0;i<3;i++)h+=`<span class="s${i<n?"":" off"}" style="animation-delay:${200+i*180}ms">★</span>`;return h}
 function fmt(ms){const s=Math.max(0,Math.floor(ms/1000));return Math.floor(s/60)+":"+pad(s%60)}
@@ -632,7 +740,7 @@ function renderHome(){
   $("dailyNum").innerHTML=`Daily #${n}`+(s?` &nbsp;<span class="chip">${svg("flame")}${s} day streak</span>`:"");
   const play='<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg>',tick='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   if(d&&d.done){$("dailyGo").innerHTML=d.gaveUp?"SEEN":tick;$("dailyGo").classList.toggle("ok",!d.gaveUp);
-    $("dailySub").innerHTML=d.gaveUp?"Revealed. New ladder tomorrow.":`${d.ladder.length-1} steps · <span class="stars">${starStr(d.stars)}</span> · back tomorrow`}
+    $("dailySub").innerHTML=d.gaveUp?`Revealed. Next ladder in ${untilTomorrow()}.`:`${d.ladder.length-1} steps · <span class="stars">${starStr(d.stars)}</span> · next in ${untilTomorrow()}`}
   else{$("dailyGo").innerHTML=play;$("dailyGo").classList.remove("ok");$("dailySub").textContent=d?"In progress. Pick up where you left off.":"One four-letter ladder. Same for everyone."}
   $("modeList").innerHTML=Object.entries(MODES).map(([id,m])=>`<button class="mrow" type="button" data-mode="${id}" style="--c:var(--${m.c});--cd:var(--${m.c}-d)"><span class="ico">${svg(m.icon)}</span><span class="txt"><b>${m.name}</b><small>${m.desc}</small></span><span class="chev" aria-hidden="true">›</span></button>`).join("");
   $("modeList").querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>openMode(b.dataset.mode));
@@ -642,8 +750,8 @@ $("goDaily").onclick=()=>{const k=todayKey(),d=S.daily[k];startGame({mode:"daily
 function paintSettings(){$("hardToggle").setAttribute("aria-checked",S.settings.hard);$("fxToggle").setAttribute("aria-checked",S.settings.fx!==false)}
 $("hardToggle").onclick=()=>{S.settings.hard=!S.settings.hard;save();paintSettings()};
 $("fxToggle").onclick=()=>{S.settings.fx=S.settings.fx===false;save();paintSettings()};
-$("openSettings").onclick=()=>{paintSettings();$("settings").hidden=false};
-$("openHow").onclick=()=>{$("how").hidden=false};
+$("openSettings").onclick=()=>{paintSettings();openModal($("settings"))};
+$("openHow").onclick=()=>{openModal($("how"))};
 $("openBadges").onclick=()=>show("badges");
 $("openStats").onclick=()=>{
   const st=S.stats;
@@ -651,17 +759,17 @@ $("openStats").onclick=()=>{
     [allStars(),"Level stars"],[S.words.length,"Different words used"],[Math.max(...LENS.map(n=>st.sprintBest[n])),"Best Sprint"],[Math.max(...LENS.map(n=>st.bustBest[n])),"Best Par or Bust"],
     [st.fastest?fmt(st.fastest):"–","Fastest climb, no hints"],[st.steps,"Total steps"]];
   $("statGrid").innerHTML=items.map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join("");
-  $("stats").hidden=false
+  openModal($("stats"))
 };
 let sheetMode=null;
 function openMode(m){sheetMode=m;const M=MODES[m];
   $("shIco").innerHTML=svg(M.icon);$("shIco").style.background=`var(--${M.c})`;$("shIco").style.boxShadow=`0 5px 0 var(--${M.c}-d)`;
   $("shTitle").textContent=M.name;$("shDesc").textContent=M.long;
-  $("shGo").textContent=m==="levels"?"Open levels":"Start";paintLens();$("sheet").hidden=false;setTimeout(()=>$("shGo").focus(),50)}
+  $("shGo").textContent=m==="levels"?"Open levels":"Start";paintLens();openModal($("sheet"));setTimeout(()=>$("shGo").focus(),50)}
 function paintLens(){const n=S.settings.len;
   $("shLens").innerHTML=LENS.map(L=>`<button type="button" role="radio" aria-checked="${L===n}" data-len="${L}"><b>${L}</b><span>${modeBest(sheetMode,L)}</span></button>`).join("");
   $("shLens").querySelectorAll("button").forEach(b=>b.onclick=()=>{S.settings.len=+b.dataset.len;save();paintLens()})}
-$("shGo").onclick=()=>{const m=sheetMode,n=S.settings.len;$("sheet").hidden=true;if(m==="levels"){lvLen=n;show("levels")}else if(m==="sprint"||m==="bust")startRun(m,n);else startGame({mode:m,len:n})};
+$("shGo").onclick=()=>{const m=sheetMode,n=S.settings.len;closeModal($("sheet"));if(m==="levels"){lvLen=n;show("levels")}else if(m==="sprint"||m==="bust")startRun(m,n);else startGame({mode:m,len:n})};
 
 let lvLen=4;
 $("lvSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{lvLen=+b.dataset.len;renderLevels()});
@@ -694,7 +802,7 @@ function startGame(o,fresh){
     if(!fresh&&saved&&!saved.done)G=saved;
     else{const[lo,hi]=MODES[o.mode].range;[a,b,par]=makePuzzle(len,Math.random,lo,len===6&&o.mode==="marathon"?9:hi);G=newG(o,a,b,par,len)}
     S.sessions[sk]=G}
-  R=null;G.sel=firstDiff(cur());$("hintline").textContent="";save();show("game");render(true);if(!G.done)startClock()
+  R=null;G.sel=firstDiff(cur());clearHint();introNext=true;save();show("game");render(true);if(!G.done)startClock()
 }
 /* runs: Sprint and Par or Bust */
 function startRun(mode,len){
@@ -703,30 +811,59 @@ function startRun(mode,len){
 }
 function nextRunLadder(first){
   const[lo,hi]=MODES[R.mode].range;const[a,b,par]=makePuzzle(R.len,Math.random,lo,hi);
-  G=newG({mode:R.mode},a,b,par,R.len);G.sel=firstDiff(a);$("hintline").textContent="";
+  G=newG({mode:R.mode},a,b,par,R.len);G.sel=firstDiff(a);clearHint();
+  $("wrap").classList.remove("swap-out");introNext=true;
   show("game");render(true);
-  if(first&&R.mode==="sprint"){countdown(()=>startClock())}else startClock()
+  if(first&&R.mode==="sprint"){$("wrap").classList.add("veil");countdown(()=>{$("wrap").classList.remove("veil");introNext=true;render(true);startClock()})}
+  else startClock()
 }
-function countdown(done){const c=$("countdown");let n=3;c.innerHTML=`<span>${n}</span>`;c.hidden=false;const t=setInterval(()=>{n--;if(n<=0){clearInterval(t);c.hidden=true;done()}else c.innerHTML=`<span>${n}</span>`},650)}
+/* 3, 2, 1, GO: the ladder stays blurred until GO so nobody gets a head start */
+let counting=false,cdT=null;
+function countdown(done){
+  const c=$("countdown");let n=3;counting=true;
+  const paint=v=>{c.innerHTML=`<span class="${v==="GO!"?"go":""}">${v}</span>`};
+  paint(n);c.hidden=false;buzz(15);
+  cdT=setInterval(()=>{n--;
+    if(n>0){paint(n);buzz(15)}
+    else if(n===0){paint("GO!");buzz(40);counting=false;done()}
+    else{clearInterval(cdT);cdT=null;c.hidden=true}
+  },650)
+}
+function stopCountdown(){if(cdT){clearInterval(cdT);cdT=null}counting=false;$("countdown").hidden=true;$("wrap").classList.remove("veil")}
 const cur=()=>G.ladder[G.ladder.length-1];
 function firstDiff(w){for(let i=0;i<w.length;i++)if(w[i]!==G.b[i])return i;return 0}
 function startClock(){stopClock();let last=Date.now();clockT=setInterval(()=>{const now=Date.now(),dt=now-last;last=now;if(document.hidden||!G)return;
-  if(R&&R.mode==="sprint"&&!R.over){R.left-=dt;if(!G.done)G.ms+=dt;paintClock();if(R.left<=0)endRun();return}
-  if(!G.done){G.ms+=dt;paintClock()}},250)}
+  const paused=isOpen($("confirm"))||counting;
+  if(R&&R.mode==="sprint"&&!R.over){if(G.done||paused)return;R.left-=dt;G.ms+=dt;paintClock();if(R.left<=0)endRun();return}
+  if(!G.done&&!paused){G.ms+=dt;paintClock()}},250)}
 function stopClock(){if(clockT)clearInterval(clockT);clockT=null;if(G&&!R)save()}
 function paintClock(){const c=$("clock"),p=$("pillClock");if(R&&R.mode==="sprint"){c.textContent=fmt(R.left+999);p.classList.toggle("low",R.left<20000)}else{c.textContent=fmt(G.ms);p.classList.remove("low")}}
 
 function tileRow(word,cls,prev){
   const r=document.createElement("div");r.className="row "+cls;const isCur=cls==="cur";
+  const special=/goal|won|ghost/.test(cls);
+  const solvedRow=!special&&!isCur&&word===G.b&&!G.gaveUp;
   for(let i=0;i<word.length;i++){
-    const t=document.createElement(isCur?"button":"div");t.className="tile";t.textContent=word[i];
-    if(isCur){t.type="button";t.setAttribute("aria-label",`Letter ${i+1}: ${word[i].toUpperCase()}${i===G.sel?", selected":""}`);if(i===G.sel)t.classList.add("sel");t.onclick=()=>{G.sel=i;render()}}
-    if(!S.settings.hard&&cls!=="goal"&&word[i]===G.b[i])t.classList.add("on");
-    if(prev&&word[i]!==prev[i])t.classList.add("changed");
+    const t=document.createElement(isCur?"button":"div");t.className="tile";t.textContent=word[i];t.style.setProperty("--i",i);
+    if(isCur){t.type="button";t.setAttribute("aria-label",`Letter ${i+1}: ${word[i].toUpperCase()}${i===G.sel?", selected":""}`);if(i===G.sel)t.classList.add("sel");t.onclick=()=>select(i)}
+    if(solvedRow)t.classList.add("on");
+    else{
+      if(!S.settings.hard&&!special&&word[i]===G.b[i])t.classList.add("on");
+      if(prev&&!/won/.test(cls)&&word[i]!==prev[i])t.classList.add("changed");
+    }
     r.appendChild(t)
   }
   return r
 }
+/* change the selected letter without rebuilding the ladder, so the lift animates */
+function select(i){
+  if(!G||G.done)return;G.sel=i;
+  const row=document.querySelector("#ladder .row.cur");if(!row){render();return}
+  row.querySelectorAll(".tile").forEach((t,j)=>{t.classList.toggle("sel",j===i);t.setAttribute("aria-label",`Letter ${j+1}: ${t.textContent.toUpperCase()}${j===i?", selected":""}`)})
+}
+function flash(el,cls,ms){if(!el)return;el.classList.remove(cls);void el.offsetWidth;el.classList.add(cls);setTimeout(()=>el.classList.remove(cls),ms||520)}
+const keyEl=ch=>document.querySelector(`.key[data-k="${ch}"]`);
+function clearHint(){$("hintline").textContent="";document.querySelectorAll(".key.hintkey").forEach(k=>k.classList.remove("hintkey"))}
 function modeLabel(){
   if(G.mode==="daily")return`Daily #${dayNum(G.key)}`;
   if(G.mode==="level")return`Level ${G.idx+1} of ${LEVELS[G.len].length} · ${G.len} letters`;
@@ -735,23 +872,27 @@ function modeLabel(){
   if(G.mode==="sprint")return`Sprint · ${G.len} letters · ${R?R.score:0} climbed`;
   if(G.mode==="bust")return`Par or Bust · ${G.len} letters · ${R?R.score:0} climbed`;
 }
-let lastLen=0;
+let lastLen=0,introNext=false,winAnim=false,lastDist=null,lastOn="",busy=false;
 function render(scroll){
   const L=$("ladder");L.innerHTML="";L.style.setProperty("--n",G.len);
+  const intro=introNext;introNext=false;L.classList.toggle("intro",intro);
+  if(intro){lastDist=null;lastOn=""}
   // shrink tiles for long words so the row fits the screen
-  const avail=Math.min(window.innerWidth,480)-32-60;const ts=Math.max(34,Math.min(56,Math.floor((avail-(G.len-1)*6)/G.len)));L.style.setProperty("--ts",ts+"px");
+  const avail=Math.min(window.innerWidth,480)-32-60;const ts=Math.max(34,Math.min(56,Math.floor((avail-(G.len-1)*7)/G.len)));L.style.setProperty("--ts",ts+"px");
   $("gMode").textContent=modeLabel();
   $("gTitle").textContent=`${G.a.toUpperCase()} → ${G.b.toUpperCase()}`;
-  const steps=G.ladder.length-1;
+  const steps=G.ladder.length-1,grew=!intro&&G.ladder.length>lastLen;
   const ps=$("pillSteps");ps.classList.toggle("over",steps>G.par);
-  if(R&&R.mode==="bust")ps.innerHTML=`<span class="lives" aria-label="${R.lives} lives">${[0,1,2].map(i=>svg("heart",i<R.lives?"":"lost")).join("")}</span> <b>${steps}</b>/<b>${G.par}</b>`;
+  if(R&&R.mode==="bust"){const brk=R.breakAt!=null?R.breakAt:-1;R.breakAt=null;
+    ps.innerHTML=`<span class="lives" aria-label="${R.lives} lives">${[0,1,2].map(i=>svg("heart",i===brk?"lost breaking":i<R.lives?"":"lost")).join("")}</span> <b>${steps}</b>/<b>${G.par}</b>`}
   else ps.innerHTML=`Steps <b>${steps}</b>/<b>${G.par}</b>`;
+  if(grew&&!G.done)flash(ps,"bump",360);
   paintClock();
   G.ladder.forEach((w,i)=>{
-    const last=i===G.ladder.length-1&&!G.done;
-    const row=tileRow(w,last?"cur":"done",i>0?G.ladder[i-1]:null);
-    if(last&&i>0&&G.ladder.length!==lastLen)row.querySelectorAll(".tile.changed").forEach(t=>t.classList.add("flip"));
-    if(G.done&&i===G.ladder.length-1){row.classList.add("flashwin");row.querySelectorAll(".tile").forEach((t,j)=>t.style.setProperty("--i",j))}
+    const last=i===G.ladder.length-1;
+    const won=last&&G.done&&!G.gaveUp&&winAnim;
+    const row=tileRow(w,last&&!G.done?"cur":won?"done won":"done",i>0?G.ladder[i-1]:null);
+    if(last&&i>0&&grew&&!G.done){row.classList.add("enter");row.querySelectorAll(".tile.changed").forEach(t=>t.classList.add("flip"))}
     L.appendChild(row)
   });
   if(!G.done){
@@ -760,30 +901,39 @@ function render(scroll){
     if(S.settings.hard)g.textContent=`par ${G.par}`;
     else if(dist===undefined)g.textContent="no route from here, try Undo";
     else{g.textContent=`${dist} more ${dist===1?"step":"steps"} at best`;if(steps+dist>G.par){g.textContent+=` · ${steps+dist-G.par} over par`;g.classList.add("over")}}
+    if(lastDist!==null&&dist!==lastDist&&!S.settings.hard)g.classList.add("tick");
+    lastDist=dist;
     L.appendChild(g);
-    const goal=tileRow(G.b,"goal",null);
-    if(!S.settings.hard)goal.querySelectorAll(".tile").forEach((t,i)=>{if(cur()[i]===G.b[i])t.classList.add("on")});
+    const goal=tileRow(G.b,"goal",null);let on="";
+    goal.querySelectorAll(".tile").forEach((t,i)=>{const m=!S.settings.hard&&cur()[i]===G.b[i];on+=m?"1":"0";if(m){t.classList.add("on");if(!intro&&lastOn&&lastOn[i]!=="1")t.classList.add("fresh")}});
+    lastOn=on;
     L.appendChild(goal)
+  }else if(winAnim){
+    L.appendChild(tileRow(G.b,"goal merge",null))
   }
+  winAnim=false;
   const bust=R&&R.mode==="bust";
-  $("undo").disabled=G.done||G.ladder.length<2;$("hint").disabled=G.done||bust;$("hint").hidden=bust;
-  $("hint").textContent=R&&R.mode==="sprint"?"Hint −10s":"Hint";$("hint").hidden=!!bust;
+  $("undo").disabled=G.done||G.ladder.length<2;$("hint").disabled=G.done;$("hint").hidden=!!bust;
+  $("hint").textContent=R&&R.mode==="sprint"?"Hint −10s":"Hint";
   $("reveal").textContent=R?"Skip":"Give up";$("reveal").disabled=G.done;
   lastLen=G.ladder.length;
-  if(scroll)requestAnimationFrame(()=>{const c=L.querySelector(".row.cur")||L.lastElementChild;if(c)c.scrollIntoView({block:"center"})})
+  if(scroll)requestAnimationFrame(()=>{const c=L.querySelector(".row.cur")||L.querySelector(".row.won")||L.lastElementChild;if(c)c.scrollIntoView({block:"center"})})
 }
 function shake(){const r=document.querySelector(".row.cur");if(!r)return;r.classList.remove("shake");void r.offsetWidth;r.classList.add("shake");buzz([20,40,20])}
 
 function play(ch){
-  if(!G||G.done||!$("result").hidden||$("game").hidden||!$("countdown").hidden||(R&&R.over))return;
+  if(!G||G.done||busy||counting||isOpen($("result"))||isOpen($("confirm"))||$("game").hidden||(R&&R.over))return;
   const w=cur();if(w[G.sel]===ch){shake();toast("Pick a different letter");return}
   const nw=w.slice(0,G.sel)+ch+w.slice(G.sel+1);
-  if(!DICT[G.len].has(nw)){shake();toast(`${nw.toUpperCase()} isn't in the word list`);return}
-  if(G.ladder.includes(nw)){shake();toast("Already on your ladder");return}
-  G.ladder.push(nw);buzz(8);$("hintline").textContent="";
+  if(!DICT[G.len].has(nw)){bad(ch);toast(`${nw.toUpperCase()} isn't in the word list`);return}
+  if(G.ladder.includes(nw)){bad(ch);toast("Already on your ladder");return}
+  G.ladder.push(nw);buzz(8);clearHint();
   if(nw===G.b){finish(false);return}
+  // once a letter locks into place, move on to the next one that still needs changing
+  if(!S.settings.hard&&nw[G.sel]===G.b[G.sel]){for(let k=1;k<G.len;k++){const j=(G.sel+k)%G.len;if(nw[j]!==G.b[j]){G.sel=j;break}}}
   if(!R)save();render(true)
 }
+function bad(ch){shake();const t=document.querySelector("#ladder .row.cur .tile.sel");if(t){t.classList.add("bad");setTimeout(()=>t.classList.remove("bad"),420)}flash(keyEl(ch),"bad",420)}
 function starsFor(){const steps=G.ladder.length-1;if(G.gaveUp)return 0;if(steps<=G.par&&!G.hints)return 3;if(steps<=G.par+1&&G.hints<=1)return 2;return 1}
 function recordSolve(){
   const st=S.stats,steps=G.ladder.length-1;
@@ -798,7 +948,7 @@ function recordSolve(){
 }
 let pendingBadges=[];
 function finish(gaveUp){
-  G.done=true;G.gaveUp=gaveUp;G.stars=starsFor();
+  G.done=true;G.gaveUp=gaveUp;G.stars=starsFor();winAnim=!gaveUp;
   if(!gaveUp)recordSolve();
   const st=S.stats;
   if(R){runLadderDone(gaveUp);return}
@@ -812,27 +962,47 @@ function finish(gaveUp){
   }else if(G.mode==="endless"){
     if(!gaveUp){st.run[G.len]++;st.bestRun[G.len]=Math.max(st.bestRun[G.len],st.run[G.len])}else st.run[G.len]=0
   }else if(G.mode==="marathon"){if(!gaveUp)st.marathons++}
-  pendingBadges=checkBadges();
-  save();render(true);if(!gaveUp)setTimeout(()=>confetti(G.stars===3?140:80),250);setTimeout(()=>showResult(),gaveUp?0:650)
+  pendingBadges=checkBadges();save();
+  if(gaveUp){render(true);playReveal(()=>setTimeout(showResult,380));return}
+  // green wave across the final rung, then confetti, then the result card
+  render(true);
+  const wave=G.len*85;
+  setTimeout(()=>confetti(G.stars===3?140:80),620+wave);
+  setTimeout(()=>{if(curScreen==="game")showResult()},1150+wave)
+}
+/* giving up plays out the rest of a shortest route as ghost rungs */
+function playReveal(done){
+  const path=shortest(cur(),G.b)||[],steps=path.slice(1),L=$("ladder");let prev=cur(),i=0;busy=true;
+  (function next(){
+    if(curScreen!=="game"){busy=false;return}
+    if(i>=steps.length){busy=false;done();return}
+    const w=steps[i],row=tileRow(w,"ghost enter"+(i===steps.length-1?" last":""),prev);
+    row.querySelectorAll(".tile.changed").forEach(t=>t.classList.add("flip"));
+    L.appendChild(row);row.scrollIntoView({block:"center",behavior:"smooth"});buzz(6);
+    prev=w;i++;setTimeout(next,340)
+  })()
 }
 function runLadderDone(gaveUp){
   const over=G.ladder.length-1-G.par;
   R.history.push({a:G.a,b:G.b,par:G.par,steps:G.ladder.length-1,gaveUp});
   if(R.mode==="sprint"){
-    if(gaveUp){R.left-=15000;toast("Skipped · −15s","bad")}else{R.score++;toast(`+1 · ${R.score} climbed`,"good");confetti(30)}
+    if(gaveUp){R.left-=15000;flash($("pillClock"),"hit");toast("Skipped · −15s","bad")}else{R.score++;toast(`+1 · ${R.score} climbed`,"good")}
   }else{
-    if(gaveUp){R.lives--;toast("Skipped · lost a life","bad")}
-    else if(over>0){R.lives--;R.score++;toast(`${over} over par · lost a life`,"bad")}
-    else{R.score++;toast(`On par · ${R.score} climbed`,"good");confetti(30)}
+    if(gaveUp){R.breakAt=--R.lives;toast("Skipped · lost a life","bad");buzz([30,60,30])}
+    else if(over>0){R.breakAt=--R.lives;R.score++;toast(`${over} over par · lost a life`,"bad");buzz([30,60,30])}
+    else{R.score++;toast(`On par · ${R.score} climbed`,"good")}
   }
   checkBadges().forEach(badgeToast);save();
-  render(false);
-  if(R.mode==="bust"&&R.lives<=0){setTimeout(endRun,500);return}
-  if(R.mode==="sprint"&&R.left<=0){endRun();return}
-  setTimeout(()=>{if(R&&!R.over)nextRunLadder(false)},gaveUp?250:550)
+  render(true);
+  if(!gaveUp)setTimeout(()=>confetti(30),420+G.len*85);
+  const hold=gaveUp?420:850+G.len*85;
+  if(R.mode==="bust"&&R.lives<=0){setTimeout(endRun,hold+250);return}
+  if(R.mode==="sprint"&&R.left<=0){paintClock();setTimeout(endRun,350);return}
+  // swipe the finished ladder away and drop in the next one
+  setTimeout(()=>{if(!R||R.over||curScreen!=="game")return;$("wrap").classList.add("swap-out");setTimeout(()=>{if(R&&!R.over)nextRunLadder(false)},220)},hold)
 }
 function endRun(){
-  if(!R||R.over)return;R.over=true;stopClock();
+  if(!R||R.over)return;R.over=true;stopClock();stopCountdown();
   const st=S.stats,key=R.mode==="sprint"?"sprintBest":"bustBest";
   const prev=st[key][R.len];R.newBest=R.score>prev;if(R.newBest)st[key][R.len]=R.score;
   pendingBadges=checkBadges();save();showRunResult()
@@ -848,8 +1018,8 @@ function showRunResult(){$("toasts").innerHTML="";
   paintBadges();
   $("rShareText").hidden=true;$("rShare").hidden=!R.score;
   const main=$("rMain"),alt=$("rAlt");const mode=R.mode,len=R.len;
-  main.textContent="Play again";main.onclick=()=>{$("result").hidden=true;startRun(mode,len)};alt.hidden=true;
-  $("result").hidden=false;setTimeout(()=>main.focus(),50)
+  main.textContent="Play again";main.onclick=()=>{closeModal($("result"));startRun(mode,len)};alt.hidden=true;
+  openModal($("result"));setTimeout(()=>main.focus(),50)
 }
 function paintBadges(){
   const nb=$("rBadges");
@@ -866,21 +1036,21 @@ function showResult(){$("toasts").innerHTML="";
   const showBest=G.gaveUp||steps>G.par;
   $("rRoutes").innerHTML=`<div class="route"><div class="eyebrow">Your climb</div><div>${yours}</div></div>`+(showBest&&best?`<div class="route"><div class="eyebrow">A shortest route</div><div>${best.map(w=>w.toUpperCase()).join(" → ")}</div></div>`:"");
   const note=[];if(G.hints)note.push(`${G.hints} ${G.hints===1?"hint":"hints"} used.`);
-  if(G.mode==="daily")note.push(G.gaveUp?"Your streak resets. A new ladder arrives tomorrow.":`Daily streak: ${S.stats.streak}. Come back tomorrow for #${dayNum(G.key)+1}.`);
+  if(G.mode==="daily")note.push(G.gaveUp?`Your streak resets. Next ladder in ${untilTomorrow()}.`:`Daily streak: ${S.stats.streak}. Daily #${dayNum(G.key)+1} arrives in ${untilTomorrow()}.`);
   if(G.mode==="endless")note.push(G.gaveUp?"Run reset to 0.":`Run: ${S.stats.run[G.len]} in a row.`);
   $("rNote").textContent=note.join(" ");$("rNote").hidden=!note.length;
   paintBadges();
   $("rShareText").hidden=true;
   const main=$("rMain"),alt=$("rAlt");const g=G;
-  if(g.mode==="daily"){main.textContent="Back to home";main.onclick=()=>{$("result").hidden=true;show("home")};alt.hidden=true}
+  if(g.mode==="daily"){main.textContent="Keep climbing: Endless";main.onclick=()=>{closeModal($("result"));startGame({mode:"endless",len:S.settings.len})};alt.hidden=true}
   else if(g.mode==="level"){const nx=g.idx+1,set=LEVELS[g.len];main.textContent=g.gaveUp?"Try again":nx<set.length?`Level ${nx+1}`:"All levels";
-    main.onclick=()=>{$("result").hidden=true;if(g.gaveUp)startGame({mode:"level",len:g.len,idx:g.idx},true);else if(nx<set.length)startGame({mode:"level",len:g.len,idx:nx},true);else{lvLen=g.len;show("levels")}};
-    alt.hidden=false;alt.textContent=g.gaveUp?"Levels":"Retry";alt.onclick=()=>{$("result").hidden=true;if(g.gaveUp){lvLen=g.len;show("levels")}else startGame({mode:"level",len:g.len,idx:g.idx},true)}}
-  else{main.textContent=g.mode==="marathon"?"Next marathon":"Next ladder";main.onclick=()=>{$("result").hidden=true;startGame({mode:g.mode,len:g.len},true)};alt.hidden=true}
+    main.onclick=()=>{closeModal($("result"));if(g.gaveUp)startGame({mode:"level",len:g.len,idx:g.idx},true);else if(nx<set.length)startGame({mode:"level",len:g.len,idx:nx},true);else{lvLen=g.len;show("levels")}};
+    alt.hidden=false;alt.textContent=g.gaveUp?"Levels":"Retry";alt.onclick=()=>{closeModal($("result"));if(g.gaveUp){lvLen=g.len;show("levels")}else startGame({mode:"level",len:g.len,idx:g.idx},true)}}
+  else{main.textContent=g.mode==="marathon"?"Next marathon":"Next ladder";main.onclick=()=>{closeModal($("result"));startGame({mode:g.mode,len:g.len},true)};alt.hidden=true}
   $("rShare").hidden=g.gaveUp;
-  $("result").hidden=false;setTimeout(()=>main.focus(),50)
+  openModal($("result"));setTimeout(()=>main.focus(),50)
 }
-$("rHome").onclick=()=>{$("result").hidden=true;R=null;show("home")};
+$("rHome").onclick=()=>{closeModal($("result"));R=null;show("home")};
 function shareText(){
   if(R&&R.over)return`Rungs ${R.mode==="sprint"?"Sprint":"Par or Bust"} · ${R.len} letters\n${R.score} ${R.score===1?"ladder":"ladders"} climbed${R.mode==="sprint"?" in 3:00":""}\n${SITE}`;
   const steps=G.ladder.length-1;
@@ -895,48 +1065,57 @@ $("rShare").onclick=async()=>{
   catch(e){const ta=$("rShareText");ta.value=text;ta.hidden=false;ta.focus();ta.select();toast("Copy the text below")}
 };
 function hint(){
-  if(!G||G.done||(R&&R.mode==="bust"))return;
+  if(!G||G.done||busy||counting||(R&&R.mode==="bust"))return;
   const path=shortest(cur(),G.b);
   if(!path){toast("No route from here. Try Undo");return}
   const nx=path[1];let i=0;while(cur()[i]===nx[i])i++;
-  G.sel=i;G.hints++;S.stats.hintsUsed++;
-  if(R&&R.mode==="sprint"){R.left-=10000;toast("−10s")}
-  if(!R)save();render();
+  G.hints++;S.stats.hintsUsed++;
+  if(R&&R.mode==="sprint"){R.left-=10000;flash($("pillClock"),"hit");toast("−10s","bad");paintClock()}
+  if(!R)save();
+  clearHint();select(i);
+  const k=keyEl(nx[i]);if(k)k.classList.add("hintkey");
   $("hintline").textContent=`Hint: change letter ${i+1} to ${nx[i].toUpperCase()}`
 }
-let revealArmed=0;
 $("reveal").onclick=()=>{
-  if(!G||G.done)return;
+  if(!G||G.done||busy||counting)return;
   if(R){finish(true);return}
-  if(Date.now()-revealArmed>3000){revealArmed=Date.now();toast("Tap Give up again to see the answer");return}
-  revealArmed=0;finish(true)
+  const run=G.mode==="endless"?S.stats.run[G.len]:0;
+  confirmBox({title:"Give up?",
+    text:G.mode==="daily"?"You'll see a way to the goal, and your Daily streak resets.":run?`You'll see a way to the goal, and your run of ${run} ends.`:"You'll see a shortest way to the goal.",
+    yes:"Show me the answer",no:"Keep climbing",onYes:()=>{if(G&&!G.done)finish(true)}})
 };
-$("undo").onclick=()=>{if(G&&!G.done&&G.ladder.length>1){G.ladder.pop();G.undos=(G.undos||0)+1;$("hintline").textContent="";if(!R)save();render(true)}};
+$("undo").onclick=()=>{
+  if(!G||G.done||busy||G.ladder.length<2)return;
+  const row=document.querySelector("#ladder .row.cur");busy=true;
+  const go=()=>{busy=false;const gone=G.ladder.pop();G.undos=(G.undos||0)+1;clearHint();
+    const back=cur();for(let i=0;i<G.len;i++)if(gone[i]!==back[i]){G.sel=i;break} // reselect the letter you changed
+    if(!R)save();render(true)};
+  if(row){row.classList.add("leave");setTimeout(go,170)}else go()
+};
 $("hint").onclick=hint;
-let quitArmed=0;
 $("gameBack").onclick=()=>{
-  if(R&&!R.over){if(Date.now()-quitArmed>3000){quitArmed=Date.now();toast(`Tap back again to end this ${R.mode==="sprint"?"Sprint":"run"}`);return}quitArmed=0;endRun();return}
-  R=null;if(G&&G.mode==="level"){lvLen=G.len;show("levels")}else show("home")
+  if(R&&!R.over){confirmBox({title:R.mode==="sprint"?"End this Sprint?":"End this run?",text:`You've climbed ${R.score} so far, and that still counts.`,yes:"End it",no:"Keep going",onYes:()=>endRun()});return}
+  R=null;stopCountdown();if(G&&G.mode==="level"){lvLen=G.len;show("levels")}else show("home")
 };
 
 /* keyboard */
 ["qwertyuiop","asdfghjkl","zxcvbnm"].forEach((r,ri)=>{const d=document.createElement("div");d.className="kr";
-  const mk=(label,aria,fn,wide)=>{const b=document.createElement("button");b.className="key"+(wide?" wide":"");b.type="button";b.textContent=label;if(aria)b.setAttribute("aria-label",aria);b.onclick=fn;d.appendChild(b)};
+  const mk=(label,aria,fn,wide)=>{const b=document.createElement("button");b.className="key"+(wide?" wide":"");b.type="button";b.textContent=label;if(aria)b.setAttribute("aria-label",aria);b.onclick=fn;d.appendChild(b);return b};
   if(ri===2)mk("◀","Select previous letter",()=>move(-1),true);
-  for(const ch of r)mk(ch,null,()=>play(ch));
+  for(const ch of r)mk(ch,null,()=>play(ch)).dataset.k=ch;
   if(ri===2)mk("▶","Select next letter",()=>move(1),true);
   $("kb").appendChild(d)});
-function move(dx){if(!G||G.done)return;G.sel=(G.sel+dx+G.len)%G.len;render()}
+function move(dx){if(!G||G.done)return;select((G.sel+dx+G.len)%G.len)}
 document.addEventListener("keydown",e=>{
   if(e.metaKey||e.ctrlKey||e.altKey)return;
-  const open=[...document.querySelectorAll(".modal,.sheet-wrap")].find(m=>!m.hidden);
-  if(open){if(e.key==="Escape"&&open.id!=="result")open.hidden=true;return}
+  const open=[...document.querySelectorAll(".modal,.sheet-wrap")].find(isOpen);
+  if(open){if(e.key==="Escape"&&open.id!=="result")closeModal(open);return}
   if($("game").hidden)return;
-  if(/^[a-z]$/i.test(e.key)){play(e.key.toLowerCase());e.preventDefault()}
+  if(/^[a-z]$/i.test(e.key)){const ch=e.key.toLowerCase();flash(keyEl(ch),"press",120);play(ch);e.preventDefault()}
   else if(e.key==="ArrowLeft"){move(-1);e.preventDefault()}
   else if(e.key==="ArrowRight"){move(1);e.preventDefault()}
   else if(e.key==="Backspace"){$("undo").click();e.preventDefault()}
-  else if(/^[1-6]$/.test(e.key)&&G&&+e.key<=G.len){G.sel=+e.key-1;render()}
+  else if(/^[1-6]$/.test(e.key)&&G&&+e.key<=G.len)select(+e.key-1);
   else if(e.key==="Escape")$("gameBack").click();
 });
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&!R)save()});
@@ -947,8 +1126,9 @@ load();
 for(const w of S.words)wordSet.add(w);
 lvLen=S.settings.len;
 const quiet=checkBadges(); // badges earned by earlier play are awarded without a fanfare
-try{if(!localStorage.getItem("rungs-seen")){localStorage.setItem("rungs-seen","1");$("how").hidden=false}}catch(e){}
+try{if(!localStorage.getItem("rungs-seen")){localStorage.setItem("rungs-seen","1");openModal($("how"))}}catch(e){}
 show("home");
+setInterval(()=>{if(curScreen==="home"&&!document.hidden)renderHome()},30000);
 if(quiet.length)setTimeout(()=>toast(`${quiet.length} ${quiet.length===1?"badge":"badges"} earned from your earlier climbs`),600);
 </script>
 </body>
