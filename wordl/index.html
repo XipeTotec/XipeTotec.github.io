@@ -38,11 +38,20 @@
 html,body{height:100%;margin:0}
 body{background:var(--paper);color:var(--ink);font-family:var(--body);-webkit-tap-highlight-color:transparent;overscroll-behavior:none;
   background-image:radial-gradient(rgba(120,100,60,.07) 1px,transparent 1px);background-size:5px 5px}
-button{font:inherit;color:inherit}
+button{font:inherit;color:inherit;touch-action:manipulation}
+:root{--ease:cubic-bezier(.2,.8,.2,1);--spring:cubic-bezier(.3,1.35,.5,1)}
 button:focus-visible,a:focus-visible{outline:3px solid var(--near);outline-offset:2px}
 .app{height:100%;height:100dvh;display:flex;flex-direction:column;max-width:500px;margin:0 auto;
   padding:calc(env(safe-area-inset-top,0px) + 6px) 8px calc(env(safe-area-inset-bottom,0px) + 8px)}
 #home{overflow-y:auto;padding-inline:16px}
+.app.enter{animation:screenIn .32s var(--ease) both}
+.app.leave{animation:screenOut .14s ease-in both}
+@keyframes screenIn{from{opacity:0;transform:translateY(10px)}}
+@keyframes screenOut{to{opacity:0;transform:translateY(-6px)}}
+#home.enter .homebody>*{animation:rise .42s var(--ease) both}
+#home.enter .homebody>:nth-child(2){animation-delay:.04s}#home.enter .homebody>:nth-child(3){animation-delay:.08s}
+#home.enter .homebody>:nth-child(4){animation-delay:.12s}#home.enter .homebody>:nth-child(5){animation-delay:.16s}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}}
 
 /* masthead */
 header{display:flex;align-items:center;gap:4px;padding:4px 0 8px;border-bottom:2px solid var(--ink);flex:none}
@@ -69,7 +78,7 @@ svg.i{width:22px;height:22px;display:block}
 .rank .grow{flex:1;min-width:0}
 .rt{font:700 1.2rem var(--slab)}
 .meter{height:8px;border-radius:4px;background:var(--paper-2);border:1px solid var(--rule);overflow:hidden;margin:6px 0 4px}
-.meter i{display:block;height:100%;background:var(--hit);border-radius:4px;transition:width .6s}
+.meter i{display:block;height:100%;background:var(--hit);border-radius:4px;transition:width .9s var(--ease)}
 .card{display:block;width:100%;text-align:left;border:2px solid var(--ink);border-radius:16px;background:var(--card);padding:16px;box-shadow:4px 4px 0 var(--ink)}
 button.card{cursor:pointer;transition:transform .1s,box-shadow .1s}
 button.card:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
@@ -105,52 +114,77 @@ button.card:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
 /* ---------- play ---------- */
 .hud{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:8px;flex:none}
 .hud .chip{background:var(--card);border:1px solid var(--rule)}
-.hud .chip b{font-family:var(--slab);font-size:1rem}
+.hud .chip b{font-family:var(--slab);font-size:1rem;font-variant-numeric:tabular-nums}
+.chip.bump{animation:pop .4s var(--spring)}
 .boardwrap{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:10px 0}
 .board{display:grid;gap:6px;height:100%;max-height:420px;aspect-ratio:5/6}
 .row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .tile{position:relative;display:grid;place-items:center;border:2px solid var(--rule);border-radius:6px;background:var(--card);
   font:700 clamp(1.5rem,7.5vw,2.1rem)/1 var(--slab);text-transform:uppercase;user-select:none}
-.tile.filled{border-color:var(--tile-edge);animation:pop .1s ease-out}
-.tile.ghost{border-color:var(--hit);border-style:dashed;color:var(--hit);opacity:.75}
+.tile.filled{border-color:var(--tile-edge);animation:pop .12s var(--ease)}
+.tile.ghost{border-color:var(--hit);border-style:dashed;color:var(--hit);opacity:.75;animation:pop .25s var(--spring)}
 .tile.hit,.tile.near,.tile.miss{border-color:transparent;color:var(--on-mark);box-shadow:inset 0 -3px 0 rgba(0,0,0,.18)}
-.tile.hit{background:var(--hit)}.tile.near{background:var(--near)}.tile.miss{background:var(--miss)}
-.tile.flip{animation:flip .5s ease-in-out both}
+.tile.hit{background:var(--hit);--mark:var(--hit)}.tile.near{background:var(--near);--mark:var(--near)}.tile.miss{background:var(--miss);--mark:var(--miss)}
+.tile.reveal{animation:flip .46s ease-in-out both}
+.board.clearing .tile{animation:tileOut .26s ease-in both;animation-delay:calc(var(--i)*9ms)}
+.board.fresh .tile{animation:tileIn .34s var(--spring) both;animation-delay:calc(var(--i)*12ms)}
+@keyframes tileOut{to{opacity:0;transform:scale(.6)}}
+@keyframes tileIn{from{opacity:0;transform:scale(.7)}}
 .row.shake{animation:shake .45s}
-.tile.win{animation:hop .5s ease-out both}
-@keyframes pop{50%{transform:scale(1.08)}}
-@keyframes flip{0%{transform:rotateX(0)}50%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+.tile.win{animation:hop .55s var(--ease) both}
+@keyframes pop{0%{transform:scale(.92)}60%{transform:scale(1.06)}100%{transform:none}}
+@keyframes flip{
+  0%{transform:scaleY(1);background:var(--card);color:var(--ink);border-color:var(--tile-edge);box-shadow:none}
+  50%{transform:scaleY(0);background:var(--card);color:var(--ink);border-color:var(--tile-edge);box-shadow:none}
+  50.01%{background:var(--mark);color:var(--on-mark);border-color:transparent}
+  100%{transform:scaleY(1)}}
 @keyframes shake{20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
-@keyframes hop{40%{transform:translateY(-18px)}70%{transform:translateY(3px)}}
+@keyframes hop{35%{transform:translateY(-20px)}65%{transform:translateY(2px)}85%{transform:translateY(-3px)}}
 .kb{display:flex;flex-direction:column;gap:7px;user-select:none;padding-bottom:4px;flex:none}
 .kr{display:flex;gap:5px;justify-content:center}
 .k{flex:1;max-width:44px;height:56px;border:0;border-radius:7px;background:var(--key);color:var(--key-ink);cursor:pointer;
-  font:700 1.15rem var(--slab);text-transform:uppercase;box-shadow:0 2px 0 rgba(0,0,0,.18);touch-action:manipulation;transition:background .2s}
-.k:active{transform:translateY(2px);box-shadow:none}
+  font:700 1.15rem var(--slab);text-transform:uppercase;box-shadow:0 2px 0 rgba(0,0,0,.18);touch-action:manipulation;transition:background .35s,color .35s,transform .08s,box-shadow .08s}
+.k:active,.k.pressed{transform:translateY(2px);box-shadow:none}
 .k.wide{flex:1.55;max-width:68px;font:700 .78rem var(--body);letter-spacing:.04em}
 .k.wide svg{width:22px;height:22px;vertical-align:middle}
 .k.hit,.k.near,.k.miss{color:var(--on-mark)}
 .k.hit{background:var(--hit)}.k.near{background:var(--near)}.k.miss{background:var(--key-miss);box-shadow:none}
 .spacer{flex:.5;max-width:22px}
-.afterbar{display:flex;gap:8px;padding:6px 0 8px;flex:none}
+.dock{display:grid;flex:none}
+.dock>*{grid-area:1/1;transition:opacity .3s var(--ease),transform .3s var(--ease),visibility 0s}
+.afterbar{display:flex;flex-direction:column;justify-content:center;gap:10px;padding:0 6px 4px;opacity:0;visibility:hidden;transform:translateY(14px);transition-delay:0s,0s,.3s}
+.dock.done .kb{opacity:0;visibility:hidden;transform:translateY(14px);transition-delay:0s,0s,.3s}
+.dock.done .afterbar{opacity:1;visibility:visible;transform:none;transition-delay:.08s,.08s,0s}
 .afterbar .btn{margin:0}
+.afterbar .btnrow .btn{width:auto;flex:1}
+.afterbar .btnrow .btn:first-child{flex:2.2}
+.winline{display:flex;align-items:baseline;justify-content:center;gap:12px;font-variant-numeric:tabular-nums}
+.winline .plus{font:900 2.4rem/1 var(--display);color:var(--hit)}
+.winline span{color:var(--muted);font-weight:700}
+.afterbar .breakdown{margin:0}
+.afterbar .keyhint{text-align:center;font-size:.78rem;color:var(--muted)}
+@media (pointer:coarse){.afterbar .keyhint{display:none}}
 
 /* toasts */
 .toasts{position:fixed;top:calc(env(safe-area-inset-top,0px) + 110px);left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;z-index:40;padding:0 16px}
-.toast{display:flex;align-items:center;gap:10px;max-width:380px;background:var(--ink);color:var(--paper);font-weight:700;padding:10px 16px;border-radius:8px;animation:fade 1.6s forwards}
+.toast{display:flex;align-items:center;gap:10px;max-width:380px;background:var(--ink);color:var(--paper);font-weight:700;padding:10px 16px;border-radius:8px;animation:fade 1.6s var(--ease) forwards;box-shadow:0 6px 20px rgba(0,0,0,.18)}
 .toast small{display:block;font-weight:400;opacity:.8}
 .toast .medal{width:38px;height:38px;flex:none}
 .toast.long{animation-duration:3.2s}
-@keyframes fade{0%{opacity:0;transform:translateY(-6px)}10%,80%{opacity:1;transform:none}100%{opacity:0}}
+@keyframes fade{0%{opacity:0;transform:translateY(-10px) scale(.96)}10%,82%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-4px)}}
 
 /* sheets */
-.veil{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center;background:rgba(20,16,10,.45);animation:in .2s}
+.veil{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center;background:rgba(20,16,10,.45);animation:in .24s ease-out}
+.veil.closing{animation:veilOut .2s ease-in forwards}
+.veil.closing .sheet{animation:sheetOut .2s ease-in forwards}
 .veil.top{z-index:30}
 @media (min-width:600px){.veil{align-items:center}}
 .sheet{width:100%;max-width:460px;max-height:90dvh;overflow-y:auto;background:var(--card);border-radius:18px 18px 0 0;padding:20px 20px calc(env(safe-area-inset-bottom,0px) + 20px);
-  border-top:3px solid var(--ink);animation:up .25s ease-out}
+  border-top:3px solid var(--ink);animation:up .38s var(--ease);overscroll-behavior:contain}
 @media (min-width:600px){.sheet{border-radius:18px;border:2px solid var(--ink)}}
-@keyframes in{from{opacity:0}}@keyframes up{from{transform:translateY(30px);opacity:0}}
+@keyframes in{from{opacity:0}}@keyframes up{from{transform:translateY(60px);opacity:0}}
+@keyframes veilOut{to{opacity:0}}@keyframes sheetOut{to{transform:translateY(50px);opacity:0}}
+@media (min-width:600px){@keyframes up{from{transform:translateY(16px) scale(.98);opacity:0}}@keyframes sheetOut{to{transform:translateY(10px) scale(.98);opacity:0}}}
 .sheet h2{font:900 1.6rem/1.1 var(--display);margin:0 0 12px;letter-spacing:-.02em}
 .sheet h3{font:700 .74rem var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
 .sheet p,.sheet li{line-height:1.45}
@@ -190,6 +224,7 @@ button.card:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
 .sw[aria-checked="true"]::after{left:23px}
 .foot{font-size:.78rem;color:var(--muted);margin-top:16px}
 .tabs{margin-bottom:14px}
+#dailyResult:not(:empty)+h2{margin-top:22px}
 .dtable{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 .dtable th,.dtable td{padding:7px 4px;border-bottom:1px solid var(--rule);text-align:right}
 .dtable th:first-child,.dtable td:first-child{text-align:left}
@@ -302,8 +337,7 @@ button.card:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
   </header>
   <div class="hud" id="hud" hidden></div>
   <div class="boardwrap"><div class="board" id="board" aria-label="Guesses" role="grid"></div></div>
-  <div class="afterbar" id="afterbar" hidden></div>
-  <div class="kb" id="kb" aria-label="Keyboard"></div>
+  <div class="dock" id="dock"><div class="kb" id="kb" aria-label="Keyboard"></div><div class="afterbar" id="afterbar" aria-live="polite"></div></div>
 </section>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
@@ -575,14 +609,27 @@ function checkBadges(){
 }
 checkBadges(); // quietly award anything earned before badges existed
 const medal=(b,tier,cls="")=>`<span class="medal${tier?" got t"+tier:""}${cls?" "+cls:""}">${svg(b.icon)}</span>`;
-function badgeToasts(list,delay=0){list.forEach((f,i)=>setTimeout(()=>toast(`${medal(f.b,f.tier)}<span>${TIERS[f.tier-1]}: ${esc(f.b.name)}<small>${esc(f.b.d(f.b.t[f.tier-1]))}</small></span>`,"long",true),delay+i*900))}
+function badgeToasts(list,delay=0){setTimeout(()=>list.forEach(f=>toastQ(`${medal(f.b,f.tier)}<span>${TIERS[f.tier-1]}: ${esc(f.b.name)}<small>${esc(f.b.d(f.b.t[f.tier-1]))}</small></span>`)),delay)}
 const badgeListHTML=list=>list.length?`<h3>Badges earned</h3><div class="bnew">${list.map(f=>`<div>${medal(f.b,f.tier,"sm")}<span><b>${TIERS[f.tier-1]} · ${esc(f.b.name)}</b><small>${esc(f.b.d(f.b.t[f.tier-1]))}</small></span></div>`).join("")}</div>`:"";
 
 /* ---------- views ---------- */
+let swapping=false;
 function show(view){
-  $("home").hidden=view!=="home";$("play").hidden=view!=="play";
-  if(view==="home")renderHome();else renderPlay();
-  window.scrollTo(0,0);
+  const to=$(view),from=$(view==="home"?"play":"home");
+  const swap=()=>{from.hidden=true;from.classList.remove("leave","enter");to.hidden=false;
+    if(view==="home")renderHome();else renderPlay();
+    to.classList.remove("enter");void to.offsetWidth;to.classList.add("enter");
+    window.scrollTo(0,0);to.scrollTop=0;swapping=false};
+  if(from.hidden||reduced()){swap();return}
+  if(swapping)return;swapping=true;
+  from.classList.add("leave");setTimeout(swap,130);
+}
+const reduced=()=>matchMedia("(prefers-reduced-motion: reduce)").matches;
+function countUp(el,from,to,ms=700,pre=""){
+  if(!el)return;if(reduced()||from===to){el.textContent=pre+fmt(to);return}
+  const t0=performance.now();
+  const step=t=>{const k=Math.min(1,(t-t0)/ms),e=1-Math.pow(1-k,3);el.textContent=pre+fmt(from+(to-from)*e);if(k<1)requestAnimationFrame(step)};
+  requestAnimationFrame(step);
 }
 let homeTick=null;
 function renderHome(){
@@ -621,7 +668,7 @@ function renderHome(){
   $("wCount").textContent=fmt(A().words.length);
 }
 $("diffSeg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||runActive())return;S.diff=b.dataset.d;save();renderHome()});
-$("goDaily").onclick=()=>{G=dailyGame();cur="";save();show("play");if(G.done)setTimeout(()=>openStats("daily"),250)};
+$("goDaily").onclick=()=>{G=dailyGame();cur="";save();show("play");if(G.done)setTimeout(()=>openStats("daily"),450)};
 $("goClassic").onclick=()=>{
   if(runActive()){if(!S.game||S.game.done)nextWord()}else startRun();
   G=S.game;cur="";save();show("play");
@@ -639,7 +686,7 @@ const board=$("board"),kb=$("kb");
 function buildBoard(rows){
   board.innerHTML="";board.style.gridTemplateRows=`repeat(${rows},1fr)`;board.style.aspectRatio=`5/${rows}`;board.style.maxHeight=rows*70+"px";
   for(let r=0;r<rows;r++){const row=document.createElement("div");row.className="row";row.setAttribute("role","row");
-    for(let c=0;c<LEN;c++){const t=document.createElement("div");t.className="tile";t.setAttribute("role","gridcell");row.appendChild(t)}
+    for(let c=0;c<LEN;c++){const t=document.createElement("div");t.className="tile";t.setAttribute("role","gridcell");t.style.setProperty("--i",r*LEN+c);row.appendChild(t)}
     board.appendChild(row)}
 }
 const LAYOUT=["qwertyuiop","asdfghjkl","+zxcvbnm-"];
@@ -686,32 +733,59 @@ function renderPlay(){
     $("pTitle").textContent=`Classic · ${d.name}`;
     $("pSub").textContent=`Word ${R.words.length+(G.done?0:1)}${G.hard&&!d.hard?" · Hard":""}`;
     hud.hidden=false;
-    hud.innerHTML=`<span class="chip">Score <b>${fmt(R.score)}</b></span><span class="chip">Run <b>${runSolved(R)}</b></span><span class="chip">Streak <b>×${runMult(R).toFixed(1)}</b></span>`;
+    hud.innerHTML=`<span class="chip" id="hudScore">Score <b>${fmt(R.score)}</b></span><span class="chip" id="hudRun">Run <b>${runSolved(R)}</b></span><span class="chip" id="hudMult">Streak <b>×${runMult(R).toFixed(1)}</b></span>`;
     hb.hidden=false;$("hintN").textContent=R.hints;hb.classList.toggle("empty",!R.hints);
     hb.setAttribute("aria-label",`Use a hint, ${R.hints} left`);
   }
   // after a finished word, offer the next step without a sheet in the way
-  const ab=$("afterbar");ab.innerHTML="";ab.hidden=!G.done;kb.hidden=G.done;
-  if(G.done){
-    if(G.mode==="daily"){ab.append(btn("See results","",()=>openStats("daily")),btn("Menu","alt",()=>show("home")))}
-    else if(G.won&&runActive()){ab.append(btn("Next word","",goNext),btn("Menu","alt",()=>show("home")))}
-    else{ab.append(btn("New run","",()=>{startRun();G=S.game;cur="";save();show("play")}),btn("Menu","alt",()=>show("home")))}
-  }
+  renderDock();
 }
+/* the dock swaps the keyboard for next-step buttons in the same space, so the board never jumps */
+function renderDock(){
+  const ab=$("afterbar"),dock=$("dock");
+  dock.classList.toggle("done",!!G.done);
+  if(!G.done){ab.innerHTML="";return}
+  ab.innerHTML="";
+  const row=document.createElement("div");row.className="btnrow";
+  if(G.mode==="daily"){row.append(btn("See results","",()=>openStats("daily")),btn("Menu","alt",()=>show("home")))}
+  else if(G.won&&runActive()){
+    const R=S.run;
+    ab.insertAdjacentHTML("beforeend",`<div class="winline"><span class="plus" id="plusPts">+${fmt(G.points||0)}</span><span>Run ${runSolved(R)} · next ×${runMult(R).toFixed(1)}</span></div>`+
+      (G.parts?`<div class="breakdown">${G.parts.map(x=>`<span>${esc(x)}</span>`).join("")}</div>`:""));
+    row.append(btn("Next word","",goNext),btn("Menu","alt",()=>show("home")));
+  }
+  else{row.append(btn("New run","",newRun),btn("Menu","alt",()=>show("home")))}
+  ab.append(row);
+  ab.insertAdjacentHTML("beforeend",`<div class="keyhint">Press Enter to ${G.mode==="daily"?"see results":G.won&&runActive()?"go to the next word":"start a new run"}</div>`);
+}
+function primaryAction(){if(!G||!G.done||busy)return;if(G.mode==="daily")openStats("daily");else if(G.won&&runActive())goNext();else newRun()}
+function newRun(){closeAll();startRun();G=S.game;cur="";save();transitionBoard()}
 function btn(label,cls,fn,icon){const b=document.createElement("button");b.className="btn"+(cls?" "+cls:"");b.type="button";b.innerHTML=(icon?svg(icon):"")+esc(label);b.onclick=fn;return b}
-function goNext(){closeAll();nextWord();G=S.game;cur="";save();renderPlay()}
+function goNext(){if(busy)return;closeAll();nextWord();G=S.game;cur="";save();transitionBoard()}
+function transitionBoard(){
+  if(reduced()){renderPlay();return}
+  busy=true;board.classList.add("clearing");
+  setTimeout(()=>{board.classList.remove("clearing");busy=false;renderPlay();board.classList.add("fresh");
+    setTimeout(()=>board.classList.remove("fresh"),600)},300);
+}
 $("pBack").onclick=()=>show("home");
 $("pStats").onclick=()=>openStats(G.mode);
 $("pHint").onclick=useHint;
 
 /* ---------- feedback ---------- */
+/* medal-style toasts (badges, levels, hints) queue up and show one at a time so they never pile onto the board */
+const tq=[];let tqBusy=false;
+function toastQ(html){tq.push(html);if(!tqBusy)nextQ()}
+function nextQ(){const h=tq.shift();if(!h){tqBusy=false;return}tqBusy=true;toast(h,"long",true);setTimeout(nextQ,tq.length>2?1500:2300)}
 function toast(msg,cls="",html=false){const t=document.createElement("div");t.className="toast"+(cls?" "+cls:"");if(html)t.innerHTML=msg;else t.textContent=msg;$("toasts").prepend(t);setTimeout(()=>t.remove(),cls==="long"?3300:1700)}
 function shake(){const row=board.children[G.guesses.length];row.classList.remove("shake");void row.offsetWidth;row.classList.add("shake")}
 
 /* ---------- input ---------- */
-const sheetOpen=()=>!!document.querySelector(".veil:not([hidden])");
+const sheetOpen=()=>!!document.querySelector(".veil:not([hidden]):not(.closing)");
 function press(k){
-  if(busy||G.done||sheetOpen()||$("play").hidden)return;
+  if(G.done||sheetOpen()||$("play").hidden)return;
+  if(busy&&k==="Enter")return; // letters can be typed while the last row is still flipping
+  const key=kb.querySelector(`[data-k="${k}"]`);if(key){key.classList.add("pressed");setTimeout(()=>key.classList.remove("pressed"),110)}
   if(k==="Enter")return submit();
   if(k==="Backspace")cur=cur.slice(0,-1);
   else if(/^[a-z]$/.test(k)&&cur.length<LEN)cur+=k;
@@ -744,19 +818,33 @@ function submit(){
   if(won||lost)res=finish(won);else checkBadges();
   save();
   busy=true;
-  const tiles=board.children[r].children,STEP=280;
-  for(let c=0;c<LEN;c++){const t=tiles[c];
-    setTimeout(()=>{t.classList.add("flip");setTimeout(()=>{t.className="tile flip "+marks[c]},250)},c*STEP)}
+  const tiles=board.children[r].children,STEP=reduced()?0:240,FLIP=reduced()?0:460;
+  const before=G.mode==="classic"?{score:S.run.score-(won?res.pts:0)}:null;
+  if(res)G.parts=res.parts;
+  for(let c=0;c<LEN;c++){const t=tiles[c];t.textContent=word[c];t.style.animationDelay=c*STEP+"ms";t.className="tile reveal "+marks[c]}
   setTimeout(()=>{
-    busy=false;renderPlay();
-    if(!res){paintRow(r,word,marks);return}
+    busy=false;
+    for(const t of tiles)t.style.animationDelay="";
+    if(!res){paintRow(r,word,marks);paintKeys();paintRow(G.guesses.length,cur,null,true);return}
     const fresh=res.badges;
-    if(won){[...board.children[r].children].forEach((t,c)=>setTimeout(()=>t.classList.add("win"),c*90));
-      toast(`${["Genius","Magnificent","Impressive","Splendid","Great","Phew"][Math.min(5,r+(6-G.rows))]} · +${fmt(res.pts)}`)}
+    renderPlay();
+    if(G.mode==="classic"){
+      const sc=$("hudScore");if(sc){countUp(sc.querySelector("b"),before.score,S.run.score,800);sc.classList.add("bump")}
+      if(won){$("hudRun").classList.add("bump");$("hudMult").classList.add("bump")}
+      if(won)countUp($("plusPts"),0,res.pts,700,"+");
+    }
+    if(won){[...board.children[r].children].forEach((t,c)=>{t.style.animationDelay=c*80+"ms";t.classList.add("win")});
+      toast(["Genius","Magnificent","Impressive","Splendid","Great","Phew"][Math.min(5,r+(6-G.rows))])}
     else toast(G.answer.toUpperCase(),"long");
-    if(res.levelUp)setTimeout(()=>toast(`<span class="medal got">${svg("star")}</span><span>Level ${res.levelUp}<small>${rankName(res.levelUp)}</small></span>`,"long",true),900);
-    setTimeout(()=>{G.mode==="daily"?openStats("daily",fresh,res):openResult(res,fresh)},won?1500:1900);
-  },LEN*STEP+300);
+    const d=won?1100:1700; // let the praise (or the answer) show first
+    if(G.mode==="classic"&&won){
+      if(G.earnedHint)setTimeout(()=>toastQ(`<span class="medal got">${svg("bulb")}</span><span>Hint earned<small>You have ${S.run.hints}</small></span>`),d);
+      if(res.levelUp)setTimeout(()=>toastQ(`<span class="medal got">${svg("star")}</span><span>Level ${res.levelUp}<small>${rankName(res.levelUp)}</small></span>`),d);
+      badgeToasts(fresh,d);
+    }
+    if(G.mode==="daily")setTimeout(()=>openStats("daily",fresh,res),won?1300:1700);
+    else if(!won)setTimeout(()=>openResult(res,fresh),1500);
+  },(LEN-1)*STEP+FLIP+40);
 }
 function finish(won){
   G.done=true;G.won=won;
@@ -800,16 +888,20 @@ document.addEventListener("keydown",e=>{
   if($("play").hidden||!G)return;
   const k=e.key.length===1?e.key.toLowerCase():e.key;
   if(k==="Enter"||k==="Backspace"||/^[a-z]$/.test(k)){
+    if(G.done&&k==="Enter"&&!sheetOpen()&&!(e.target.closest&&e.target.closest("button"))){e.preventDefault();primaryAction();return}
     if(sheetOpen()||G.done)return; // Enter activates whatever button has focus
     e.preventDefault();press(k)}
 });
 kb.addEventListener("click",e=>{const b=e.target.closest(".k");if(b){press(b.dataset.k);b.blur()}});
 
 /* ---------- sheets ---------- */
-function open(id){$(id).hidden=false;const f=$(id).querySelector(".btn,[data-close]");if(f)f.focus({preventScroll:true})}
-function closeAll(){document.querySelectorAll(".veil").forEach(v=>v.hidden=true)}
-function closeTop(){const v=[...document.querySelectorAll(".veil:not([hidden])")].sort((a,b)=>a.classList.contains("top")?-1:1)[0];if(v)v.hidden=true}
-document.querySelectorAll(".veil").forEach(v=>v.addEventListener("click",e=>{if(e.target===v||e.target.closest("[data-close]"))v.hidden=true}));
+function open(id){$(id).classList.remove("closing");$(id).hidden=false;const f=$(id).querySelector(".btn,[data-close]");if(f)f.focus({preventScroll:true})}
+function closeVeil(v){if(v.hidden||v.classList.contains("closing"))return;
+  if(reduced()){v.hidden=true;return}
+  v.classList.add("closing");setTimeout(()=>{v.hidden=true;v.classList.remove("closing")},190)}
+function closeAll(){document.querySelectorAll(".veil").forEach(closeVeil)}
+function closeTop(){const v=[...document.querySelectorAll(".veil:not([hidden]):not(.closing)")].sort((a,b)=>a.classList.contains("top")?-1:1)[0];if(v)closeVeil(v)}
+document.querySelectorAll(".veil").forEach(v=>v.addEventListener("click",e=>{if(e.target===v||e.target.closest("[data-close]"))closeVeil(v)}));
 
 let statTab="daily",tick=null;
 $("statTabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b){statTab=b.dataset.t;renderStats()}});
@@ -820,6 +912,7 @@ function openStats(tab,fresh,res){
   if(statTab==="daily"&&dg&&dg.done){
     box.innerHTML=`<div class="reveal${dg.won?"":" lost"}"><span class="word">${dg.answer}</span><small>${dg.won?`Solved in ${dg.guesses.length} of 6`:"Not this time"}</small></div>`+
       (dg.won?`<div class="gain">+${fmt(dg.points||0)}<span>XP</span></div>`:"")+(res&&res.parts.length?`<div class="breakdown">${res.parts.map(esc).map(x=>`<span>${x}</span>`).join("")}</div>`:"")+
+      (res&&res.levelUp?`<span class="newbest">Level ${res.levelUp} · ${rankName(res.levelUp)}</span>`:"")+
       badgeListHTML(fresh||[]);
     const nx=document.createElement("div");nx.className="next";
     const sb=btn("Share","",()=>share(dg),"share");
@@ -866,10 +959,9 @@ function openResult(res,fresh){
   }
   h+=badgeListHTML(fresh||[]);
   box.innerHTML=h;
-  if(won)box.append(btn("Next word","",goNext),btn("Menu","alt",()=>{closeAll();show("home")}));
-  else{const row=document.createElement("div");row.className="btnrow";
+  {const row=document.createElement("div");row.className="btnrow";
     row.append(btn("Share","alt",()=>shareRun(R),"share"),btn("Menu","alt",()=>{closeAll();show("home")}));
-    box.append(btn("New run","",()=>{closeAll();startRun();G=S.game;cur="";save();show("play")}),row)}
+    box.append(btn("New run","",newRun),row)}
   open("result");
 }
 function openBadges(){
