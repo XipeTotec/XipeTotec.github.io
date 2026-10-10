@@ -7,7 +7,7 @@ Browser games and apps, served with GitHub Pages at https://xipetotec.github.io/
 | [`index.html`](https://xipetotec.github.io/) | Home page that links to everything below |
 | [`meridian.html`](https://xipetotec.github.io/meridian.html) | Meridian, a world map quiz |
 | [`rungs.html`](https://xipetotec.github.io/rungs.html) | Rungs, a word ladder game |
-| [`wordl/`](https://xipetotec.github.io/wordl/) | Wordl, a five-letter word guessing game (about 14,800 accepted guesses, 2,300 everyday answers) |
+| [`wordl/`](https://xipetotec.github.io/wordl/) | Wordl, a five-letter word game: Daily word, endless Classic runs (Easy, Normal, Expert), levels and tiered badges |
 | [`history.html`](https://xipetotec.github.io/history.html) | Year by Year, a history dates quiz (events load from `history-events.json`) |
 | [`tides.html`](https://xipetotec.github.io/tides.html) | Nightcliff Tides, a tides, fishing and weather dashboard |
 
